@@ -4,7 +4,6 @@
   "upstream_commit": "88217624b637646b886cb0462995c07559e96f58",
   "artifact_path": "trajectories/demonstrations/replay__marshmallow-code__marshmallow-1867__default__t-0.20__p-0.95__c-2.00__install-1___install_from_source/marshmallow-code__marshmallow-1867.traj",
   "instance_id": "marshmallow-code__marshmallow-1867",
-  "trajectory_id": "unknown",
   "agent": "MSWE-agent",
   "git_blob_sha": "75031f57de2da663d8848570b02293d6097a5811",
   "raw_sha256": "7112504a1d783755f97fa6c8dec4bb4f8e596627c8100f356c9eda82d057c770",

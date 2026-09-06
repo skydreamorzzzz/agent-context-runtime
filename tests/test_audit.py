@@ -40,6 +40,20 @@ def test_good_persisted_chain_passes_and_source_binding_is_audited(tmp_path: Pat
     assert "source_identity_mismatch" in audit(tmp_path / "raw-ref", "one").blocks
 
 
+def test_pinned_upstream_identity_tampering_blocks(tmp_path: Path) -> None:
+    for field, replacement in (
+        ("upstream_commit", "different-non-empty-revision"),
+        ("upstream_repository", "https://github.com/example/other-repository"),
+        ("artifact_path", "trajectories/other.traj"),
+    ):
+        root = tmp_path / field
+        _, manifest, _, _, _, _ = build_import(root)
+        changed = dict(manifest)
+        changed[field] = replacement
+        (root / "imports" / "one" / "source_manifest.json").write_text(json.dumps(changed))
+        assert "pinned_source_identity_mismatch" in audit(root, "one").blocks
+
+
 def test_retained_m1_mutations_block(tmp_path: Path) -> None:
     _, _, _, _, normalized, provenance = build_import(tmp_path)
 
@@ -73,6 +87,29 @@ def test_retained_m1_mutations_block(tmp_path: Path) -> None:
     _, _, _, _, _, provenance = build_import(tmp_path / "conflicting")
     _write_provenance(_provenance_path(tmp_path / "conflicting"), provenance + [provenance[0]])
     assert "conflicting_provenance" in audit(tmp_path / "conflicting", "one").blocks
+
+
+def test_provenance_must_reference_this_imports_exact_raw_blob(tmp_path: Path) -> None:
+    raw, _, _, _, _, provenance = build_import(tmp_path)
+    alternate = json.loads(raw)
+    alternate["trajectory"][1]["thought"] = "different but valid alternate raw artifact"
+    from acr.store import ingest_bytes
+
+    alternate_ref = ingest_bytes(
+        json.dumps(alternate, sort_keys=True).encode(),
+        tmp_path,
+        "mswe_agent_demo",
+        "marshmallow-code__marshmallow-1867",
+    )
+    changed = list(provenance)
+    changed[0] = changed[0].model_copy(
+        update={"input_refs": [changed[0].input_refs[0].model_copy(update={"blob_hash": alternate_ref.blob_hash})]}
+    )
+    _write_provenance(_provenance_path(tmp_path), changed)
+
+    blocks = audit(tmp_path, "one").blocks
+    assert "provenance_raw_blob_mismatch" in blocks
+    assert "referenced_blob_missing" not in blocks
 
 
 def test_raw_corruption_producer_reference_and_malformed_artifacts_block(tmp_path: Path) -> None:

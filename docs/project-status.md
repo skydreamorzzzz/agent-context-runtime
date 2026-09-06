@@ -35,9 +35,17 @@ schema is NOT VERIFIED.
 - Retained and new attacks BLOCK: bad blob/hash, bad locator, tampered value,
   missing/conflicting provenance, raw corruption, deleted/empty steps, position
   laundering, malformed persisted evidence, and environment mismatch.
+- Provenance input refs must name the exact persisted raw blob for this import;
+  a different valid blob with matching source labels and field value BLOCKs.
+- The source manifest is checked against the frozen MSWE-agent repository,
+  revision, artifact path, instance identity, and raw SHA256 rather than merely
+  requiring non-empty strings.
 
 Minor boundary debt remains: `store.py` loads the fixed normalized record via
 the concrete legacy adapter. It is outside M1's accepted scope and is not a
 reason to broaden this milestone.
 
 Next action: remain at M1 completion until M2 is explicitly authorized.
+M1 DONE denotes this re-frozen historical persisted-evidence closure; trusted
+native capture is not included in this completion and is deferred to later
+explicitly authorized runtime work.

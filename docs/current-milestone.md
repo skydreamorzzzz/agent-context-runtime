@@ -28,6 +28,10 @@ to satisfy a newer M1.2 gate.
 
 - Source manifest completeness and raw-ref ↔ manifest `raw_sha256` binding.
 - `source_id` / `trajectory_key` / instance identity consistency.
+- Every provenance raw input ref must bind to this import's exact `raw_ref`
+  blob hash, not merely to another valid blob with matching labels or content.
+- The frozen MSWE-agent source type, repository, commit, artifact path, instance
+  identity, and raw SHA256 must match their pinned values.
 - Referenced raw blob exists and its hash matches.
 - Invalid locator, wrong EvidenceRef blob hash, tampered normalized field,
   missing provenance, and conflicting provenance each BLOCK.

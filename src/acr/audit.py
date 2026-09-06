@@ -40,6 +40,18 @@ _REQUIRED_PRODUCER = (
     "config_identity",
     "created_at",
 )
+_PINNED_SOURCE_IDENTITY = {
+    "source_type": "official_demonstration_trajectory",
+    "upstream_repository": "https://github.com/multi-swe-bench/MSWE-agent",
+    "upstream_commit": "88217624b637646b886cb0462995c07559e96f58",
+    "artifact_path": (
+        "trajectories/demonstrations/"
+        "replay__marshmallow-code__marshmallow-1867__default__t-0.20__p-0.95__c-2.00__"
+        "install-1___install_from_source/marshmallow-code__marshmallow-1867.traj"
+    ),
+    "instance_id": "marshmallow-code__marshmallow-1867",
+    "raw_sha256": "7112504a1d783755f97fa6c8dec4bb4f8e596627c8100f356c9eda82d057c770",
+}
 
 
 @dataclass(frozen=True)
@@ -70,6 +82,12 @@ def _valid_manifest(manifest: Any) -> bool:
     )
 
 
+def _pinned_source_matches(manifest: Any) -> bool:
+    return isinstance(manifest, dict) and all(
+        manifest.get(key) == value for key, value in _PINNED_SOURCE_IDENTITY.items()
+    )
+
+
 def _valid_producer_manifest(manifest: Any) -> bool:
     return (
         isinstance(manifest, dict)
@@ -87,6 +105,8 @@ def _audit(root: Path, import_id: str, blocks: list[str]) -> None:
         return
     if not _valid_manifest(manifest):
         blocks.append("source_manifest_incomplete")
+    if not _pinned_source_matches(manifest):
+        blocks.append("pinned_source_identity_mismatch")
     if (
         raw_ref.source_id != "mswe_agent_demo"
         or raw_ref.trajectory_key != manifest.get("instance_id")
@@ -170,6 +190,8 @@ def _audit(root: Path, import_id: str, blocks: list[str]) -> None:
             continue
         index = int(output_object.split(":", maxsplit=1)[1])
         ref = item.input_refs[0]
+        if ref.blob_hash != raw_ref.blob_hash:
+            blocks.append("provenance_raw_blob_mismatch")
         if ref.source_id != raw_ref.source_id or ref.trajectory_key != raw_ref.trajectory_key:
             blocks.append("source_identity_mismatch")
         expected_locator = f"/trajectory/{index}/{field}"
