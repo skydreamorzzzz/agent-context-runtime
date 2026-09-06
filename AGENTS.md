@@ -54,3 +54,22 @@ discipline and report the conflict before expanding scope.
 - Regression invariants are cumulative: when adding an audit or integrity gate,
   do not remove or weaken a previously accepted gate/test unless the frozen
   architecture explicitly supersedes it and the change is documented.
+
+## Git and credential hygiene
+
+- Use the repository's configured authenticated Git transport; prefer its
+  existing credential helper or SSH agent.
+- Never put a PAT, token, password, or private-key content in a command,
+  remote URL, log, document, commit, or `https://<TOKEN>@github.com/...` URL.
+- Do not cat, echo, print, copy, or record secret files, local secret paths,
+  credential environment-variable values, or private-key material in this
+  public repository. Summarize sensitive remote/credential state safely.
+- If authenticated Git transport is unavailable, stop pushing and report:
+  `push unavailable: authenticated Git transport not available`.
+- Before committing, inspect the staged diff for `.env`, credentials, tokens,
+  private keys, and secret-bearing configuration. Do not force-push or rewrite
+  history without explicit user approval.
+- After a commit materially changes milestone status, an implementation
+  checkpoint, or handoff context, update `docs/project-status.md` in the same
+  work session. Context-only commits may define their context baseline as
+  repository HEAD rather than embedding a self-invalidating exact SHA.
