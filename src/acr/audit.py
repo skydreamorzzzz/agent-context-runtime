@@ -1,13 +1,45 @@
-"""Fail-closed audit of persisted M1 artifacts."""
+"""Fail-closed audit of persisted M1 artifacts only."""
+
 from __future__ import annotations
 
 import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
+from pydantic import ValidationError
+
+from acr.adapters.legacy import ADAPTER_VERSION, parse_document
+from acr.contracts import EvidenceRef, Provenance
 from acr.provenance import resolve_json_pointer
-from acr.store import load_blob, load_import, load_normalized, load_producer, load_provenance
+from acr.store import (
+    load_blob,
+    load_import,
+    load_normalized,
+    load_producer,
+    load_producer_manifest,
+    load_provenance,
+)
+
+_FIELDS = ("action", "observation", "response")
+_REQUIRED_MANIFEST = (
+    "source_type",
+    "upstream_repository",
+    "upstream_commit",
+    "artifact_path",
+    "instance_id",
+    "raw_sha256",
+)
+_REQUIRED_PRODUCER = (
+    "producer_kind",
+    "code_revision",
+    "adapter_name",
+    "adapter_version",
+    "schema_version",
+    "config_identity",
+    "created_at",
+)
 
 
 @dataclass(frozen=True)
@@ -16,57 +48,154 @@ class AuditResult:
     blocks: tuple[str, ...]
 
 
-def audit(root: Path, import_id: str) -> AuditResult:
-    blocks: list[str] = []
-    _, raw_ref = load_import(root, import_id)
-    normalized = load_normalized(root, import_id)
-    producer_ref = load_producer(root, import_id)
-    provenance = load_provenance(root, import_id)
-    raw = load_blob(root, raw_ref.blob_hash)
-    document = json.loads(raw)
-    raw_steps = document["trajectory"]
-    if hashlib.sha256(raw).hexdigest() != raw_ref.blob_hash:
+def _digest_matches(value: bytes, expected: str) -> bool:
+    return hashlib.sha256(value).hexdigest() == expected
+
+
+def _load_ref_blob(root: Path, ref: EvidenceRef, blocks: list[str]) -> bytes | None:
+    try:
+        value = load_blob(root, ref.blob_hash)
+    except (FileNotFoundError, OSError):
+        blocks.append("referenced_blob_missing")
+        return None
+    if not _digest_matches(value, ref.blob_hash):
         blocks.append("referenced_blob_hash_invalid")
+        return None
+    return value
+
+
+def _valid_manifest(manifest: Any) -> bool:
+    return isinstance(manifest, dict) and all(
+        isinstance(manifest.get(key), str) and manifest[key].strip() for key in _REQUIRED_MANIFEST
+    )
+
+
+def _valid_producer_manifest(manifest: Any) -> bool:
+    return (
+        isinstance(manifest, dict)
+        and all(isinstance(manifest.get(key), str) and manifest[key].strip() for key in _REQUIRED_PRODUCER)
+        and manifest.get("adapter_version") == ADAPTER_VERSION
+        and manifest.get("schema_version") == "1.0"
+    )
+
+
+def _audit(root: Path, import_id: str, blocks: list[str]) -> None:
+    try:
+        manifest, raw_ref = load_import(root, import_id)
+    except (FileNotFoundError, OSError, json.JSONDecodeError, ValidationError, ValueError):
+        blocks.append("malformed_persisted_evidence")
+        return
+    if not _valid_manifest(manifest):
+        blocks.append("source_manifest_incomplete")
+    if (
+        raw_ref.source_id != "mswe_agent_demo"
+        or raw_ref.trajectory_key != manifest.get("instance_id")
+        or raw_ref.blob_hash != manifest.get("raw_sha256")
+        or raw_ref.locator != ""
+    ):
+        blocks.append("source_identity_mismatch")
+
+    raw = _load_ref_blob(root, raw_ref, blocks)
+    if raw is None:
+        return
+    try:
+        document = parse_document(raw)
+    except (TypeError, ValueError):
+        blocks.append("malformed_raw_schema")
+        return
+
+    try:
+        normalized = load_normalized(root, import_id)
+        producer_ref = load_producer(root, import_id)
+        producer_file = load_producer_manifest(root, import_id)
+        provenance = load_provenance(root, import_id)
+    except (FileNotFoundError, OSError, json.JSONDecodeError, ValidationError, ValueError):
+        blocks.append("malformed_persisted_evidence")
+        return
+
+    producer_blob = _load_ref_blob(root, producer_ref, blocks)
+    if producer_blob is None:
+        return
+    if producer_ref.source_id != "acr_producer_manifest" or producer_ref.trajectory_key != import_id:
+        blocks.append("producer_identity_mismatch")
+    if producer_blob != producer_file:
+        blocks.append("producer_manifest_mismatch")
+    try:
+        producer_manifest = json.loads(producer_blob)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        blocks.append("malformed_persisted_evidence")
+        return
+    if not _valid_producer_manifest(producer_manifest):
+        blocks.append("producer_manifest_incomplete")
+
+    raw_steps = document["trajectory"]
+    if normalized.adapter_version != ADAPTER_VERSION:
+        blocks.append("normalized_adapter_mismatch")
+    if normalized.producer_ref != producer_ref:
+        blocks.append("producer_identity_mismatch")
+    if normalized.environment != document["environment"]:
+        blocks.append("normalized_environment_mismatch")
     if len(normalized.steps) != len(raw_steps):
         blocks.append("normalized_structure_mismatch")
-    expected = {(f"step:{i}", field) for i in range(len(raw_steps)) for field in ("action", "observation", "response")}
-    groups: dict[tuple[str, str], list] = {}
+
+    for index, raw_step in enumerate(raw_steps):
+        if index >= len(normalized.steps):
+            continue
+        step = normalized.steps[index]
+        if step.source_position != index:
+            blocks.append("source_position_mismatch")
+        for field in _FIELDS:
+            if getattr(step, field) != raw_step[field]:
+                blocks.append("normalized_value_mismatch")
+
+    expected = {(f"step:{index}", field) for index in range(len(raw_steps)) for field in _FIELDS}
+    groups: dict[tuple[str, str], list[Provenance]] = {}
     for item in provenance:
         groups.setdefault((item.output_object, item.field), []).append(item)
     if set(groups) != expected:
         blocks.append("required_provenance_missing")
+
     for key, items in groups.items():
         if len(items) != 1:
             blocks.append("conflicting_provenance")
             continue
-        item = items[0]
-        if item.producer_ref != producer_ref or normalized.producer_ref != producer_ref:
-            blocks.append("producer_identity_mismatch")
-        index = int(key[0].split(":")[1])
-        if index >= len(normalized.steps) or normalized.steps[index].get("source_position") != index:
-            blocks.append("source_position_mismatch")
+        output_object, field = key
+        if key not in expected:
             continue
-        for ref in item.input_refs:
-            try:
-                referenced = load_blob(root, ref.blob_hash)
-            except FileNotFoundError:
-                blocks.append("referenced_blob_missing")
-                continue
-            if hashlib.sha256(referenced).hexdigest() != ref.blob_hash:
-                blocks.append("referenced_blob_hash_invalid")
-                continue
-            if ref.source_id != raw_ref.source_id or ref.trajectory_key != raw_ref.trajectory_key:
-                blocks.append("source_identity_mismatch")
-                continue
-            expected_locator = f"/trajectory/{index}/{key[1]}"
-            if ref.locator != expected_locator:
-                blocks.append("provenance_position_mismatch")
-                continue
-            try:
-                value = resolve_json_pointer(json.loads(referenced), ref.locator)
-            except (KeyError, IndexError, TypeError, ValueError):
-                blocks.append("invalid_locator")
-                continue
-            if normalized.steps[index][key[1]] != value:
-                blocks.append("normalized_value_mismatch")
+        item = items[0]
+        if item.producer_ref != producer_ref:
+            blocks.append("producer_identity_mismatch")
+        if len(item.input_refs) != 1:
+            blocks.append("provenance_input_mismatch")
+            continue
+        index = int(output_object.split(":", maxsplit=1)[1])
+        ref = item.input_refs[0]
+        if ref.source_id != raw_ref.source_id or ref.trajectory_key != raw_ref.trajectory_key:
+            blocks.append("source_identity_mismatch")
+        expected_locator = f"/trajectory/{index}/{field}"
+        locator_matches_position = ref.locator == expected_locator
+        if not locator_matches_position:
+            blocks.append("provenance_position_mismatch")
+        referenced = _load_ref_blob(root, ref, blocks)
+        if referenced is None:
+            continue
+        try:
+            value = resolve_json_pointer(json.loads(referenced), ref.locator)
+        except (UnicodeDecodeError, json.JSONDecodeError, KeyError, IndexError, TypeError, ValueError):
+            blocks.append("invalid_locator")
+            continue
+        if not locator_matches_position:
+            continue
+        if index >= len(normalized.steps) or getattr(normalized.steps[index], field) != value:
+            blocks.append("normalized_value_mismatch")
+
+
+def audit(root: Path, import_id: str) -> AuditResult:
+    """Audit only stored artifacts; never invoke normalization during audit."""
+
+    blocks: list[str] = []
+    try:
+        _audit(root, import_id, blocks)
+    except (AttributeError, IndexError, KeyError, TypeError, ValueError):
+        blocks.append("malformed_persisted_evidence")
     return AuditResult("BLOCK" if blocks else "PASS", tuple(sorted(set(blocks))))

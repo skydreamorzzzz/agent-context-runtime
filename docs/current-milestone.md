@@ -1,4 +1,4 @@
-# Current milestone: M1.2 — Final Integrity Closure
+# Current milestone: M1.2 — Final Integrity Closure (DONE)
 
 Only close the single MSWE-agent demonstration trajectory evidence chain. Do
 not add a second trajectory, retry Flash downloads, or begin M2.
@@ -49,3 +49,10 @@ to satisfy a newer M1.2 gate.
 No second trajectory, Flash/SWE-smith download, native adapter, runtime,
 provider, DecisionView, candidate, intervention, paired rerun, evaluation,
 accounting, reporting, or benchmark execution.
+
+## Completion record
+
+The persisted-artifact chain for the single frozen MSWE-agent demonstration
+fixture passed the required good-path audit and all retained M1/M1.1 plus M1.2
+mutation gates. M1 is therefore complete for this explicitly frozen scope.
+M2 remains NOT STARTED and requires a separate authorization.
