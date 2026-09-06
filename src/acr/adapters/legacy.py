@@ -2,36 +2,18 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 
-from acr.contracts import EvidenceRef
-from acr.provenance import FieldProvenance
+from acr.contracts import EvidenceRef, Provenance
 
-ADAPTER_VERSION = "mswe_agent_demo_traj_v1"
-
-@dataclass(frozen=True)
-class LegacyStep:
-    source_position: int
-    action: str
-    observation: str
-    response: str
-
-@dataclass(frozen=True)
-class NormalizedLegacyTrajectory:
-    environment: str
-    steps: tuple[LegacyStep, ...]
-    provenance: tuple[FieldProvenance, ...]
-
-def normalize(raw: bytes, raw_ref: EvidenceRef) -> NormalizedLegacyTrajectory:
-    document = json.loads(raw)
-    if set(document) != {"environment", "trajectory", "history", "info"} or not isinstance(document["trajectory"], list):
-        raise ValueError("unsupported MSWE-agent demonstration schema")
+ADAPTER_VERSION="mswe_agent_demo_traj_v1"
+def normalize(raw: bytes, raw_ref: EvidenceRef) -> tuple[dict, list[Provenance]]:
+    doc=json.loads(raw)
+    if set(doc)!={"environment","trajectory","history","info"} or not isinstance(doc["trajectory"],list): raise ValueError("unsupported MSWE-agent demonstration schema")
     steps=[]; provenance=[]
-    for index, step in enumerate(document["trajectory"]):
-        if set(step) != {"action", "observation", "response", "state", "thought"} or not all(isinstance(step[k], str) for k in ("action", "observation", "response")):
-            raise ValueError("unsupported MSWE-agent trajectory step schema")
-        steps.append(LegacyStep(index, step["action"], step["observation"], step["response"]))
-        for field in ("action", "observation", "response"):
-            ref = raw_ref.model_copy(update={"locator": f"/trajectory/{index}/{field}"})
-            provenance.append(FieldProvenance(f"step:{index}", field, (ref,), "mswe_agent_demo_extract_v1", ADAPTER_VERSION))
-    return NormalizedLegacyTrajectory(document["environment"], tuple(steps), tuple(provenance))
+    for i,step in enumerate(doc["trajectory"]):
+        if set(step)!={"action","observation","response","state","thought"}: raise ValueError("unsupported MSWE-agent trajectory step schema")
+        steps.append({"source_position":i,"action":step["action"],"observation":step["observation"],"response":step["response"]})
+        for field in ("action","observation","response"):
+            ref=raw_ref.model_copy(update={"locator":f"/trajectory/{i}/{field}"})
+            provenance.append(Provenance(kind="provenance",id=f"step:{i}/{field}",producer_ref=raw_ref,provenance_ref=None,output_object=f"step:{i}",field=field,input_refs=[ref],transform_name="mswe_agent_demo_extract_v1",transform_version=ADAPTER_VERSION,config_ref=None))
+    return {"adapter_version":ADAPTER_VERSION,"environment":doc["environment"],"steps":steps},provenance
