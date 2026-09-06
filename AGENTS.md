@@ -14,12 +14,18 @@ discipline and report the conflict before expanding scope.
   source-location identity even when content repeats.
 - `unknown`, `not_applicable`, and zero/false/empty are distinct. Observed and
   derived facts require evidence references; missing evidence must fail closed.
+- Do not encode epistemic unknown as magic strings such as `"unknown"`,
+  `"none"`, or `"N/A"`; use the existing Fact/status/reason semantics where
+  the field is epistemic.
 - Persistent top-level records use the `Envelope` conventions with schema
   version `1.0`. Reuse `acr.contracts.Provenance`; do not add parallel
   provenance schemas.
 - Audit is fail-closed: a missing blob, hash mismatch, bad locator, missing or
   conflicting provenance, source/producer mismatch, or unverifiable observed
   claim is a BLOCK, never a silently repaired warning.
+- Fail-closed means malformed persisted evidence produces a deterministic
+  BLOCK/AuditFinding where feasible; malformed user-controlled evidence must
+  not escape as an unhandled parser, index, or key exception.
 
 ## Architecture boundaries
 
@@ -45,3 +51,6 @@ discipline and report the conflict before expanding scope.
   origin; producer explains code/config/format that derived an artifact.
 - Before claiming completion, run the requested tests and lint, inspect the
   worktree, commit only verified changes, and push when requested.
+- Regression invariants are cumulative: when adding an audit or integrity gate,
+  do not remove or weaken a previously accepted gate/test unless the frozen
+  architecture explicitly supersedes it and the change is documented.
