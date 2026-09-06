@@ -1,0 +1,15 @@
+{
+  "source_type": "official_demonstration_trajectory",
+  "upstream_repository": "https://github.com/multi-swe-bench/MSWE-agent",
+  "upstream_commit": "88217624b637646b886cb0462995c07559e96f58",
+  "artifact_path": "trajectories/demonstrations/replay__marshmallow-code__marshmallow-1867__default__t-0.20__p-0.95__c-2.00__install-1___install_from_source/marshmallow-code__marshmallow-1867.traj",
+  "instance_id": "marshmallow-code__marshmallow-1867",
+  "trajectory_id": "unknown",
+  "agent": "MSWE-agent",
+  "git_blob_sha": "75031f57de2da663d8848570b02293d6097a5811",
+  "raw_sha256": "7112504a1d783755f97fa6c8dec4bb4f8e596627c8100f356c9eda82d057c770",
+  "retrieved_at": "2026-09-06T05:38:21Z",
+  "license_note": "Upstream MSWE-agent repository license applies; no separate artifact license was observed.",
+  "benchmark_relation": "This official MSWE-agent demonstration trajectory is used only for M1 trajectory schema and provenance engineering validation. It does not prove that Multi-SWE-bench Flash has the same trajectory schema and is not final paired-run benchmark evidence.",
+  "flash_status": "Official experiments metadata, HF trajectory dataset, and archive revision were verified; raw Flash bytes were unavailable in this environment and Flash schema was not inspected."
+}
