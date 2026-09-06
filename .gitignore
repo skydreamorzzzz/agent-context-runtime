@@ -1,0 +1,17 @@
+# Runtime evidence and private evaluation inputs are local-only.
+data/**
+!data/.gitkeep
+private_eval/**
+!private_eval/README.md
+
+# Python tooling
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.venv/
+dist/
+build/
+*.egg-info/
+
+# Windows alternate data-stream marker copied alongside downloaded files.
+*:Zone.Identifier

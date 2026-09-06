@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "status": "template_requires_freezing",
+  "provider": null,
+  "model": null,
+  "task_manifest": null,
+  "image_digest": null,
+  "budget": null,
+  "price_snapshot": "configs/prices.json",
+  "intervention": "omit_one_duplicate_read_v1",
+  "cache_isolation": "unsupported"
+}
