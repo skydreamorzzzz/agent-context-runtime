@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
+from acr.config import RunConfigValidationError, validate_run_config
 from acr.contracts import (
     Candidate,
     ContextBlock,
@@ -15,6 +16,10 @@ from acr.contracts import (
     FileBinding,
     FileComparison,
     InformationLabel,
+    Pair,
+    RepositoryState,
+    RequestSnapshot,
+    Run,
     propagate_label,
 )
 
@@ -162,3 +167,109 @@ def test_candidate_keeps_occurrence_ids_separate_from_content_reference() -> Non
     )
 
     assert candidate.older_occurrence != candidate.newest_occurrence
+
+
+def test_minimum_experiment_records_round_trip_together() -> None:
+    request = RequestSnapshot(
+        **envelope_fields("request-1", "request_snapshot"),
+        run_id="run-baseline",
+        logical_call_id="call-1",
+        attempt_id="attempt-1",
+        cutoff_seq=0,
+        before_body_ref=evidence(locator="/requests/0/before"),
+        sent_body_ref=evidence(locator="/requests/0/sent"),
+        ordered_blocks=[],
+        model_config_ref=evidence(locator="/config/model"),
+        transport_status="sent",
+        provider_request_id="provider-request-1",
+    )
+    repository_state = RepositoryState(
+        **envelope_fields("state-1", "repository_state"),
+        run_id="run-baseline",
+        initial_tree_hash="f" * 64,
+        image_digest="sha256:" + "1" * 64,
+        observed_seq=0,
+        files=[],
+        state_caps={
+            "initial_repository": "verified",
+            "file_binding": "unavailable",
+            "execution_restore": "unsupported",
+        },
+    )
+    baseline_run = Run(
+        **envelope_fields("run-baseline", "run"),
+        task_id="taskset/task-1",
+        config_ref=evidence(locator="/config"),
+        capabilities={"runtime_level": "L3"},
+        initial_state_ref=evidence(locator="/states/state-1"),
+        status="completed",
+        events_ref=evidence(locator="/runs/run-baseline/events.jsonl"),
+    )
+    treatment_run = Run(
+        **envelope_fields("run-treatment", "run"),
+        task_id="taskset/task-1",
+        config_ref=evidence(locator="/config"),
+        capabilities={"runtime_level": "L3"},
+        initial_state_ref=evidence(locator="/states/state-1"),
+        status="completed",
+        events_ref=evidence(locator="/runs/run-treatment/events.jsonl"),
+    )
+    pair = Pair(
+        **envelope_fields("pair-1", "pair"),
+        task_id="taskset/task-1",
+        replicate_id="replicate-1",
+        baseline_run_id=baseline_run.id,
+        treatment_run_id=treatment_run.id,
+        manifest_hash="2" * 64,
+        execution_order="AB",
+        preflight_result=Fact[bool](value=True, status="derived", refs=[evidence(locator="/preflight")]),
+        status="completed",
+    )
+
+    for model in (request, repository_state, baseline_run, treatment_run, pair):
+        assert type(model).model_validate_json(model.model_dump_json()) == model
+
+    assert request.run_id == baseline_run.id
+    assert request.attempt_id == "attempt-1"
+    assert repository_state.run_id == baseline_run.id
+    assert pair.baseline_run_id == baseline_run.id
+    assert pair.treatment_run_id == treatment_run.id
+    assert pair.task_id == baseline_run.task_id == treatment_run.task_id
+    assert pair.manifest_hash == "2" * 64
+    assert baseline_run.initial_state_ref.locator == "/states/state-1"
+    assert baseline_run.events_ref.locator == "/runs/run-baseline/events.jsonl"
+
+
+def complete_run_config() -> dict[str, object]:
+    return {
+        "provider": "provider-id",
+        "model": "model-id",
+        "task_manifest": "configs/tasks.json",
+        "image_digest": "sha256:" + "3" * 64,
+        "budget": {"max_attempts": 1},
+        "price_snapshot": "configs/prices.json",
+    }
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["provider", "model", "task_manifest", "image_digest", "budget"],
+)
+def test_missing_required_run_config_field_is_rejected(field: str) -> None:
+    config = complete_run_config()
+    config[field] = None
+
+    with pytest.raises(RunConfigValidationError, match=field):
+        validate_run_config(config)
+
+
+def test_missing_price_snapshot_is_rejected_as_missing_price_evidence() -> None:
+    config = complete_run_config()
+    config["price_snapshot"] = None
+
+    with pytest.raises(RunConfigValidationError, match="missing price evidence: price_snapshot"):
+        validate_run_config(config)
+
+
+def test_complete_minimal_run_config_is_accepted_with_price_reference() -> None:
+    validate_run_config(complete_run_config())
