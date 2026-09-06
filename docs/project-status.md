@@ -6,7 +6,8 @@ M2: NOT STARTED
 
 Latest implementation checkpoint: `524dd47 Close raw-driven M1 integrity checks`.
 
-Current context/document baseline: repository HEAD.
+Current context/document baseline: repository HEAD (including the Git
+credential-hygiene handoff protocol).
 
 Important: `524dd47` is a known-regressed implementation checkpoint and must
 not be treated as an accepted M1 baseline. Worktree at this status update is

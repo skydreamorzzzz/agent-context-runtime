@@ -69,6 +69,37 @@ discipline and report the conflict before expanding scope.
 - Before committing, inspect the staged diff for `.env`, credentials, tokens,
   private keys, and secret-bearing configuration. Do not force-push or rewrite
   history without explicit user approval.
+- Use this safe commit/push sequence after verification, substituting only
+  reviewed paths and an accurate message; it relies on the configured
+  authenticated transport and never embeds a credential:
+
+  ```bash
+  git status --short
+  git diff --check
+  git add -- <reviewed-paths>
+  git diff --cached --check
+  git diff --cached
+  git commit -m "<accurate commit message>"
+  git push origin HEAD
+  git status --short
+  git rev-parse HEAD
+  ```
+
+  In this repository's WSL environment, when the configured transport needs
+  the supplied GitHub credential, use the designated environment variable
+  without printing, exporting, or persisting its value:
+
+  ```bash
+  GITHUB_TOKEN="${GITHUB_PAT_TOKEN:?GITHUB_PAT_TOKEN is required}" git push origin HEAD
+  ```
+
+  `GITHUB_PAT_TOKEN` is an environment-variable identifier only; its value is
+  secret and must never be displayed, copied into a remote URL, written to a
+  file, or committed.
+
+  If `git push origin HEAD` cannot authenticate using the existing transport,
+  stop and report the prescribed push-unavailable message; do not substitute a
+  token-bearing URL or inspect secret material.
 - After a commit materially changes milestone status, an implementation
   checkpoint, or handoff context, update `docs/project-status.md` in the same
   work session. Context-only commits may define their context baseline as
