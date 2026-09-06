@@ -1,7 +1,9 @@
-# Current milestone: M1.2 — Final Integrity Closure (DONE)
+# Current milestone: M2.0 — Observation Protocol Freeze + Trusted Capture Slice
 
-Only close the single MSWE-agent demonstration trajectory evidence chain. Do
-not add a second trajectory, retry Flash downloads, or begin M2.
+M1 remains DONE. M2 is authorized only for the minimal trusted-capture
+vertical slice: protocol, persisted runtime evidence, send-boundary capture,
+complete `read_file` binding, workspace verification, sealing, and adversarial
+engineering tests. No context optimization or paired rerun is in scope.
 
 New integrity gates are cumulative. Do not delete, weaken, replace, or stop
 executing an already-established M1/M1.1 invariant or regression test merely
@@ -9,20 +11,19 @@ to satisfy a newer M1.2 gate.
 
 ## Required gates
 
-- Raw trajectory determines normalized step count and all expected
-  `(step:i, action|observation|response)` provenance keys.
-- Every normalized `source_position` equals its historical raw array index;
-  this is not `event_seq` or `available_seq`.
-- Every provenance locator is exactly `/trajectory/i/<field>` for its output
-  key, even if another raw value is equal.
-- Persisted normalized output has an Envelope and producer reference.
-- Persist `producer_manifest.json` separately from the source manifest; its
-  content-addressed `EvidenceRef` is the producer ref of normalized output and
-  every `Provenance`. Raw trajectory refs appear in `input_refs`.
-- Audit reads persisted import artifacts only and blocks malformed raw schema,
-  raw/normalized structure mismatch, position laundering, producer mismatch,
-  wrong blob/hash, invalid locator, value mismatch, missing provenance, and
-  conflicting provenance.
+- `docs/observation-protocol.md` freezes observation boundaries, raw evidence,
+  status semantics, occurrence identity, contract binding, failure modes, and
+  adversarial test for actual request, attempt, response, usage, tools, reads,
+  state, final artifacts, and evaluation.
+- Actual sent bytes are captured at the physical transport call, distinct from
+  draft/prepared bytes. Every physical attempt is retained, including failure.
+- Runtime events have authoritative serial `event_seq`; raw payloads precede
+  normalized events. The audit reads persisted run artifacts only.
+- `read_file` binds relative path, actual bytes, SHA256, UTF-8 full-read mode,
+  read occurrence, run identity, and closed tool event.
+- Initial workspace is verified without symlinks; protected data/evaluator roots
+  cannot overlap workspace. Final tree/state binds to a sealed run.
+- Evaluation remains outside runtime. No evaluator result may be fabricated.
 
 ## Retained M1/M1.1 regressions
 
@@ -37,26 +38,26 @@ to satisfy a newer M1.2 gate.
   missing provenance, and conflicting provenance each BLOCK.
 - Persisted artifact round-trip and immutable-write integrity.
 
-## M1.2 regressions and E2E
+## M2 adversarial and E2E gates
 
-- Keep prior M1/M1.1 attacks: wrong blob hash, bad locator, tampered value,
-  missing provenance, conflicting provenance, and raw corruption.
-- Add/delete-step, empty-normalized-plus-empty-provenance, and position
-  laundering attacks; each must BLOCK through the production audit path.
-- Malformed persisted evidence must BLOCK rather than crash. If `environment`
-  remains persisted, bind it to `raw.environment`.
-- From an empty data root run `acr ingest`, `acr normalize`, and `acr audit`,
-  then run all three mutation gates. Run `pytest -q` and `ruff check .`.
+- Keep every M1/M1.1/M1.2 regression.
+- Prepared/sent divergence, retry merge, lost failed attempt, missing usage
+  default, unfinished tool, file-byte replacement, same-path mutation,
+  workspace escape, evaluator-root overlap, post-seal event, wrong-run ref,
+  and malformed persisted runtime evidence must each reject or BLOCK.
+- Run a clean engineering-fixture capture and persisted `audit-run`; it is not
+  a real provider smoke.
 
 ## Prohibited
 
-No second trajectory, Flash/SWE-smith download, native adapter, runtime,
-provider, DecisionView, candidate, intervention, paired rerun, evaluation,
-accounting, reporting, or benchmark execution.
+No duplicate detection, candidate, intervention, paired rerun, A/A, benchmark
+execution, evaluator implementation, accounting, dashboard, learned policy,
+second provider, or second task suite. Do not retry Flash or add a trajectory.
 
-## Completion record
+## Completion rule
 
-The persisted-artifact chain for the single frozen MSWE-agent demonstration
-fixture passed the required good-path audit and all retained M1/M1.1 plus M1.2
-mutation gates. M1 is therefore complete for this explicitly frozen scope.
-M2 remains NOT STARTED and requires a separate authorization.
+An engineering fixture may validate capture wiring only. M2 stays IN PROGRESS
+until a separately frozen, real provider/model/task/environment is available,
+one real smoke is captured and sealed, and the required runtime/evaluator
+conditions in the frozen MVP plan are met. A real task failure is evidence, not
+an engineering failure, if capture and sealing remain complete.

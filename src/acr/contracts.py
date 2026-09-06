@@ -136,6 +136,7 @@ class RequestSnapshot(Envelope):
     attempt_id: str
     cutoff_seq: int = Field(ge=0)
     before_body_ref: EvidenceRef
+    prepared_body_ref: EvidenceRef | None = None
     sent_body_ref: EvidenceRef | None = None
     ordered_blocks: list[ContextBlock]
     model_config_ref: EvidenceRef
@@ -146,7 +147,7 @@ class RequestSnapshot(Envelope):
 class RepositoryState(Envelope):
     run_id: str
     initial_tree_hash: str
-    image_digest: str
+    image_digest: Fact[str]
     observed_seq: int = Field(ge=0)
     files: list[FileBinding]
     state_caps: dict[str, str]

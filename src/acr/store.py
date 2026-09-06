@@ -1,4 +1,4 @@
-"""Immutable filesystem store for the single persisted M1 import."""
+"""Small immutable filesystem store for imported and runtime evidence."""
 
 from __future__ import annotations
 
@@ -36,8 +36,56 @@ def ingest_bytes(
     )
 
 
+def ingest_runtime_bytes(raw: bytes, data_root: Path, run_id: str, locator: str) -> EvidenceRef:
+    """Store one runtime occurrence without conflating it with byte identity."""
+
+    return ingest_bytes(
+        raw,
+        data_root,
+        source_id="acr_runtime",
+        trajectory_key=run_id,
+        locator=locator,
+    ).model_copy(
+        update={
+            "labels": [
+                InformationLabel(scope="runtime", run_id=run_id),
+            ]
+        }
+    )
+
+
 def load_blob(data_root: Path, blob_hash: str) -> bytes:
     return (data_root / "blobs" / blob_hash).read_bytes()
+
+
+def persist_run_json(data_root: Path, run_id: str, name: str, value: Any) -> None:
+    """Write a named runtime artifact exactly once under its run directory."""
+
+    if "/" in name or name in {"", ".", ".."}:
+        raise ValueError("invalid runtime artifact name")
+    content = (
+        value.model_dump_json(indent=2).encode() + b"\n"
+        if hasattr(value, "model_dump_json")
+        else json.dumps(value, sort_keys=True, indent=2).encode() + b"\n"
+    )
+    _write_once(data_root / "runs" / run_id / name, content)
+
+
+def persist_run_jsonl(data_root: Path, run_id: str, name: str, values: list[Any]) -> None:
+    """Persist a closed JSONL artifact exactly once; runtime never appends after seal."""
+
+    if "/" in name or name in {"", ".", ".."}:
+        raise ValueError("invalid runtime artifact name")
+    content = b"".join(
+        (item.model_dump_json() if hasattr(item, "model_dump_json") else json.dumps(item, sort_keys=True)).encode()
+        + b"\n"
+        for item in values
+    )
+    _write_once(data_root / "runs" / run_id / name, content)
+
+
+def load_run_json(data_root: Path, run_id: str, name: str) -> Any:
+    return json.loads((data_root / "runs" / run_id / name).read_text())
 
 
 def persist_import(

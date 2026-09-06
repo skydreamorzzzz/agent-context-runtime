@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from acr.adapters.legacy import normalize
-from acr.audit import audit
+from acr.audit import audit, audit_run
 from acr.store import (
     ingest_bytes,
     load_blob,
@@ -28,9 +28,16 @@ def main() -> None:
     ingest.add_argument("--raw", required=True); ingest.add_argument("--manifest", required=True); ingest.add_argument("--data-root", required=True); ingest.add_argument("--import-id", required=True)
     for name in ("normalize", "audit"):
         command = commands.add_parser(name); command.add_argument("--data-root", required=True); command.add_argument("--import-id", required=True)
+    runtime_audit = commands.add_parser("audit-run")
+    runtime_audit.add_argument("--data-root", required=True)
+    runtime_audit.add_argument("--run-id", required=True)
     args = parser.parse_args(); root = Path(args.data_root)
     if args.command == "ingest":
         manifest = json.loads(Path(args.manifest).read_text()); ref = ingest_bytes(Path(args.raw).read_bytes(), root, "mswe_agent_demo", manifest["instance_id"]); persist_import(root, args.import_id, manifest, ref); print(args.import_id); return
+    if args.command == "audit-run":
+        result = audit_run(root, args.run_id)
+        print(result.status)
+        raise SystemExit(result.status != "PASS")
     _, raw_ref = load_import(root, args.import_id)
     if args.command == "normalize":
         producer_path = root / "imports" / args.import_id / "producer_ref.json"
@@ -57,4 +64,5 @@ def main() -> None:
                 },
             )
         normalized, provenance = normalize(load_blob(root, raw_ref.blob_hash), raw_ref, producer); persist_normalized(root, args.import_id, normalized); persist_provenance(root, args.import_id, provenance); print(len(normalized.steps)); return
-    result = audit(root, args.import_id); print(result.status); raise SystemExit(result.status != "PASS")
+    result = audit(root, args.import_id)
+    print(result.status); raise SystemExit(result.status != "PASS")

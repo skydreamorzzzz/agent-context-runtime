@@ -13,6 +13,9 @@ The repository is intentionally organized around evidence boundaries rather than
 
 The MVP performs clean, from-scratch baseline/treatment pairs. It may omit one verified old duplicate `read_file` result from one outbound request. Every conclusion must be reconstructible from raw blobs, normalized records, provenance, audit findings, sealed runs, evaluation results, and the cost ledger. Missing evidence remains `unknown`; it is never inferred.
 
-Implementation status: this commit establishes the file and responsibility boundaries only. It does not claim a runnable provider, evaluator, or experimental result.
+Implementation status: M0/M1 are complete and M2 is in progress. The current
+M2 slice captures an engineering-only scripted transport through the persisted
+request/attempt/response/tool/file/state/seal chain. It does **not** claim a
+configured real provider, real task smoke, evaluator result, or experiment.
 
 See [the architecture guide](docs/architecture.md), [audit checklist](docs/audit-checklist.md), and the frozen [MVP plan](agent-context-runtime-mvp-plan.md).

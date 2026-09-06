@@ -149,6 +149,19 @@ def test_not_applicable_and_unknown_remain_distinct_after_serialization() -> Non
     assert parsed_not_applicable.reason is None
 
 
+def test_repository_image_digest_can_be_explicitly_unknown() -> None:
+    state = RepositoryState(
+        **envelope_fields("state-unknown-image", "repository_state"),
+        run_id="run-1",
+        initial_tree_hash="f" * 64,
+        image_digest=Fact[str](status="unknown", reason="runtime_image_digest_not_observed"),
+        observed_seq=0,
+        files=[],
+        state_caps={"initial_repository": "verified", "execution_restore": "unsupported"},
+    )
+    assert state.image_digest.status == "unknown"
+
+
 def test_contracts_reject_unknown_extra_fields() -> None:
     with pytest.raises(ValidationError):
         Envelope(**envelope_fields("envelope-1", "envelope"), unexpected="not a contract field")
@@ -187,7 +200,7 @@ def test_minimum_experiment_records_round_trip_together() -> None:
         **envelope_fields("state-1", "repository_state"),
         run_id="run-baseline",
         initial_tree_hash="f" * 64,
-        image_digest="sha256:" + "1" * 64,
+        image_digest=Fact[str](value="sha256:" + "1" * 64, status="observed", refs=[evidence()]),
         observed_seq=0,
         files=[],
         state_caps={
