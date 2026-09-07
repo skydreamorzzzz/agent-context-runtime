@@ -7,11 +7,17 @@ from pathlib import Path
 
 import pytest
 
-from acr.adapters.provider import CapturedProvider, RequestDraft, TransportResult
+from acr.adapters.provider import (
+    CapturedProvider,
+    DeepSeekHTTPTransport,
+    RequestDraft,
+    TransportResult,
+    serialize_deepseek_chat_request,
+)
 from acr.audit import audit_run
 from acr.contracts import Run
 from acr.evaluation import EvaluationHandoffRejected, require_sealed_run
-from acr.runtime.runner import CapturedRuntime, RunSealedError, RuntimeTask
+from acr.runtime.runner import CapturedRuntime, RunSealedError, RuntimeTask, run_deepseek_add_smoke
 from acr.state import WorkspaceViolation, initial_tree_manifest
 from acr.store import ingest_runtime_bytes, load_blob
 
@@ -65,6 +71,22 @@ def _jsonl(path: Path) -> list[dict]:
 
 def _write_jsonl(path: Path, rows: list[dict]) -> None:
     path.write_text("".join(json.dumps(row) + "\n" for row in rows))
+
+
+class _HTTPResponse:
+    def __init__(self, body: bytes, *, status: int = 200) -> None:
+        self._body = body
+        self.status = status
+        self.headers = {"x-request-id": "header-request-id"}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self._body
 
 
 def _replace_event_payload(root: Path, events: list[dict], event: dict, payload: dict) -> None:
@@ -576,3 +598,76 @@ def test_runtime_producer_and_config_references_are_closed(tmp_path: Path) -> No
     requests[1]["model_config_ref"] = alternate.model_dump()
     _write_jsonl(requests_path, requests)
     assert "request_config_reference_mismatch" in audit_run(root, "run-1").blocks
+
+
+def test_deepseek_transport_and_bounded_smoke_remain_offline_and_captured(tmp_path: Path) -> None:
+    sent: list[bytes] = []
+    responses = [
+        json.dumps(
+            {
+                "id": "provider-read",
+                "choices": [{"message": {"content": "READ target.py"}}],
+                "usage": {"prompt_tokens": 4, "completion_tokens": 2},
+            }
+        ).encode(),
+        json.dumps(
+            {
+                "id": "provider-final",
+                "choices": [{"message": {"content": "def add(a, b): return a + b"}}],
+                "usage": {"prompt_tokens": 8, "completion_tokens": 4},
+            }
+        ).encode(),
+    ]
+
+    def opener(request, timeout: float) -> _HTTPResponse:
+        assert timeout == 30.0
+        sent.append(request.data)
+        assert request.get_header("Authorization") == "Bearer test-credential"
+        return _HTTPResponse(responses.pop(0))
+
+    runtime, _ = _runtime(tmp_path)
+    (runtime.workspace / "target.py").write_text("def add(a, b):\n    # TODO\n    pass\n")
+    provider = CapturedProvider(
+        DeepSeekHTTPTransport(
+            api_key="test-credential",
+            base_url="https://api.deepseek.com",
+            opener=opener,
+        )
+    )
+    outcome = run_deepseek_add_smoke(runtime, provider, model="deepseek-v4-flash")
+    assert outcome.physical_attempts == 2
+    assert outcome.file_reads == 1
+    assert outcome.final_response_observed
+    assert outcome.run.capabilities["runtime_level"] == "engineering_fixture_only"
+    assert audit_run(tmp_path / "data", "run-1").status == "PASS"
+    assert all(json.loads(body)["model"] == "deepseek-v4-flash" for body in sent)
+    persisted = "\n".join(
+        path.read_text(errors="ignore")
+        for path in (tmp_path / "data" / "runs" / "run-1").rglob("*.json*")
+    )
+    assert "test-credential" not in persisted
+
+
+def test_deepseek_transport_exception_uses_the_existing_failure_path(tmp_path: Path) -> None:
+    def timeout(request, timeout_seconds: float) -> _HTTPResponse:
+        del request, timeout_seconds
+        raise TimeoutError("offline timeout")
+
+    runtime, _ = _runtime(tmp_path)
+    provider = CapturedProvider(
+        DeepSeekHTTPTransport(
+            api_key="test-credential",
+            base_url="https://api.deepseek.com",
+            opener=timeout,
+        )
+    )
+    snapshot = runtime.send_request(
+        provider,
+        serialize_deepseek_chat_request(
+            model="deepseek-v4-flash", messages=[{"role": "user", "content": "hello"}]
+        ),
+        "deepseek-timeout",
+    )
+    runtime.seal(status="task_failed", stop_reason="provider_exception")
+    assert snapshot.transport_status == "transport_exception"
+    assert audit_run(tmp_path / "data", "run-1").status == "PASS"

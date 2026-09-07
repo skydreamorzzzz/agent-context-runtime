@@ -10,7 +10,13 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from acr.adapters.provider import CapturedProvider, RequestDraft
+from acr.adapters.provider import (
+    CapturedAttempt,
+    CapturedProvider,
+    RequestDraft,
+    extract_deepseek_message_content,
+    serialize_deepseek_chat_request,
+)
 from acr.contracts import Event, EvidenceRef, Fact, RepositoryState, RequestSnapshot, Run
 from acr.runtime.tools import RuntimeTools
 from acr.state import initial_tree_manifest, verified_workspace
@@ -46,17 +52,20 @@ class CapturedRuntime:
         config_bytes: bytes,
         private_eval_root: Path | None = None,
         image_digest: str | None = None,
+        runtime_level: str = "engineering_fixture_only",
     ) -> None:
         forbidden = (data_root,) + ((private_eval_root,) if private_eval_root else ())
         self.workspace = verified_workspace(workspace, forbidden_roots=forbidden)
         self.data_root = data_root
         self.run_id = run_id
         self.task = task
+        self._runtime_level = runtime_level
         self._sealed = False
         self._events: list[Event] = []
         self._snapshots: list[RequestSnapshot] = []
         self._event_seq = 0
         self._attempt_seq = 0
+        self._last_attempt: CapturedAttempt | None = None
         self._producer_ref = self._persist_producer()
         self._config_ref = ingest_runtime_bytes(config_bytes, data_root, run_id, "/config")
         tree, tree_hash = initial_tree_manifest(self.workspace)
@@ -104,6 +113,12 @@ class CapturedRuntime:
     @property
     def producer_ref(self) -> EvidenceRef:
         return self._producer_ref
+
+    @property
+    def last_attempt(self) -> CapturedAttempt | None:
+        """Most recent captured physical attempt for this synchronous runtime."""
+
+        return self._last_attempt
 
     def _persist_producer(self) -> EvidenceRef:
         code_revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
@@ -170,6 +185,7 @@ class CapturedRuntime:
             producer_ref=self._producer_ref,
         )
         attempt = provider.send(prepared, attempt_id)
+        self._last_attempt = attempt
         cutoff_seq = max((event.available_seq or 0 for event in self._events), default=0)
         snapshot = RequestSnapshot(
             kind="request_snapshot",
@@ -260,7 +276,7 @@ class CapturedRuntime:
             task_id=self.task.task_id,
             config_ref=self._config_ref,
             capabilities={
-                "runtime_level": "engineering_fixture_only",
+                "runtime_level": self._runtime_level,
                 "initial_repository": "verified",
                 "file_binding": "read_bound",
                 "execution_restore": "unsupported",
@@ -291,3 +307,79 @@ def run_scripted_capture(
 
     script(runtime)
     return runtime.seal(status=status)
+
+
+@dataclass(frozen=True)
+class DeepSeekSmokeOutcome:
+    """Non-persistent result of the bounded two-request real-smoke loop."""
+
+    run: Run
+    physical_attempts: int
+    file_reads: int
+    final_response_observed: bool
+
+
+def run_deepseek_add_smoke(
+    runtime: CapturedRuntime,
+    provider: CapturedProvider,
+    *,
+    model: str,
+) -> DeepSeekSmokeOutcome:
+    """Run only the public add-task smoke protocol; no autonomous agent loop.
+
+    The first real response must explicitly request the sole allowed file read.
+    A nonconforming model response is a truthful task failure, not a reason to
+    retry or fabricate a tool observation.
+    """
+
+    first_body = serialize_deepseek_chat_request(
+        model=model,
+        messages=[
+            {
+                "role": "system",
+                "content": "For this coding smoke, request the public file before solving.",
+            },
+            {
+                "role": "user",
+                "content": (
+                    "Inspect target.py and provide the minimal correct implementation of add(a, b). "
+                    "Reply exactly: READ target.py"
+                ),
+            },
+        ],
+    )
+    runtime.send_request(provider, first_body, "smoke-read-request")
+    first = runtime.last_attempt
+    if first is None or first.raw_response_ref is None:
+        run = runtime.seal(status="task_failed", stop_reason="first_response_not_observed")
+        return DeepSeekSmokeOutcome(run, 1, 0, False)
+    from acr.store import load_blob
+
+    requested = extract_deepseek_message_content(load_blob(runtime.data_root, first.raw_response_ref.blob_hash))
+    if requested is None or requested.strip() != "READ target.py":
+        run = runtime.seal(status="task_failed", stop_reason="model_did_not_request_allowed_file_read")
+        return DeepSeekSmokeOutcome(run, 1, 0, False)
+
+    read = runtime.tools.read_file("target.py")
+    final_body = serialize_deepseek_chat_request(
+        model=model,
+        messages=[
+            {
+                "role": "system",
+                "content": "Return only the minimal correct Python implementation.",
+            },
+            {"role": "assistant", "content": requested},
+            {
+                "role": "user",
+                "content": f"target.py was read exactly:\n{read.text}\nProvide the answer now.",
+            },
+        ],
+    )
+    runtime.send_request(provider, final_body, "smoke-final-answer")
+    final_attempt = runtime.last_attempt
+    final_response_observed = final_attempt is not None and final_attempt.raw_response_ref is not None
+    run = runtime.seal(
+        status="completed" if final_response_observed else "task_failed",
+        stop_reason=None if final_response_observed else "final_response_not_observed",
+    )
+    return DeepSeekSmokeOutcome(run, 2, 1, final_response_observed)

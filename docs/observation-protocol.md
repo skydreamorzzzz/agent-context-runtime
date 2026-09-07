@@ -32,3 +32,8 @@ bytes enter the content-addressed store before normalized records are made.
 - The engineering fixture transport exists only to test wiring. It is labelled
   `engineering_fixture_only` and cannot establish real-provider, task-quality,
   usage-price, or evaluator claims.
+- The frozen DeepSeek smoke uses the standard-library HTTP client. Its request
+  observation boundary is the exact serialized JSON bytes supplied as
+  `urllib.request.Request(data=body)`; HTTP framing and any later SDK/client
+  transformation are not observed or claimed. The API response body is stored
+  unchanged before response/usage normalization.

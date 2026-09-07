@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from dataclasses import dataclass
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 
 from acr.contracts import EvidenceRef, Fact, PhysicalAttempt
 from acr.store import ingest_runtime_bytes, persist_physical_attempt
@@ -44,6 +46,102 @@ class CapturedAttempt:
     usage: Fact[dict]
     transport_status: str
     provider_request_id: str | None
+
+
+def serialize_deepseek_chat_request(*, model: str, messages: list[dict[str, str]]) -> bytes:
+    """Build the exact JSON body handed to the standard-library HTTP client."""
+
+    return json.dumps(
+        {"model": model, "messages": messages, "temperature": 0},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+
+
+class DeepSeekHTTPTransport:
+    """Thin DeepSeek chat-completions transport for the one real-smoke provider.
+
+    The observed request boundary is the exact ``body`` passed to
+    ``urllib.request.Request(data=body)``.  This adapter deliberately makes no
+    claim about HTTP-client framing or bytes after the client takes ownership.
+    """
+
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        base_url: str,
+        timeout_seconds: float = 30.0,
+        opener: Callable[[Request, float], object] | None = None,
+    ) -> None:
+        self._api_key = api_key
+        self._endpoint = f"{base_url.rstrip('/')}/chat/completions"
+        self._timeout_seconds = timeout_seconds
+        self._opener = opener or _open_request
+
+    def __call__(self, body: bytes, attempt_id: str) -> TransportResult:
+        """Send the captured body once and preserve response bytes verbatim."""
+
+        del attempt_id
+        request = Request(
+            self._endpoint,
+            data=body,
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            response = self._opener(request, self._timeout_seconds)
+        except HTTPError as error:
+            return TransportResult(
+                status=f"http_{error.code}",
+                response_body=error.read(),
+                provider_request_id=error.headers.get("x-request-id"),
+            )
+        with response:
+            raw = response.read()
+            status = getattr(response, "status", 200)
+            headers = getattr(response, "headers", {})
+        return TransportResult(
+            status=f"http_{status}",
+            response_body=raw,
+            provider_request_id=_provider_request_id(raw, headers),
+        )
+
+
+def _open_request(request: Request, timeout_seconds: float) -> object:
+    return urlopen(request, timeout=timeout_seconds)
+
+
+def _provider_request_id(raw: bytes, headers: object) -> str | None:
+    try:
+        parsed = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        parsed = None
+    if isinstance(parsed, dict) and isinstance(parsed.get("id"), str):
+        return parsed["id"]
+    get = getattr(headers, "get", None)
+    value = get("x-request-id") if callable(get) else None
+    return value if isinstance(value, str) else None
+
+
+def extract_deepseek_message_content(response_body: bytes) -> str | None:
+    """Return only the documented chat-message content when it is present."""
+
+    try:
+        parsed = json.loads(response_body)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(parsed, dict) or not isinstance(parsed.get("choices"), list):
+        return None
+    if not parsed["choices"] or not isinstance(parsed["choices"][0], dict):
+        return None
+    message = parsed["choices"][0].get("message")
+    content = message.get("content") if isinstance(message, dict) else None
+    return content if isinstance(content, str) else None
 
 
 class CapturedProvider:

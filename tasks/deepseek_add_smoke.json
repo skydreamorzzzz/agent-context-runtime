@@ -1,0 +1,5 @@
+{
+  "task_id": "public/deepseek-add-smoke-v1",
+  "public_instruction": "Inspect target.py and provide the minimal correct implementation of add(a, b).",
+  "workspace_source": "deepseek_add_smoke_workspace"
+}

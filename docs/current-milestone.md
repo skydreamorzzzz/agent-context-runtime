@@ -59,6 +59,10 @@ to satisfy a newer M1.2 gate.
   laundering must each reject or BLOCK.
 - Run a clean engineering-fixture capture and persisted `audit-run`; it is not
   a real provider smoke.
+- The first real-smoke command is fixed to the public DeepSeek add-task fixture.
+  It is bounded to two requests (and never more than the frozen hard limit of
+  five), requires an explicit model request for the sole `read_file`, and seals
+  a task failure rather than retrying a nonconforming response.
 
 ## Prohibited
 

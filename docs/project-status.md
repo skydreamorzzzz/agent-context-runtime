@@ -62,11 +62,12 @@ producer, and runtime config identity in addition to the prior exception,
 usage, state, and file-read gates. This is not whole M2 completion; real smoke
 and evaluator gates remain unstarted.
 
-Real provider smoke: BLOCKED / NOT RUN. `configs/pilot.json` remains a template
-and does not freeze a provider, model, task manifest, image digest, or budget.
-No credential, provider, or model has been selected or inferred. Therefore no
-real task execution, provider-observed usage, evaluator result, task-quality,
-or cost claim exists.
+Real provider smoke: NOT RUN. `configs/pilot.json` freezes the single DeepSeek
+provider/model/public add-task smoke and records the credential source name
+without a credential value. The runtime captures the actual execution revision
+into the local persisted run config at smoke start. No real task execution,
+provider-observed usage, evaluator result, task-quality, or cost claim exists
+until that clean-worktree command completes and persisted audit passes.
 
 M1 DONE denotes the historical persisted-evidence closure only. M2 native
 trusted capture is in progress; the engineering fixture does not satisfy the
