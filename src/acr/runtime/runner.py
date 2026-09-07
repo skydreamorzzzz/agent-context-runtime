@@ -281,6 +281,7 @@ class CapturedRuntime:
                 "file_binding": "read_bound",
                 "execution_restore": "unsupported",
                 "evaluation": "not_run",
+                "workspace_identity": hashlib.sha256(str(self.workspace).encode()).hexdigest(),
             },
             initial_state_ref=self._initial_state_ref,
             start=self._events[0].start if self._events else None,

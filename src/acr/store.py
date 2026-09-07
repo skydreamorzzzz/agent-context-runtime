@@ -121,6 +121,23 @@ def persist_evaluation_json(data_root: Path, run_id: str, name: str, value: Any)
     _write_once(data_root / "evaluations" / run_id / name, content)
 
 
+def persist_pair_json(data_root: Path, pair_id: str, name: str, value: Any) -> None:
+    """Persist one immutable pair-harness artifact."""
+
+    if "/" in name or name in {"", ".", ".."}:
+        raise ValueError("invalid pair artifact name")
+    content = (
+        value.model_dump_json(indent=2).encode() + b"\n"
+        if hasattr(value, "model_dump_json")
+        else json.dumps(value, sort_keys=True, indent=2).encode() + b"\n"
+    )
+    _write_once(data_root / "pairs" / pair_id / name, content)
+
+
+def load_pair_json(data_root: Path, pair_id: str, name: str) -> Any:
+    return json.loads((data_root / "pairs" / pair_id / name).read_text())
+
+
 def persist_import(
     data_root: Path,
     import_id: str,

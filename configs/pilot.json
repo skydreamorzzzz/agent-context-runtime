@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "status": "frozen_real_smoke_configuration",
+  "status": "frozen_m3_noop_aa_configuration",
   "provider": "deepseek",
   "model": "deepseek-v4-flash",
   "base_url": "https://api.deepseek.com",
@@ -31,6 +31,6 @@
   "price_snapshot": "configs/prices.json",
   "intervention": "noop",
   "cache_isolation": "unsupported",
-  "evaluation": "not_run",
+  "evaluation": "local_add_evaluator_v1",
   "accounting": "not_run"
 }

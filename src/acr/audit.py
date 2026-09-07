@@ -18,6 +18,7 @@ from acr.contracts import (
     EvidenceRef,
     Fact,
     FileBinding,
+    Pair,
     PhysicalAttempt,
     Provenance,
     RepositoryState,
@@ -30,6 +31,7 @@ from acr.store import (
     load_blob,
     load_import,
     load_normalized,
+    load_pair_json,
     load_producer,
     load_producer_manifest,
     load_provenance,
@@ -761,6 +763,140 @@ def audit_evaluation(root: Path, run_id: str, private_spec_ref: str) -> AuditRes
     except OSError:
         blocks.append("malformed_persisted_evaluation_evidence")
     return AuditResult("BLOCK" if blocks else "PASS", tuple(sorted(set(blocks))))
+
+
+def audit_pair(root: Path, pair_id: str, private_spec_ref: str) -> AuditResult:
+    """Audit a persisted noop A/A pair without re-running either arm."""
+
+    blocks: list[str] = []
+    try:
+        pair = Pair.model_validate(load_pair_json(root, pair_id, "pair.json"))
+        manifest_raw = (root / "pairs" / pair_id / "pair_manifest.json").read_bytes()
+        manifest_ref = EvidenceRef.model_validate_json(
+            (root / "pairs" / pair_id / "producer_ref.json").read_text()
+        )
+        producer_file = (root / "pairs" / pair_id / "producer_manifest.json").read_bytes()
+        producer_blob = _load_ref_blob(root, manifest_ref, blocks)
+        manifest = json.loads(manifest_raw)
+        run_a = Run.model_validate(load_run_json(root, pair.baseline_run_id, "run.json"))
+        run_b = Run.model_validate(load_run_json(root, pair.treatment_run_id, "run.json"))
+        initial_a = RepositoryState.model_validate(load_run_json(root, pair.baseline_run_id, "initial_state.json"))
+        initial_b = RepositoryState.model_validate(load_run_json(root, pair.treatment_run_id, "initial_state.json"))
+    except (FileNotFoundError, OSError, UnicodeDecodeError, json.JSONDecodeError, ValidationError, ValueError):
+        return AuditResult("BLOCK", ("malformed_persisted_pair_evidence",))
+    if pair.id != pair_id or pair.mode != "from_scratch" or pair.status != "completed":
+        blocks.append("pair_identity_mismatch")
+    if pair.baseline_run_id == pair.treatment_run_id:
+        blocks.append("pair_same_run")
+    if pair.execution_order not in {"AB", "BA"}:
+        blocks.append("pair_execution_order_mismatch")
+    if hashlib.sha256(manifest_raw).hexdigest() != pair.manifest_hash:
+        blocks.append("pair_manifest_hash_mismatch")
+    pair_manifest_blob = _load_ref_blob(root, pair.provenance_ref, blocks) if pair.provenance_ref else None
+    if (
+        pair.provenance_ref is None
+        or pair.provenance_ref.blob_hash != hashlib.sha256(manifest_raw).hexdigest()
+        or pair.provenance_ref.source_id != "acr_pair_manifest"
+        or pair.provenance_ref.trajectory_key != pair_id
+        or pair.provenance_ref.locator != "/pair-manifest"
+        or pair_manifest_blob != manifest_raw
+    ):
+        blocks.append("pair_manifest_reference_mismatch")
+    if (
+        manifest_ref.source_id != "acr_pair_producer"
+        or manifest_ref.trajectory_key != pair_id
+        or manifest_ref.locator != "/producer-manifest"
+        or pair.producer_ref != manifest_ref
+        or producer_blob != producer_file
+    ):
+        blocks.append("pair_producer_mismatch")
+    try:
+        producer = json.loads(producer_blob) if producer_blob is not None else None
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        producer = None
+    if (
+        not isinstance(producer, dict)
+        or producer.get("producer_kind") != "acr_noop_pair_harness"
+        or producer.get("schema_version") != "1.0"
+        or producer.get("runtime_version") != "m3_noop_pair_v1"
+        or not isinstance(producer.get("code_revision"), str)
+        or len(producer["code_revision"]) != 40
+    ):
+        blocks.append("pair_producer_mismatch")
+    if not isinstance(manifest, dict):
+        return AuditResult("BLOCK", tuple(sorted(set(blocks + ["malformed_persisted_pair_evidence"]))))
+    _audit_pair_manifest(pair, manifest, run_a, run_b, initial_a, initial_b, blocks)
+    if audit_run(root, pair.baseline_run_id).status != "PASS" or audit_run(root, pair.treatment_run_id).status != "PASS":
+        blocks.append("pair_run_audit_block")
+    if audit_evaluation(root, pair.baseline_run_id, private_spec_ref).status != "PASS" or audit_evaluation(root, pair.treatment_run_id, private_spec_ref).status != "PASS":
+        blocks.append("pair_evaluation_audit_block")
+    return AuditResult("BLOCK" if blocks else "PASS", tuple(sorted(set(blocks))))
+
+
+def _audit_pair_manifest(
+    pair: Pair,
+    manifest: dict[str, Any],
+    run_a: Run,
+    run_b: Run,
+    initial_a: RepositoryState,
+    initial_b: RepositoryState,
+    blocks: list[str],
+) -> None:
+    """Validate pre-frozen arm conditions against persisted run evidence."""
+
+    required = (
+        "pair_id", "replicate_id", "task_id", "baseline_run_id", "treatment_run_id",
+        "execution_order", "mode", "source_tree_hash", "semantic_config_A", "semantic_config_B",
+        "semantic_config_hash_A", "semantic_config_hash_B", "workspace_identity_A", "workspace_identity_B",
+    )
+    if any(key not in manifest for key in required):
+        blocks.append("pair_manifest_incomplete")
+        return
+    if (
+        manifest["pair_id"] != pair.id
+        or manifest["replicate_id"] != pair.replicate_id
+        or manifest["task_id"] != pair.task_id
+        or manifest["baseline_run_id"] != pair.baseline_run_id
+        or manifest["treatment_run_id"] != pair.treatment_run_id
+        or manifest["execution_order"] != pair.execution_order
+        or manifest["mode"] != pair.mode
+    ):
+        blocks.append("pair_manifest_run_binding_mismatch")
+    config_a, config_b = manifest["semantic_config_A"], manifest["semantic_config_B"]
+    if not isinstance(config_a, dict) or not isinstance(config_b, dict):
+        blocks.append("pair_semantic_config_mismatch")
+        return
+    canonical_a = hashlib.sha256(json.dumps(config_a, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    canonical_b = hashlib.sha256(json.dumps(config_b, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    if (
+        config_a != config_b
+        or manifest["semantic_config_hash_A"] != canonical_a
+        or manifest["semantic_config_hash_B"] != canonical_b
+        or canonical_a != canonical_b
+        or config_a.get("intervention") != "noop"
+        or config_b.get("intervention") != "noop"
+    ):
+        blocks.append("pair_semantic_config_mismatch")
+    if pair.preflight_result.status != "observed" or pair.preflight_result.value is not True or pair.preflight_result.refs != [pair.provenance_ref]:
+        blocks.append("pair_preflight_evidence_mismatch")
+    if run_a.task_id != pair.task_id or run_b.task_id != pair.task_id:
+        blocks.append("pair_task_identity_mismatch")
+    source_hash = manifest["source_tree_hash"]
+    if (
+        initial_a.initial_tree_hash != source_hash
+        or initial_b.initial_tree_hash != source_hash
+        or config_a.get("task_source_tree_hash") != source_hash
+        or config_b.get("task_source_tree_hash") != source_hash
+    ):
+        blocks.append("pair_initial_state_mismatch")
+    if (
+        run_a.capabilities.get("workspace_identity") != manifest["workspace_identity_A"]
+        or run_b.capabilities.get("workspace_identity") != manifest["workspace_identity_B"]
+        or manifest["workspace_identity_A"] == manifest["workspace_identity_B"]
+    ):
+        blocks.append("pair_workspace_isolation_mismatch")
+    if run_a.config_ref.blob_hash != run_b.config_ref.blob_hash:
+        blocks.append("pair_runtime_config_mismatch")
 
 
 def _audit_evaluation_producer(

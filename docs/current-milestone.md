@@ -1,99 +1,59 @@
-# Current milestone: M2.0 — Observation Protocol Freeze + Trusted Capture Slice
+# Current milestone: M3 — Noop / A-A Paired-Run Feasibility
 
-M1 remains DONE. M2 is authorized only for the minimal trusted-capture
-vertical slice: protocol, persisted runtime evidence, send-boundary capture,
-complete `read_file` binding, workspace verification, sealing, and adversarial
-engineering tests. No context optimization or paired rerun is in scope.
+M0, M1, and M2 are DONE. This M3 gate is limited to one real DeepSeek noop
+A/A pair. It validates a paired-run harness, not an intervention, benchmark,
+or context-optimization result.
 
 New integrity gates are cumulative. Do not delete, weaken, replace, or stop
-executing an already-established M1/M1.1 invariant or regression test merely
-to satisfy a newer M1.2 gate.
+executing any established M0/M1/M2 invariant or regression merely to satisfy a
+new M3 gate.
 
 ## Required gates
 
-- `docs/observation-protocol.md` freezes observation boundaries, raw evidence,
-  status semantics, occurrence identity, contract binding, failure modes, and
-  adversarial test for actual request, attempt, response, usage, tools, reads,
-  state, final artifacts, and evaluation.
-- Actual sent bytes are captured at the physical transport call, distinct from
-  draft/prepared bytes. Every physical attempt is retained, including a thrown
-  transport exception with failure evidence rather than a fake response.
-- Physical-attempt inventory, snapshot, request-event, and terminal-event
-  attempt sets must be exactly one-to-one. Each inventory record is producer/run
-  bound, has the exact attempt sent-body locator, and carries a terminal
-  response/failure reference that agrees with the terminal event. Usage facts
-  must exactly resolve from their raw response `/usage`.
-- Request before/prepared/sent evidence is occurrence-bound to its own attempt
-  locator even when another attempt has identical bytes. Runtime producer and
-  config refs must resolve to this run's persisted producer/config blobs; every
-  snapshot must use `Run.config_ref`.
-- Runtime events have authoritative serial `event_seq`; raw payloads precede
-  normalized events. The audit reads persisted run artifacts only.
-- `read_file` binds relative path, actual bytes, SHA256, UTF-8 full-read mode,
-  read occurrence, run identity, and closed tool event.
-- Initial workspace is verified without symlinks; protected data/evaluator roots
-  cannot overlap workspace. Initial/final state hashes have separate semantics
-  and raw refs; final tree/state binds to a sealed run.
-- Evaluation remains outside runtime. No evaluator result may be fabricated.
-  The persisted `EvaluationResult`, evaluator `producer_ref.json`, exact
-  producer-manifest blob, frozen evaluator revision, and private-spec SHA256
-  must close under persisted audit. Evaluator execution verifies a sealed
-  workspace, then uses an isolated copy so private test by-products cannot
-  alter the sealed artifact.
+- Persist the pair manifest before either physical provider request. It freezes
+  pair/replicate/task IDs, both preallocated run IDs, provider/model, task
+  manifest hash, source-tree hash, code revision, evaluator version,
+  private-spec hash, noop intervention, attempt budget, cache limitation,
+  execution order, and occurrence-free semantic config hashes for both arms.
+- A and A' are both `noop`; their semantic configs must be byte-canonically
+  equal. Run ID, time, provider ID, output, usage, and final artifact are
+  execution occurrences and may differ. Do not describe their difference as an
+  intervention effect.
+- Copy the same frozen public source into two distinct fresh workspaces before
+  requests. Both initial tree hashes must equal the source tree; execution
+  workspace identities must be distinct and remain separate from tree identity.
+- Each arm has a distinct runtime/provider capture instance, physical-attempt
+  inventory, events, snapshots, workspace, seal, and independent evaluator
+  execution. Each runtime and evaluation audit must PASS from persisted
+  artifacts.
+- Persist a completed `Pair` only after both arms/evaluations finish. Pair
+  audit must close the exact manifest blob, pair producer blob, run identities,
+  task/config/source equality, noop condition, execution order, runtime audits,
+  and evaluation audits.
+- Pair mutations must BLOCK through production persisted audit: same run twice,
+  task/config/intervention/source mismatch, failed runtime/evaluation audit,
+  private-spec/evaluator divergence, execution-order or manifest tamper, and
+  arm occurrence swapping.
+- Provider cache isolation remains `unsupported`; usage/cache differences are
+  observations, not causal claims.
 
-## Retained M1/M1.1 regressions
+## Real A/A gate
 
-- Source manifest completeness and raw-ref ↔ manifest `raw_sha256` binding.
-- `source_id` / `trajectory_key` / instance identity consistency.
-- Every provenance raw input ref must bind to this import's exact `raw_ref`
-  blob hash, not merely to another valid blob with matching labels or content.
-- The frozen MSWE-agent source type, repository, commit, artifact path, instance
-  identity, and raw SHA256 must match their pinned values.
-- Referenced raw blob exists and its hash matches.
-- Invalid locator, wrong EvidenceRef blob hash, tampered normalized field,
-  missing provenance, and conflicting provenance each BLOCK.
-- Persisted artifact round-trip and immutable-write integrity.
-
-## M2 adversarial and E2E gates
-
-- Keep every M1/M1.1/M1.2 regression.
-- Prepared/sent divergence, retry merge, lost failed attempt, missing usage
-  default, usage value/ref/locator mutation, unfinished tool, file-byte replacement, same-path mutation,
-  workspace escape, evaluator-root overlap, post-seal event, wrong-run ref,
-  malformed persisted runtime evidence, state mismatch, and file-occurrence
-  laundering must each reject or BLOCK.
-- Run a clean engineering-fixture capture and persisted `audit-run`; it is not
-  a real provider smoke.
-- The first real-smoke command is fixed to the public DeepSeek add-task fixture.
-  It is bounded to two requests (and never more than the frozen hard limit of
-  five), requires an explicit model request for the sole `read_file`, and seals
-  a task failure rather than retrying a nonconforming response.
+Run only one pair, sequentially, with one provider/model/task and no more than
+five physical attempts per arm. The public add task must produce at least one
+exact `read_file` binding per arm. Real runtime/evaluator evidence and private
+specs remain local-only and must never be committed. A clean Git worktree and
+available non-secret credential are mandatory preflight conditions.
 
 ## Prohibited
 
-No duplicate detection, candidate, intervention, paired rerun, A/A, benchmark
-execution, accounting, dashboard, learned policy,
-second provider, or second task suite. Do not retry Flash or add a trajectory.
+No candidate detection, intervention, deletion/compression, paired treatment,
+multiple replicates, benchmark execution, cost claims, A/A statistics, second
+task/provider/model, parallel execution, framework/registry expansion, or M4
+work.
 
 ## Completion rule
 
-An engineering fixture may validate capture wiring only. M2 stays IN PROGRESS
-until a separately frozen, real provider/model/task/environment is available,
-one real smoke is captured and sealed, and the required runtime/evaluator
-conditions in the frozen MVP plan are met. A real task failure is evidence, not
-an engineering failure, if capture and sealing remain complete.
-
-The frozen DeepSeek real smoke has now completed on a clean, recorded code
-revision with two physical attempts, one exact file read, a sealed run, and
-persisted audit PASS. Its local runtime evidence is intentionally not committed.
-M2 remains IN PROGRESS because no independent evaluator has run.
-
-The independent private add evaluator has executed against the preserved sealed
-smoke artifact. It emitted raw evaluator evidence and a persisted
-`EvaluationResult`; the producer/private-spec provenance refresh audit PASS
-records `resolved=false` because the sealed workspace was not modified. M2 is
-therefore complete; M3 remains out of scope.
-
-The engineering integrity closure is complete: persisted audit now blocks
-physical-inventory, request-occurrence, raw-usage, producer/config-reference,
-state-reference/tree, and file-occurrence laundering.
+One successful real pair may be reported as `M3 Noop/A-A paired-run feasibility:
+PASS`; M3 overall remains IN PROGRESS because frozen-plan M3 includes more
+than one small task and no actual intervention has yet been authorized.
