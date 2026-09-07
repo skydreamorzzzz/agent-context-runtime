@@ -701,6 +701,7 @@ def test_private_add_evaluator_is_sealed_only_persisted_and_fail_closed(tmp_path
     assert result.failed.value == 3
     assert result.resolved.value is False
     assert audit_evaluation(tmp_path / "data", "eval-run", str(private_spec)).status == "PASS"
+    assert not (workspace / "__pycache__").exists()
 
     result_path = tmp_path / "data" / "evaluations" / "eval-run" / "evaluation_result.json"
     tampered = json.loads(result_path.read_text()); tampered["resolved"]["value"] = True; result_path.write_text(json.dumps(tampered))

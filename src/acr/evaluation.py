@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from acr.contracts import EvaluationResult, EvidenceRef, Fact, Run
@@ -50,12 +52,26 @@ class LocalAddEvaluator:
         private_spec = Path(private_spec_ref)
         spec_bytes = private_spec.read_bytes()
         spec_hash = hashlib.sha256(spec_bytes).hexdigest()
-        completed = subprocess.run(
-            [sys.executable, "-m", "acr.evaluation_worker", "--workspace", str(self._sealed_workspace), "--spec", str(private_spec)],
-            capture_output=True,
-            check=False,
-            text=False,
-        )
+        # The evaluator verifies the sealed workspace, then executes private
+        # tests in an isolated copy.  Imports and test by-products must never
+        # mutate the sealed artifact used as the submission identity.
+        with tempfile.TemporaryDirectory(prefix="acr-evaluator-") as temporary:
+            execution_workspace = Path(temporary) / "workspace"
+            shutil.copytree(self._sealed_workspace, execution_workspace)
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "acr.evaluation_worker",
+                    "--workspace",
+                    str(execution_workspace),
+                    "--spec",
+                    str(private_spec),
+                ],
+                capture_output=True,
+                check=False,
+                text=False,
+            )
         raw = completed.stdout if completed.returncode == 0 else json.dumps(
             {"status": "infra_error", "error_type": "evaluator_worker_failed"}, sort_keys=True
         ).encode()
