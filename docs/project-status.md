@@ -7,7 +7,8 @@ M2 Observation Protocol: DONE
 M2 Trusted Capture: DONE
 Real provider smoke: PASS
 
-Latest implementation checkpoint: `86aef1a` — DeepSeek real-smoke capture.
+Latest implementation checkpoint: `6a8141d` — evaluator producer/private-spec
+provenance closure and isolated evaluator execution workspace.
 
 Current context/document baseline: repository HEAD (including the Git
 credential-hygiene handoff protocol).
@@ -72,6 +73,13 @@ M1 DONE denotes the historical persisted-evidence closure only. M2 native
 trusted capture is DONE: the preserved real run has a sealed-artifact-bound,
 independent private evaluator result with `resolved=false`. The model's text
 answer was not treated as a workspace patch or a positive evaluation.
+
+The original local evaluator artifact predates the final producer-identity
+closure and is retained without alteration. A later local-only evaluator
+observation against the same preserved sealed real artifact records the actual
+clean evaluator code revision, exact producer-manifest blob, and private-spec
+SHA256; runtime and evaluation audits PASS. Raw run/evaluation data and private
+specs remain ignored and uncommitted.
 
 Next gate: M3 noop / A-A remains a separate authorization decision. Do not
 extend synthetic integrity scope absent a new explicit P0 finding.

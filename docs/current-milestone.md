@@ -35,6 +35,11 @@ to satisfy a newer M1.2 gate.
   cannot overlap workspace. Initial/final state hashes have separate semantics
   and raw refs; final tree/state binds to a sealed run.
 - Evaluation remains outside runtime. No evaluator result may be fabricated.
+  The persisted `EvaluationResult`, evaluator `producer_ref.json`, exact
+  producer-manifest blob, frozen evaluator revision, and private-spec SHA256
+  must close under persisted audit. Evaluator execution verifies a sealed
+  workspace, then uses an isolated copy so private test by-products cannot
+  alter the sealed artifact.
 
 ## Retained M1/M1.1 regressions
 
@@ -67,7 +72,7 @@ to satisfy a newer M1.2 gate.
 ## Prohibited
 
 No duplicate detection, candidate, intervention, paired rerun, A/A, benchmark
-execution, evaluator implementation, accounting, dashboard, learned policy,
+execution, accounting, dashboard, learned policy,
 second provider, or second task suite. Do not retry Flash or add a trajectory.
 
 ## Completion rule
@@ -83,10 +88,11 @@ revision with two physical attempts, one exact file read, a sealed run, and
 persisted audit PASS. Its local runtime evidence is intentionally not committed.
 M2 remains IN PROGRESS because no independent evaluator has run.
 
-The independent private add evaluator has now executed against the preserved
-sealed smoke workspace. It emitted raw evaluator evidence and a persisted
-`EvaluationResult`; audit PASS records `resolved=false` because the sealed
-workspace was not modified. M2 is therefore complete; M3 remains out of scope.
+The independent private add evaluator has executed against the preserved sealed
+smoke artifact. It emitted raw evaluator evidence and a persisted
+`EvaluationResult`; the producer/private-spec provenance refresh audit PASS
+records `resolved=false` because the sealed workspace was not modified. M2 is
+therefore complete; M3 remains out of scope.
 
 The engineering integrity closure is complete: persisted audit now blocks
 physical-inventory, request-occurrence, raw-usage, producer/config-reference,
