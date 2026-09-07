@@ -2,10 +2,12 @@
 
 M0: DONE
 M1: DONE
-M2: IN PROGRESS
+M2 Observation Protocol: DONE
+M2 Trusted Capture: IN PROGRESS
+Real provider smoke: NOT RUN
 
 Latest implementation checkpoint: repository HEAD — M2 trusted-capture
-engineering integrity closure in progress.
+engineering integrity closure complete (engineering fixture only).
 
 Current context/document baseline: repository HEAD (including the Git
 credential-hygiene handoff protocol).
@@ -54,8 +56,11 @@ engineering transport fixture. Its closure now includes exception attempts,
 one-to-one attempt sets, raw-response usage binding, phase-specific repository
 state, sealed-state closure, and exact file-read occurrence binding.
 
-M2 trusted-capture engineering integrity closure: COMPLETE. This is not whole
-M2 completion; real smoke and evaluator gates remain unstarted.
+M2 trusted-capture engineering integrity closure: COMPLETE. The persisted
+audit closes physical-attempt inventory, exact request occurrence, runtime
+producer, and runtime config identity in addition to the prior exception,
+usage, state, and file-read gates. This is not whole M2 completion; real smoke
+and evaluator gates remain unstarted.
 
 Real provider smoke: BLOCKED / NOT RUN. `configs/pilot.json` remains a template
 and does not freeze a provider, model, task manifest, image digest, or budget.
@@ -66,3 +71,7 @@ or cost claim exists.
 M1 DONE denotes the historical persisted-evidence closure only. M2 native
 trusted capture is in progress; the engineering fixture does not satisfy the
 frozen plan's real-task/evaluator M2 completion condition.
+
+Next gate: freeze one real provider/model/task/environment and execute the
+first real Coding Agent smoke. Do not extend synthetic integrity scope absent a
+new explicit P0 finding.

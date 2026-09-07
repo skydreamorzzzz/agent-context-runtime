@@ -101,6 +101,10 @@ class CapturedRuntime:
     def sealed(self) -> bool:
         return self._sealed
 
+    @property
+    def producer_ref(self) -> EvidenceRef:
+        return self._producer_ref
+
     def _persist_producer(self) -> EvidenceRef:
         code_revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
         manifest = {
@@ -160,7 +164,11 @@ class CapturedRuntime:
         attempt_id = f"attempt:{self.run_id}:{self._attempt_seq}"
         self._attempt_seq += 1
         prepared = provider.prepare(RequestDraft(body=body))
-        provider.bind_capture(data_root=self.data_root, run_id=self.run_id)
+        provider.bind_capture(
+            data_root=self.data_root,
+            run_id=self.run_id,
+            producer_ref=self._producer_ref,
+        )
         attempt = provider.send(prepared, attempt_id)
         cutoff_seq = max((event.available_seq or 0 for event in self._events), default=0)
         snapshot = RequestSnapshot(

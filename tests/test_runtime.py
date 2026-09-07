@@ -429,3 +429,150 @@ def test_file_binding_occurrence_laundering_is_blocked(tmp_path: Path) -> None:
     blocks = audit_run(root, "run-1").blocks
     assert "duplicate_tool_occurrence" in blocks
     assert "file_binding_occurrence_mismatch" in blocks
+
+
+def _two_identical_attempts(tmp_path: Path) -> Path:
+    runtime, _ = _runtime(tmp_path)
+    provider = CapturedProvider(lambda body, attempt_id: TransportResult("ok", b'{"id":"same"}'))
+    runtime.send_request(provider, b'{"prompt":"same"}', "call-1")
+    runtime.send_request(provider, b'{"prompt":"same"}', "call-1")
+    runtime.seal(status="completed")
+    return tmp_path / "data"
+
+
+@pytest.mark.parametrize("field", ["before_body_ref", "prepared_body_ref", "sent_body_ref"])
+def test_request_evidence_occurrence_laundering_is_blocked(tmp_path: Path, field: str) -> None:
+    root = _two_identical_attempts(tmp_path / field)
+    path = root / "runs" / "run-1" / "requests.jsonl"
+    requests = _jsonl(path)
+    assert requests[0][field]["blob_hash"] == requests[1][field]["blob_hash"]
+    requests[0][field]["locator"] = requests[1][field]["locator"]
+    _write_jsonl(path, requests)
+    blocks = audit_run(root, "run-1").blocks
+    assert "request_occurrence_mismatch" in blocks
+
+
+def test_physical_attempt_inventory_closes_direct_send_and_mutations(tmp_path: Path) -> None:
+    runtime, _ = _runtime(tmp_path / "bypass")
+    provider = CapturedProvider(lambda body, attempt_id: TransportResult("ok", b'{"id":"direct"}'))
+    provider.bind_capture(
+        data_root=runtime.data_root,
+        run_id=runtime.run_id,
+        producer_ref=runtime.producer_ref,
+    )
+    provider.send(provider.prepare(RequestDraft(b"direct")), "attempt:run-1:direct")
+    runtime.seal(status="completed")
+    blocks = audit_run(tmp_path / "bypass" / "data", "run-1").blocks
+    assert "orphan_physical_attempt" in blocks
+
+    root = _two_identical_attempts(tmp_path / "deleted")
+    physical = root / "runs" / "run-1" / "physical_attempts"
+    for path in physical.glob("*.json"):
+        path.unlink()
+    physical.rmdir()
+    blocks = audit_run(root, "run-1").blocks
+    assert "physical_attempt_inventory_mismatch" in blocks
+    assert "normalized_attempt_without_physical_evidence" in blocks
+
+    root = _two_identical_attempts(tmp_path / "sent-mismatch")
+    physical = root / "runs" / "run-1" / "physical_attempts"
+    first = physical / "physical-attempt:attempt:run-1:0:entered.json"
+    second = physical / "physical-attempt:attempt:run-1:1:entered.json"
+    first_record = json.loads(first.read_text())
+    second_record = json.loads(second.read_text())
+    assert first_record["sent_body_ref"]["blob_hash"] == second_record["sent_body_ref"]["blob_hash"]
+    first_record["sent_body_ref"] = second_record["sent_body_ref"]
+    first.write_text(json.dumps(first_record))
+    assert "physical_attempt_sent_mismatch" in audit_run(root, "run-1").blocks
+
+    root = _two_identical_attempts(tmp_path / "duplicate")
+    physical = root / "runs" / "run-1" / "physical_attempts"
+    original = physical / "physical-attempt:attempt:run-1:0:terminal.json"
+    duplicate = physical / "duplicate.json"
+    duplicate.write_bytes(original.read_bytes())
+    assert "duplicate_physical_attempt" in audit_run(root, "run-1").blocks
+
+    root = _two_identical_attempts(tmp_path / "terminal-deleted")
+    physical = root / "runs" / "run-1" / "physical_attempts"
+    (physical / "physical-attempt:attempt:run-1:0:terminal.json").unlink()
+    assert "physical_attempt_terminal_missing" in audit_run(root, "run-1").blocks
+
+
+def test_runtime_producer_and_config_references_are_closed(tmp_path: Path) -> None:
+    runtime, _ = _runtime(tmp_path / "producer-file")
+    _complete(runtime)
+    root = tmp_path / "producer-file" / "data"
+    (root / "runs" / "run-1" / "producer_manifest.json").write_text('{"producer_kind":"tampered"}')
+    assert "runtime_producer_mismatch" in audit_run(root, "run-1").blocks
+
+    runtime, _ = _runtime(tmp_path / "producer-ref")
+    _complete(runtime)
+    root = tmp_path / "producer-ref" / "data"
+    ref_path = root / "runs" / "run-1" / "producer_ref.json"
+    ref = json.loads(ref_path.read_text())
+    ref["blob_hash"] = "0" * 64
+    ref_path.write_text(json.dumps(ref))
+    assert "referenced_blob_missing" in audit_run(root, "run-1").blocks
+
+    runtime, _ = _runtime(tmp_path / "producer-run")
+    _complete(runtime)
+    root = tmp_path / "producer-run" / "data"
+    ref_path = root / "runs" / "run-1" / "producer_ref.json"
+    ref = json.loads(ref_path.read_text())
+    ref["trajectory_key"] = "other-run"
+    ref_path.write_text(json.dumps(ref))
+    assert "wrong_run_evidence_reference" in audit_run(root, "run-1").blocks
+
+    runtime, _ = _runtime(tmp_path / "run-producer-ref")
+    _complete(runtime)
+    root = tmp_path / "run-producer-ref" / "data"
+    run_path = root / "runs" / "run-1" / "run.json"
+    run = json.loads(run_path.read_text())
+    run["producer_ref"]["blob_hash"] = "0" * 64
+    run_path.write_text(json.dumps(run))
+    assert "runtime_producer_mismatch" in audit_run(root, "run-1").blocks
+
+    runtime, _ = _runtime(tmp_path / "producer-value")
+    _complete(runtime)
+    root = tmp_path / "producer-value" / "data"
+    manifest = json.loads((root / "runs" / "run-1" / "producer_manifest.json").read_text())
+    manifest["runtime_version"] = "tampered"
+    ref = ingest_runtime_bytes(
+        json.dumps(manifest, sort_keys=True, indent=2).encode() + b"\n",
+        root,
+        "run-1",
+        "/producer-manifest",
+    )
+    (root / "runs" / "run-1" / "producer_manifest.json").write_text(
+        json.dumps(manifest, sort_keys=True, indent=2) + "\n"
+    )
+    (root / "runs" / "run-1" / "producer_ref.json").write_text(ref.model_dump_json())
+    assert "runtime_producer_manifest_invalid" in audit_run(root, "run-1").blocks
+
+    runtime, _ = _runtime(tmp_path / "config-run")
+    _complete(runtime)
+    root = tmp_path / "config-run" / "data"
+    run_path = root / "runs" / "run-1" / "run.json"
+    run = json.loads(run_path.read_text())
+    run["config_ref"]["trajectory_key"] = "other-run"
+    run_path.write_text(json.dumps(run))
+    assert "runtime_config_reference_mismatch" in audit_run(root, "run-1").blocks
+
+    runtime, _ = _runtime(tmp_path / "config-blob")
+    _complete(runtime)
+    root = tmp_path / "config-blob" / "data"
+    run_path = root / "runs" / "run-1" / "run.json"
+    run = json.loads(run_path.read_text())
+    run["config_ref"]["blob_hash"] = "0" * 64
+    run_path.write_text(json.dumps(run))
+    blocks = audit_run(root, "run-1").blocks
+    assert "referenced_blob_missing" in blocks
+    assert "runtime_config_reference_mismatch" in blocks
+
+    root = _two_identical_attempts(tmp_path / "config-request")
+    alternate = ingest_runtime_bytes(b'{"provider":"other"}', root, "run-1", "/other-config")
+    requests_path = root / "runs" / "run-1" / "requests.jsonl"
+    requests = _jsonl(requests_path)
+    requests[1]["model_config_ref"] = alternate.model_dump()
+    _write_jsonl(requests_path, requests)
+    assert "request_config_reference_mismatch" in audit_run(root, "run-1").blocks

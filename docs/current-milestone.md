@@ -18,8 +18,15 @@ to satisfy a newer M1.2 gate.
 - Actual sent bytes are captured at the physical transport call, distinct from
   draft/prepared bytes. Every physical attempt is retained, including a thrown
   transport exception with failure evidence rather than a fake response.
-- Snapshot, request-event, and terminal-event attempt sets must be exactly
-  one-to-one. Usage facts must exactly resolve from their raw response `/usage`.
+- Physical-attempt inventory, snapshot, request-event, and terminal-event
+  attempt sets must be exactly one-to-one. Each inventory record is producer/run
+  bound, has the exact attempt sent-body locator, and carries a terminal
+  response/failure reference that agrees with the terminal event. Usage facts
+  must exactly resolve from their raw response `/usage`.
+- Request before/prepared/sent evidence is occurrence-bound to its own attempt
+  locator even when another attempt has identical bytes. Runtime producer and
+  config refs must resolve to this run's persisted producer/config blobs; every
+  snapshot must use `Run.config_ref`.
 - Runtime events have authoritative serial `event_seq`; raw payloads precede
   normalized events. The audit reads persisted run artifacts only.
 - `read_file` binds relative path, actual bytes, SHA256, UTF-8 full-read mode,
@@ -68,4 +75,5 @@ conditions in the frozen MVP plan are met. A real task failure is evidence, not
 an engineering failure, if capture and sealing remain complete.
 
 The engineering integrity closure is complete: persisted audit now blocks
-attempt-set, raw-usage, state-reference/tree, and file-occurrence laundering.
+physical-inventory, request-occurrence, raw-usage, producer/config-reference,
+state-reference/tree, and file-occurrence laundering.

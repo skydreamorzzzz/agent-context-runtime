@@ -10,8 +10,8 @@ import json
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from acr.contracts import EvidenceRef, Fact
-from acr.store import ingest_runtime_bytes
+from acr.contracts import EvidenceRef, Fact, PhysicalAttempt
+from acr.store import ingest_runtime_bytes, persist_physical_attempt
 
 
 @dataclass(frozen=True)
@@ -59,17 +59,21 @@ class CapturedProvider:
         self._send_serializer = send_serializer or (lambda prepared: prepared.prepared_body)
         self._data_root = None
         self._run_id: str | None = None
+        self._producer_ref: EvidenceRef | None = None
 
     def prepare(self, request: RequestDraft) -> PreparedRequest:
         return PreparedRequest(before_body=request.body, prepared_body=request.body)
 
-    def bind_capture(self, *, data_root, run_id: str) -> None:
+    def bind_capture(self, *, data_root, run_id: str, producer_ref: EvidenceRef) -> None:
         """Bind the one run that owns this provider's persisted observations."""
 
-        if self._run_id is not None and (self._run_id != run_id or self._data_root != data_root):
+        if self._run_id is not None and (
+            self._run_id != run_id or self._data_root != data_root or self._producer_ref != producer_ref
+        ):
             raise ValueError("provider capture is already bound to another run")
         self._data_root = data_root
         self._run_id = run_id
+        self._producer_ref = producer_ref
 
     def send(self, prepared: PreparedRequest, attempt_id: str) -> CapturedAttempt:
         """Persist before/prepared/sent evidence at the physical send boundary.
@@ -79,7 +83,7 @@ class CapturedProvider:
         be hidden by reserializing ``prepared`` after the fact.
         """
 
-        if self._data_root is None or self._run_id is None:
+        if self._data_root is None or self._run_id is None or self._producer_ref is None:
             raise RuntimeError("provider send requires a bound capture run")
         before_ref = ingest_runtime_bytes(
             prepared.before_body, self._data_root, self._run_id, f"/attempts/{attempt_id}/before"
@@ -92,6 +96,17 @@ class CapturedProvider:
         )
         sent = self._send_serializer(prepared)
         sent_ref = ingest_runtime_bytes(sent, self._data_root, self._run_id, f"/attempts/{attempt_id}/sent")
+        self._persist_attempt(
+            PhysicalAttempt(
+                kind="physical_attempt",
+                id=f"physical-attempt:{attempt_id}:entered",
+                producer_ref=self._producer_ref,
+                run_id=self._run_id,
+                attempt_id=attempt_id,
+                phase="entered",
+                sent_body_ref=sent_ref,
+            )
+        )
         try:
             result = self._transport(sent, attempt_id)
         except Exception as error:  # noqa: BLE001 - transport exceptions are evidence, not control flow
@@ -100,6 +115,19 @@ class CapturedProvider:
                 self._data_root,
                 self._run_id,
                 f"/attempts/{attempt_id}/transport-failure",
+            )
+            self._persist_attempt(
+                PhysicalAttempt(
+                    kind="physical_attempt",
+                    id=f"physical-attempt:{attempt_id}:terminal",
+                    producer_ref=self._producer_ref,
+                    run_id=self._run_id,
+                    attempt_id=attempt_id,
+                    phase="terminal",
+                    sent_body_ref=sent_ref,
+                    terminal_state="transport_exception",
+                    failure_ref=failure_ref,
+                )
             )
             return CapturedAttempt(
                 attempt_id=attempt_id,
@@ -117,6 +145,19 @@ class CapturedProvider:
             result.response_body, self._data_root, self._run_id, f"/attempts/{attempt_id}/response"
         )
         usage_ref, usage = _observed_usage(result.response_body, response_ref)
+        self._persist_attempt(
+            PhysicalAttempt(
+                kind="physical_attempt",
+                id=f"physical-attempt:{attempt_id}:terminal",
+                producer_ref=self._producer_ref,
+                run_id=self._run_id,
+                attempt_id=attempt_id,
+                phase="terminal",
+                sent_body_ref=sent_ref,
+                terminal_state="response_observed",
+                raw_response_ref=response_ref,
+            )
+        )
         return CapturedAttempt(
             attempt_id=attempt_id,
             before_body_ref=before_ref,
@@ -129,6 +170,10 @@ class CapturedProvider:
             transport_status=result.status,
             provider_request_id=result.provider_request_id,
         )
+
+    def _persist_attempt(self, attempt: PhysicalAttempt) -> None:
+        assert self._data_root is not None
+        persist_physical_attempt(self._data_root, attempt.run_id, attempt)
 
 
 def _observed_usage(response_body: bytes, response_ref: EvidenceRef) -> tuple[EvidenceRef | None, Fact[dict]]:

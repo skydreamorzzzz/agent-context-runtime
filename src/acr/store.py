@@ -84,6 +84,18 @@ def persist_run_jsonl(data_root: Path, run_id: str, name: str, values: list[Any]
     _write_once(data_root / "runs" / run_id / name, content)
 
 
+def persist_physical_attempt(data_root: Path, run_id: str, value: Any) -> None:
+    """Persist one physical attempt occurrence once; retries require a new ID."""
+
+    identifier = value.id
+    if "/" in identifier or identifier in {"", ".", ".."}:
+        raise ValueError("invalid physical attempt identity")
+    path = data_root / "runs" / run_id / "physical_attempts" / f"{identifier}.json"
+    if path.exists():
+        raise ValueError("physical attempt occurrence already exists")
+    _write_once(path, value.model_dump_json(indent=2).encode() + b"\n")
+
+
 def load_run_json(data_root: Path, run_id: str, name: str) -> Any:
     return json.loads((data_root / "runs" / run_id / name).read_text())
 

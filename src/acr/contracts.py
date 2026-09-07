@@ -145,6 +145,33 @@ class RequestSnapshot(Envelope):
     provider_request_id: str | None = None
 
 
+class PhysicalAttempt(Envelope):
+    """Physical transport-boundary evidence, independent of caller normalization."""
+
+    run_id: str
+    attempt_id: str
+    phase: Literal["entered", "terminal"]
+    sent_body_ref: EvidenceRef
+    terminal_state: Literal["response_observed", "transport_exception"] | None = None
+    raw_response_ref: EvidenceRef | None = None
+    failure_ref: EvidenceRef | None = None
+
+    @model_validator(mode="after")
+    def enforce_phase_semantics(self) -> PhysicalAttempt:
+        if self.phase == "entered":
+            if self.terminal_state is not None or self.raw_response_ref is not None or self.failure_ref is not None:
+                raise ValueError("entered physical attempts cannot claim a terminal result")
+        elif self.terminal_state == "response_observed":
+            if self.raw_response_ref is None or self.failure_ref is not None:
+                raise ValueError("response terminal requires only raw_response_ref")
+        elif self.terminal_state == "transport_exception":
+            if self.failure_ref is None or self.raw_response_ref is not None:
+                raise ValueError("exception terminal requires only failure_ref")
+        else:
+            raise ValueError("terminal physical attempts require terminal_state")
+        return self
+
+
 class RepositoryState(Envelope):
     run_id: str
     state_phase: Literal["initial", "final"] = "initial"

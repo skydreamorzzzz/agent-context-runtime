@@ -17,6 +17,7 @@ from acr.contracts import (
     EvidenceRef,
     Fact,
     FileBinding,
+    PhysicalAttempt,
     Provenance,
     RepositoryState,
     RequestSnapshot,
@@ -277,8 +278,10 @@ def _audit_runtime(root: Path, run_id: str, blocks: list[str]) -> None:
     events = _load_jsonl_models(run_root / "events.jsonl", Event, blocks)
     snapshots = _load_jsonl_models(run_root / "requests.jsonl", RequestSnapshot, blocks)
     bindings = _load_jsonl_models(run_root / "file_bindings.jsonl", FileBinding, blocks)
-    if events is None or snapshots is None or bindings is None:
+    physical_attempts = _load_physical_attempts(run_root, blocks)
+    if events is None or snapshots is None or bindings is None or physical_attempts is None:
         return
+    _audit_runtime_config(root, run_id, run, blocks)
     event_blob = _runtime_ref(root, run_id, run.events_ref, blocks)
     expected_events = b"".join(event.model_dump_json().encode() + b"\n" for event in events)
     if event_blob is not None and event_blob != expected_events:
@@ -300,7 +303,7 @@ def _audit_runtime(root: Path, run_id: str, blocks: list[str]) -> None:
         if payload is None:
             continue
         payloads[event.event_seq] = payload
-    _audit_requests(root, run_id, snapshots, events, payloads, producer, blocks)
+    _audit_requests(root, run_id, snapshots, events, payloads, physical_attempts, producer, run, blocks)
     _audit_file_bindings(root, run_id, bindings, events, payloads, final, blocks)
 
 
@@ -312,9 +315,56 @@ def _load_runtime_producer(root: Path, run_id: str, run: Run, blocks: list[str])
         blocks.append("malformed_persisted_runtime_evidence")
         return run.producer_ref
     producer_blob = _runtime_ref(root, run_id, persisted_ref, blocks)
-    if run.producer_ref != persisted_ref or producer_blob != persisted_file:
+    if (
+        persisted_ref.source_id != "acr_runtime"
+        or persisted_ref.trajectory_key != run_id
+        or persisted_ref.locator != "/producer-manifest"
+        or run.producer_ref != persisted_ref
+        or producer_blob != persisted_file
+    ):
         blocks.append("runtime_producer_mismatch")
+    if producer_blob is None:
+        return persisted_ref
+    try:
+        manifest = json.loads(producer_blob)
+    except (TypeError, UnicodeDecodeError, json.JSONDecodeError):
+        blocks.append("runtime_producer_malformed")
+        return persisted_ref
+    required = ("producer_kind", "code_revision", "schema_version", "runtime_version")
+    if (
+        not isinstance(manifest, dict)
+        or any(not isinstance(manifest.get(key), str) or not manifest[key].strip() for key in required)
+        or manifest.get("schema_version") != "1.0"
+        or manifest.get("runtime_version") != "m2_capture_v1"
+    ):
+        blocks.append("runtime_producer_manifest_invalid")
     return persisted_ref
+
+
+def _load_physical_attempts(run_root: Path, blocks: list[str]) -> list[PhysicalAttempt] | None:
+    directory = run_root / "physical_attempts"
+    if not directory.exists():
+        # A run with no provider calls has no physical-attempt inventory.  The
+        # set comparison in _audit_requests rejects its absence when any
+        # normalized provider attempt exists.
+        return []
+    try:
+        paths = sorted(directory.glob("*.json"))
+    except OSError:
+        blocks.append("physical_attempt_inventory_missing")
+        return None
+    if not paths:
+        return []
+    try:
+        return [PhysicalAttempt.model_validate_json(path.read_text()) for path in paths]
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValidationError, ValueError):
+        blocks.append("malformed_persisted_runtime_evidence")
+        return None
+
+
+def _audit_runtime_config(root: Path, run_id: str, run: Run, blocks: list[str]) -> None:
+    if run.config_ref.locator != "/config" or _runtime_ref(root, run_id, run.config_ref, blocks) is None:
+        blocks.append("runtime_config_reference_mismatch")
 
 
 def _audit_repository_states(
@@ -381,7 +431,9 @@ def _audit_requests(
     snapshots: list[RequestSnapshot],
     events: list[Event],
     payloads: dict[int, Any],
+    physical_attempts: list[PhysicalAttempt],
     producer: EvidenceRef,
+    run: Run,
     blocks: list[str],
 ) -> None:
     request_events = [(event, payloads.get(event.event_seq)) for event in events if event.kind == "request"]
@@ -412,12 +464,22 @@ def _audit_requests(
         blocks.append("orphan_terminal_event")
     if snapshot_set - request_set or snapshot_set - terminal_set:
         blocks.append("attempt_occurrence_missing")
+    physical = _physical_attempt_index(physical_attempts, run_id, producer, root, blocks)
+    physical_set = set(physical)
+    if physical_set != snapshot_set or physical_set != request_set or physical_set != terminal_set:
+        blocks.append("physical_attempt_inventory_mismatch")
+    if physical_set - snapshot_set:
+        blocks.append("orphan_physical_attempt")
+    if snapshot_set - physical_set or request_set - physical_set or terminal_set - physical_set:
+        blocks.append("normalized_attempt_without_physical_evidence")
     request_by_id = {payload["attempt_id"]: (event, payload) for event, payload in request_events if isinstance(payload, dict)}
     terminal_by_id = {payload["attempt_id"]: (event, payload) for event, payload in terminal_events if isinstance(payload, dict)}
     for snapshot in snapshots:
         if snapshot.run_id != run_id or snapshot.producer_ref != producer:
             blocks.append("wrong_run_evidence_reference")
             continue
+        if snapshot.model_config_ref != run.config_ref:
+            blocks.append("request_config_reference_mismatch")
         request_item = request_by_id.get(snapshot.attempt_id)
         terminal_item = terminal_by_id.get(snapshot.attempt_id)
         if request_item is None or terminal_item is None:
@@ -432,13 +494,63 @@ def _audit_requests(
             or terminal.get("logical_call_id") != snapshot.logical_call_id
         ):
             blocks.append("attempt_logical_call_mismatch")
-        for name, ref in (("before_body_ref", snapshot.before_body_ref), ("prepared_body_ref", snapshot.prepared_body_ref), ("sent_body_ref", snapshot.sent_body_ref)):
+        for name, suffix, ref in (
+            ("before_body_ref", "before", snapshot.before_body_ref),
+            ("prepared_body_ref", "prepared", snapshot.prepared_body_ref),
+            ("sent_body_ref", "sent", snapshot.sent_body_ref),
+        ):
             if ref is None or _runtime_ref(root, run_id, ref, blocks) is None:
                 blocks.append("request_evidence_missing")
                 continue
+            if ref.locator != f"/attempts/{snapshot.attempt_id}/{suffix}":
+                blocks.append("request_occurrence_mismatch")
             if request.get(name) != ref.model_dump():
                 blocks.append("request_send_boundary_mismatch")
-        _audit_terminal_attempt(root, run_id, snapshot, terminal_event, terminal, blocks)
+        inventory = physical.get(snapshot.attempt_id)
+        entered = inventory.get("entered") if inventory is not None else None
+        terminal_inventory = inventory.get("terminal") if inventory is not None else None
+        if entered is not None and entered.sent_body_ref != snapshot.sent_body_ref:
+            blocks.append("physical_attempt_sent_mismatch")
+        _audit_terminal_attempt(
+            root,
+            run_id,
+            snapshot,
+            terminal_event,
+            terminal,
+            terminal_inventory,
+            blocks,
+        )
+
+
+def _physical_attempt_index(
+    attempts: list[PhysicalAttempt],
+    run_id: str,
+    producer: EvidenceRef,
+    root: Path,
+    blocks: list[str],
+) -> dict[str, dict[str, PhysicalAttempt]]:
+    groups: dict[str, dict[str, PhysicalAttempt]] = {}
+    counts: Counter[tuple[str, str]] = Counter()
+    for attempt in attempts:
+        counts[(attempt.attempt_id, attempt.phase)] += 1
+        if (
+            attempt.run_id != run_id
+            or attempt.producer_ref != producer
+            or attempt.id != f"physical-attempt:{attempt.attempt_id}:{attempt.phase}"
+            or attempt.sent_body_ref.locator != f"/attempts/{attempt.attempt_id}/sent"
+            or _runtime_ref(root, run_id, attempt.sent_body_ref, blocks) is None
+        ):
+            blocks.append("physical_attempt_identity_mismatch")
+        groups.setdefault(attempt.attempt_id, {})[attempt.phase] = attempt
+    if any(count != 1 for count in counts.values()):
+        blocks.append("duplicate_physical_attempt")
+    for phases in groups.values():
+        if set(phases) != {"entered", "terminal"}:
+            blocks.append("physical_attempt_terminal_missing")
+            continue
+        if phases["entered"].sent_body_ref != phases["terminal"].sent_body_ref:
+            blocks.append("physical_attempt_sent_mismatch")
+    return groups
 
 
 def _audit_terminal_attempt(
@@ -447,10 +559,13 @@ def _audit_terminal_attempt(
     snapshot: RequestSnapshot,
     event: Event,
     terminal: dict[str, Any],
+    physical: PhysicalAttempt | None,
     blocks: list[str],
 ) -> None:
     raw_response, failure = terminal.get("raw_response_ref"), terminal.get("failure_ref")
     if event.kind == "provider_failure":
+        if physical is None or physical.terminal_state != "transport_exception":
+            blocks.append("physical_attempt_terminal_mismatch")
         if raw_response is not None or not isinstance(failure, dict):
             blocks.append("transport_failure_evidence_missing")
         else:
@@ -462,6 +577,8 @@ def _audit_terminal_attempt(
                 _runtime_ref(root, run_id, failure_ref, blocks)
                 if failure_ref.locator != f"/attempts/{snapshot.attempt_id}/transport-failure":
                     blocks.append("transport_failure_identity_mismatch")
+                if physical is not None and physical.failure_ref != failure_ref:
+                    blocks.append("physical_attempt_terminal_mismatch")
         if terminal.get("raw_usage_ref") is not None or terminal.get("provider_request_id") is not None:
             blocks.append("transport_failure_semantics_mismatch")
         try:
@@ -490,6 +607,12 @@ def _audit_terminal_attempt(
         return
     if response_ref.locator != f"/attempts/{snapshot.attempt_id}/response":
         blocks.append("provider_response_identity_mismatch")
+    if (
+        physical is None
+        or physical.terminal_state != "response_observed"
+        or physical.raw_response_ref != response_ref
+    ):
+        blocks.append("physical_attempt_terminal_mismatch")
     try:
         response_json = json.loads(response_bytes)
     except (UnicodeDecodeError, json.JSONDecodeError):
