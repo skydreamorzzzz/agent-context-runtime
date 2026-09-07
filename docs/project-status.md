@@ -4,10 +4,9 @@ M0: DONE
 M1: DONE
 M2 Observation Protocol: DONE
 M2 Trusted Capture: IN PROGRESS
-Real provider smoke: NOT RUN
+Real provider smoke: PASS
 
-Latest implementation checkpoint: repository HEAD — M2 trusted-capture
-engineering integrity closure complete (engineering fixture only).
+Latest implementation checkpoint: `86aef1a` — DeepSeek real-smoke capture.
 
 Current context/document baseline: repository HEAD (including the Git
 credential-hygiene handoff protocol).
@@ -62,17 +61,16 @@ producer, and runtime config identity in addition to the prior exception,
 usage, state, and file-read gates. This is not whole M2 completion; real smoke
 and evaluator gates remain unstarted.
 
-Real provider smoke: NOT RUN. `configs/pilot.json` freezes the single DeepSeek
-provider/model/public add-task smoke and records the credential source name
-without a credential value. The runtime captures the actual execution revision
-into the local persisted run config at smoke start. No real task execution,
-provider-observed usage, evaluator result, task-quality, or cost claim exists
-until that clean-worktree command completes and persisted audit passes.
+Real provider smoke: PASS. The frozen DeepSeek `deepseek-v4-flash` public
+add-task smoke ran from clean revision `86aef1a`, produced two physical attempts
+and one exact file read, sealed successfully, and passed persisted audit. The
+response/usage/run artifacts remain local and are not committed. Provider usage
+was observed; no price or task-quality claim is made.
 
 M1 DONE denotes the historical persisted-evidence closure only. M2 native
 trusted capture is in progress; the engineering fixture does not satisfy the
 frozen plan's real-task/evaluator M2 completion condition.
 
-Next gate: freeze one real provider/model/task/environment and execute the
-first real Coding Agent smoke. Do not extend synthetic integrity scope absent a
-new explicit P0 finding.
+Next gate: implement the minimum independent evaluator boundary from sealed
+real task artifact to `EvaluationResult`. Do not extend synthetic integrity
+scope absent a new explicit P0 finding.

@@ -78,6 +78,11 @@ one real smoke is captured and sealed, and the required runtime/evaluator
 conditions in the frozen MVP plan are met. A real task failure is evidence, not
 an engineering failure, if capture and sealing remain complete.
 
+The frozen DeepSeek real smoke has now completed on a clean, recorded code
+revision with two physical attempts, one exact file read, a sealed run, and
+persisted audit PASS. Its local runtime evidence is intentionally not committed.
+M2 remains IN PROGRESS because no independent evaluator has run.
+
 The engineering integrity closure is complete: persisted audit now blocks
 physical-inventory, request-occurrence, raw-usage, producer/config-reference,
 state-reference/tree, and file-occurrence laundering.
