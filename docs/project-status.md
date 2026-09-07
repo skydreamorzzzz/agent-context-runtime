@@ -2,8 +2,9 @@
 
 M0: DONE
 M1: DONE
+M2: DONE
 M2 Observation Protocol: DONE
-M2 Trusted Capture: IN PROGRESS
+M2 Trusted Capture: DONE
 Real provider smoke: PASS
 
 Latest implementation checkpoint: `86aef1a` — DeepSeek real-smoke capture.
@@ -68,9 +69,9 @@ response/usage/run artifacts remain local and are not committed. Provider usage
 was observed; no price or task-quality claim is made.
 
 M1 DONE denotes the historical persisted-evidence closure only. M2 native
-trusted capture is in progress; the engineering fixture does not satisfy the
-frozen plan's real-task/evaluator M2 completion condition.
+trusted capture is DONE: the preserved real run has a sealed-artifact-bound,
+independent private evaluator result with `resolved=false`. The model's text
+answer was not treated as a workspace patch or a positive evaluation.
 
-Next gate: implement the minimum independent evaluator boundary from sealed
-real task artifact to `EvaluationResult`. Do not extend synthetic integrity
-scope absent a new explicit P0 finding.
+Next gate: M3 noop / A-A remains a separate authorization decision. Do not
+extend synthetic integrity scope absent a new explicit P0 finding.

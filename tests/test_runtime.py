@@ -14,9 +14,9 @@ from acr.adapters.provider import (
     TransportResult,
     serialize_deepseek_chat_request,
 )
-from acr.audit import audit_run
+from acr.audit import audit_evaluation, audit_run
 from acr.contracts import Run
-from acr.evaluation import EvaluationHandoffRejected, require_sealed_run
+from acr.evaluation import EvaluationHandoffRejected, LocalAddEvaluator, require_sealed_run
 from acr.runtime.runner import CapturedRuntime, RunSealedError, RuntimeTask, run_deepseek_add_smoke
 from acr.state import WorkspaceViolation, initial_tree_manifest
 from acr.store import ingest_runtime_bytes, load_blob
@@ -643,7 +643,8 @@ def test_deepseek_transport_and_bounded_smoke_remain_offline_and_captured(tmp_pa
     assert all(json.loads(body)["model"] == "deepseek-v4-flash" for body in sent)
     persisted = "\n".join(
         path.read_text(errors="ignore")
-        for path in (tmp_path / "data" / "runs" / "run-1").rglob("*.json*")
+        for path in (tmp_path / "data").rglob("*")
+        if path.is_file()
     )
     assert "test-credential" not in persisted
 
@@ -671,3 +672,52 @@ def test_deepseek_transport_exception_uses_the_existing_failure_path(tmp_path: P
     runtime.seal(status="task_failed", stop_reason="provider_exception")
     assert snapshot.transport_status == "transport_exception"
     assert audit_run(tmp_path / "data", "run-1").status == "PASS"
+
+
+def test_private_add_evaluator_is_sealed_only_persisted_and_fail_closed(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"; workspace.mkdir()
+    (workspace / "target.py").write_text("def add(a, b):\n    # TODO\n    pass\n")
+    runtime = CapturedRuntime(data_root=tmp_path / "data", run_id="eval-run", task=RuntimeTask("public/add", "public"), workspace=workspace, config_bytes=b"{}")
+    private_spec = tmp_path / "private.json"
+    private_spec.write_text(json.dumps({"private_marker": "PRIVATE_EVALUATOR_ONLY", "tests": [{"args": [1, 2], "expected": 3}, {"args": [-1, 1], "expected": 0}, {"args": [0, 0], "expected": 0}]}))
+    evaluator = LocalAddEvaluator(data_root=tmp_path / "data", sealed_workspace=workspace)
+    with pytest.raises(EvaluationHandoffRejected):
+        evaluator.evaluate(
+            Run(
+                kind="run", id="eval-run", producer_ref=runtime.producer_ref, task_id="public/add",
+                config_ref=runtime.producer_ref, capabilities={}, initial_state_ref=runtime.producer_ref,
+                status="running", events_ref=runtime.producer_ref,
+            ),
+            str(private_spec),
+        )
+    run = runtime.seal(status="completed")
+    result = evaluator.evaluate(run, str(private_spec))
+    assert result.status == "completed"
+    assert result.tests_executed.value == 3
+    assert result.passed.value == 0
+    assert result.failed.value == 3
+    assert result.resolved.value is False
+    assert audit_evaluation(tmp_path / "data", "eval-run", str(private_spec)).status == "PASS"
+
+    result_path = tmp_path / "data" / "evaluations" / "eval-run" / "evaluation_result.json"
+    tampered = json.loads(result_path.read_text()); tampered["resolved"]["value"] = True; result_path.write_text(json.dumps(tampered))
+    assert "evaluation_fact_mismatch" in audit_evaluation(tmp_path / "data", "eval-run", str(private_spec)).blocks
+
+    result_path.write_text(result.model_dump_json())
+    tampered = json.loads(result_path.read_text()); tampered["submitted_artifact_hash"] = "0" * 64; result_path.write_text(json.dumps(tampered))
+    assert "evaluation_run_binding_mismatch" in audit_evaluation(tmp_path / "data", "eval-run", str(private_spec)).blocks
+
+    result_path.write_text(result.model_dump_json())
+    ingest_runtime_bytes(private_spec.read_bytes(), tmp_path / "data", "eval-run", "/injected")
+    assert "evaluator_private_data_leakage" in audit_evaluation(tmp_path / "data", "eval-run", str(private_spec)).blocks
+
+    result_path.write_text(result.model_dump_json())
+    blob = tmp_path / "data" / "blobs" / result.raw_result_ref.blob_hash
+    blob.write_bytes(b"tampered")
+    assert "referenced_blob_hash_invalid" in audit_evaluation(tmp_path / "data", "eval-run", str(private_spec)).blocks
+
+    blob.write_bytes(json.dumps({"status": "completed", "patch_valid": False, "tests_executed": 3, "passed": 0, "failed": 3, "resolved": False}, sort_keys=True).encode())
+    tampered = json.loads(result_path.read_text())
+    tampered["raw_result_ref"] = ingest_runtime_bytes(b"other", tmp_path / "data", "eval-run", "/other").model_dump()
+    result_path.write_text(json.dumps(tampered))
+    assert "evaluation_raw_reference_mismatch" in audit_evaluation(tmp_path / "data", "eval-run", str(private_spec)).blocks

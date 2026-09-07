@@ -54,6 +54,14 @@ def ingest_runtime_bytes(raw: bytes, data_root: Path, run_id: str, locator: str)
     )
 
 
+def ingest_evaluator_bytes(raw: bytes, data_root: Path, run_id: str, locator: str) -> EvidenceRef:
+    """Store evaluator-domain evidence without labelling it runtime-visible."""
+
+    return ingest_bytes(raw, data_root, "acr_evaluator", run_id, locator).model_copy(
+        update={"labels": [InformationLabel(scope="evaluator", run_id=run_id)]}
+    )
+
+
 def load_blob(data_root: Path, blob_hash: str) -> bytes:
     return (data_root / "blobs" / blob_hash).read_bytes()
 
@@ -98,6 +106,19 @@ def persist_physical_attempt(data_root: Path, run_id: str, value: Any) -> None:
 
 def load_run_json(data_root: Path, run_id: str, name: str) -> Any:
     return json.loads((data_root / "runs" / run_id / name).read_text())
+
+
+def persist_evaluation_json(data_root: Path, run_id: str, name: str, value: Any) -> None:
+    """Persist one immutable evaluator-domain artifact for a sealed run."""
+
+    if "/" in name or name in {"", ".", ".."}:
+        raise ValueError("invalid evaluator artifact name")
+    content = (
+        value.model_dump_json(indent=2).encode() + b"\n"
+        if hasattr(value, "model_dump_json")
+        else json.dumps(value, sort_keys=True, indent=2).encode() + b"\n"
+    )
+    _write_once(data_root / "evaluations" / run_id / name, content)
 
 
 def persist_import(

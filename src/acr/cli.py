@@ -12,14 +12,17 @@ from pathlib import Path
 
 from acr.adapters.legacy import normalize
 from acr.adapters.provider import CapturedProvider, DeepSeekHTTPTransport
-from acr.audit import audit, audit_run
+from acr.audit import audit, audit_evaluation, audit_run
 from acr.config import validate_run_config
+from acr.contracts import Run
+from acr.evaluation import LocalAddEvaluator
 from acr.runtime.runner import CapturedRuntime, RuntimeTask, run_deepseek_add_smoke
 from acr.store import (
     ingest_bytes,
     load_blob,
     load_import,
     load_producer,
+    load_run_json,
     persist_import,
     persist_normalized,
     persist_producer,
@@ -40,6 +43,9 @@ def main() -> None:
     smoke.add_argument("--data-root", required=True)
     smoke.add_argument("--workspace-root", required=True)
     smoke.add_argument("--config", default="configs/pilot.json")
+    evaluate = commands.add_parser("evaluate-add")
+    evaluate.add_argument("--data-root", required=True); evaluate.add_argument("--run-id", required=True)
+    evaluate.add_argument("--sealed-workspace", required=True); evaluate.add_argument("--private-spec", required=True)
     args = parser.parse_args(); root = Path(args.data_root)
     if args.command == "ingest":
         manifest = json.loads(Path(args.manifest).read_text()); ref = ingest_bytes(Path(args.raw).read_bytes(), root, "mswe_agent_demo", manifest["instance_id"]); persist_import(root, args.import_id, manifest, ref); print(args.import_id); return
@@ -50,6 +56,12 @@ def main() -> None:
     if args.command == "smoke-deepseek":
         _run_deepseek_smoke(root, Path(args.workspace_root), Path(args.config))
         return
+    if args.command == "evaluate-add":
+        run = Run.model_validate(load_run_json(root, args.run_id, "run.json"))
+        result = LocalAddEvaluator(data_root=root, sealed_workspace=Path(args.sealed_workspace)).evaluate(run, args.private_spec)
+        audit_result = audit_evaluation(root, args.run_id, args.private_spec)
+        print(json.dumps({"audit": audit_result.status, "resolved": result.resolved.value, "status": result.status}, sort_keys=True))
+        raise SystemExit(audit_result.status != "PASS")
     _, raw_ref = load_import(root, args.import_id)
     if args.command == "normalize":
         producer_path = root / "imports" / args.import_id / "producer_ref.json"

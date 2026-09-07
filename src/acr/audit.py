@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 from acr.adapters.legacy import ADAPTER_VERSION, parse_document
 from acr.contracts import (
+    EvaluationResult,
     Event,
     EvidenceRef,
     Fact,
@@ -710,4 +711,48 @@ def audit_run(root: Path, run_id: str) -> AuditResult:
         _audit_runtime(root, run_id, blocks)
     except (AttributeError, IndexError, KeyError, TypeError, ValueError):
         blocks.append("malformed_persisted_runtime_evidence")
+    return AuditResult("BLOCK" if blocks else "PASS", tuple(sorted(set(blocks))))
+
+
+def audit_evaluation(root: Path, run_id: str, private_spec_ref: str) -> AuditResult:
+    """Audit persisted evaluator artifacts without invoking evaluation again."""
+
+    blocks: list[str] = []
+    try:
+        run = Run.model_validate(load_run_json(root, run_id, "run.json"))
+        result = EvaluationResult.model_validate_json(
+            (root / "evaluations" / run_id / "evaluation_result.json").read_text()
+        )
+        private_bytes = Path(private_spec_ref).read_bytes()
+    except (FileNotFoundError, OSError, json.JSONDecodeError, ValidationError, ValueError):
+        return AuditResult("BLOCK", ("malformed_persisted_evaluation_evidence",))
+    if run.sealed_artifact_hash is None or result.run_id != run.id or result.submitted_artifact_hash != run.sealed_artifact_hash:
+        blocks.append("evaluation_run_binding_mismatch")
+    raw = _load_ref_blob(root, result.raw_result_ref, blocks)
+    if (
+        result.raw_result_ref.source_id != "acr_evaluator"
+        or result.raw_result_ref.trajectory_key != run_id
+        or result.raw_result_ref.locator != "/evaluation/result"
+        or not any(label.scope == "evaluator" and label.run_id == run_id for label in result.raw_result_ref.labels)
+    ):
+        blocks.append("evaluation_raw_reference_mismatch")
+    try:
+        record = json.loads(raw) if raw is not None else None
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        record = None
+    if result.status == "completed":
+        for field in ("patch_valid", "tests_executed", "passed", "failed", "resolved"):
+            fact = getattr(result, field)
+            if (
+                not isinstance(record, dict)
+                or record.get("status") != "completed"
+                or fact.status != "observed"
+                or fact.refs != [result.raw_result_ref]
+                or fact.value != record.get(field)
+            ):
+                blocks.append("evaluation_fact_mismatch")
+    for path in list((root / "runs" / run_id).rglob("*")) + list((root / "blobs").glob("*")):
+        if path.is_file() and private_bytes in path.read_bytes():
+            blocks.append("evaluator_private_data_leakage")
+            break
     return AuditResult("BLOCK" if blocks else "PASS", tuple(sorted(set(blocks))))

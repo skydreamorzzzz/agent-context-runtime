@@ -1,0 +1,13 @@
+{
+  "audit_result": "PASS",
+  "code_revision": "86aef1a665def9201372a429b27ec8f60e5646ff",
+  "config_blob_hash": "b228a6f34d3880dd17d173c02c705174cc9021ebece969c50bf66da12787cd95",
+  "file_read_count": 1,
+  "model": "deepseek-v4-flash",
+  "observation_boundary": "exact serialized request bytes passed to urllib.request.Request(data=body)",
+  "physical_attempt_count": 2,
+  "provider": "deepseek",
+  "run_id": "deepseek-smoke-20260907T140250Z",
+  "sealed_artifact_hash": "c92fe58b80cda93e02080ccc768aebdb3b226700f130ef2f28a282600f11a701",
+  "usage_status": "observed"
+}

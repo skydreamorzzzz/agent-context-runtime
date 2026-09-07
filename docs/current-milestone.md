@@ -83,6 +83,11 @@ revision with two physical attempts, one exact file read, a sealed run, and
 persisted audit PASS. Its local runtime evidence is intentionally not committed.
 M2 remains IN PROGRESS because no independent evaluator has run.
 
+The independent private add evaluator has now executed against the preserved
+sealed smoke workspace. It emitted raw evaluator evidence and a persisted
+`EvaluationResult`; audit PASS records `resolved=false` because the sealed
+workspace was not modified. M2 is therefore complete; M3 remains out of scope.
+
 The engineering integrity closure is complete: persisted audit now blocks
 physical-inventory, request-occurrence, raw-usage, producer/config-reference,
 state-reference/tree, and file-occurrence laundering.
