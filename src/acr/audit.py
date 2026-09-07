@@ -728,6 +728,7 @@ def audit_evaluation(root: Path, run_id: str, private_spec_ref: str) -> AuditRes
         return AuditResult("BLOCK", ("malformed_persisted_evaluation_evidence",))
     if run.sealed_artifact_hash is None or result.run_id != run.id or result.submitted_artifact_hash != run.sealed_artifact_hash:
         blocks.append("evaluation_run_binding_mismatch")
+    _audit_evaluation_producer(root, run_id, result, private_bytes, blocks)
     raw = _load_ref_blob(root, result.raw_result_ref, blocks)
     if (
         result.raw_result_ref.source_id != "acr_evaluator"
@@ -751,8 +752,83 @@ def audit_evaluation(root: Path, run_id: str, private_spec_ref: str) -> AuditRes
                 or fact.value != record.get(field)
             ):
                 blocks.append("evaluation_fact_mismatch")
-    for path in list((root / "runs" / run_id).rglob("*")) + list((root / "blobs").glob("*")):
-        if path.is_file() and private_bytes in path.read_bytes():
-            blocks.append("evaluator_private_data_leakage")
-            break
+    try:
+        paths = list((root / "runs" / run_id).rglob("*")) + list((root / "blobs").glob("*"))
+        for path in paths:
+            if path.is_file() and private_bytes in path.read_bytes():
+                blocks.append("evaluator_private_data_leakage")
+                break
+    except OSError:
+        blocks.append("malformed_persisted_evaluation_evidence")
     return AuditResult("BLOCK" if blocks else "PASS", tuple(sorted(set(blocks))))
+
+
+def _audit_evaluation_producer(
+    root: Path,
+    run_id: str,
+    result: EvaluationResult,
+    private_bytes: bytes,
+    blocks: list[str],
+) -> None:
+    """Close evaluator result, producer artifact, and private-spec identity."""
+
+    try:
+        persisted_ref = EvidenceRef.model_validate_json(
+            (root / "evaluations" / run_id / "producer_ref.json").read_text()
+        )
+        persisted_manifest = (root / "evaluations" / run_id / "producer_manifest.json").read_bytes()
+    except (FileNotFoundError, OSError, json.JSONDecodeError, ValidationError, ValueError):
+        blocks.append("malformed_persisted_evaluation_evidence")
+        return
+    producer_blob = _load_ref_blob(root, persisted_ref, blocks)
+    if (
+        result.producer_ref != persisted_ref
+        or persisted_ref.source_id != "acr_evaluator"
+        or persisted_ref.trajectory_key != run_id
+        or persisted_ref.locator != "/evaluation/producer-manifest"
+        or not any(
+            label.scope == "evaluator" and label.run_id == run_id
+            for label in persisted_ref.labels
+        )
+        or producer_blob != persisted_manifest
+    ):
+        blocks.append("evaluation_producer_mismatch")
+    if producer_blob is None:
+        return
+    try:
+        manifest = json.loads(producer_blob)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        blocks.append("malformed_persisted_evaluation_evidence")
+        return
+    required = (
+        "producer_kind",
+        "schema_version",
+        "evaluator_version",
+        "code_revision",
+        "private_spec_sha256",
+    )
+    valid_code_revision = (
+        isinstance(manifest, dict)
+        and isinstance(manifest.get("code_revision"), str)
+        and len(manifest["code_revision"]) == 40
+        and all(char in "0123456789abcdef" for char in manifest["code_revision"])
+    )
+    valid_spec_hash = (
+        isinstance(manifest, dict)
+        and isinstance(manifest.get("private_spec_sha256"), str)
+        and len(manifest["private_spec_sha256"]) == 64
+        and all(char in "0123456789abcdef" for char in manifest["private_spec_sha256"])
+    )
+    if (
+        not isinstance(manifest, dict)
+        or any(not isinstance(manifest.get(key), str) or not manifest[key].strip() for key in required)
+        or manifest.get("producer_kind") != "acr_local_add_evaluator"
+        or manifest.get("schema_version") != "1.0"
+        or manifest.get("evaluator_version") != "local_add_evaluator_v1"
+        or not valid_code_revision
+        or not valid_spec_hash
+        or result.evaluator_revision != manifest.get("evaluator_version")
+    ):
+        blocks.append("evaluation_producer_mismatch")
+    if not valid_spec_hash or manifest.get("private_spec_sha256") != hashlib.sha256(private_bytes).hexdigest():
+        blocks.append("evaluation_private_spec_mismatch")

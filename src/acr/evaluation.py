@@ -25,12 +25,23 @@ def require_sealed_run(sealed_run: Run) -> None:
 class LocalAddEvaluator:
     """Fixed private evaluator; it never enters the runtime/provider boundary."""
 
-    def __init__(self, *, data_root: Path, sealed_workspace: Path) -> None:
+    def __init__(
+        self,
+        *,
+        data_root: Path,
+        sealed_workspace: Path,
+        code_revision: str | None = None,
+    ) -> None:
         self._data_root = data_root
         self._sealed_workspace = sealed_workspace
+        # Tests may inject a synthetic revision.  Real evaluator invocations use
+        # the clean repository revision captured below, rather than claiming a
+        # post-hoc HEAD for dirty execution.
+        self._code_revision = code_revision
 
     def evaluate(self, sealed_run: Run, private_spec_ref: str) -> EvaluationResult:
         require_sealed_run(sealed_run)
+        code_revision = self._execution_code_revision()
         tree, _ = initial_tree_manifest(self._sealed_workspace)
         tree_hash = hashlib.sha256(json.dumps(tree, sort_keys=True).encode()).hexdigest()
         if tree_hash != sealed_run.sealed_artifact_hash:
@@ -49,7 +60,7 @@ class LocalAddEvaluator:
             {"status": "infra_error", "error_type": "evaluator_worker_failed"}, sort_keys=True
         ).encode()
         raw_ref = ingest_evaluator_bytes(raw, self._data_root, sealed_run.id, "/evaluation/result")
-        producer_ref = self._persist_producer(sealed_run.id, spec_hash)
+        producer_ref = self._persist_producer(sealed_run.id, spec_hash, code_revision)
         try:
             record = json.loads(raw)
         except (UnicodeDecodeError, json.JSONDecodeError):
@@ -78,9 +89,28 @@ class LocalAddEvaluator:
         persist_evaluation_json(self._data_root, sealed_run.id, "evaluation_result.json", result)
         return result
 
-    def _persist_producer(self, run_id: str, spec_hash: str) -> EvidenceRef:
-        manifest = {"producer_kind": "acr_local_add_evaluator", "schema_version": "1.0", "evaluator_version": "local_add_evaluator_v1", "private_spec_sha256": spec_hash}
-        raw = json.dumps(manifest, sort_keys=True).encode()
+    def _execution_code_revision(self) -> str:
+        if self._code_revision is not None:
+            return self._code_revision
+        try:
+            if subprocess.check_output(["git", "status", "--porcelain"], text=True):
+                raise EvaluationHandoffRejected("evaluator execution requires a clean working tree")
+            revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+        except (OSError, subprocess.CalledProcessError) as error:
+            raise EvaluationHandoffRejected("evaluator code revision is unavailable") from error
+        if len(revision) != 40 or any(char not in "0123456789abcdef" for char in revision):
+            raise EvaluationHandoffRejected("evaluator code revision is malformed")
+        return revision
+
+    def _persist_producer(self, run_id: str, spec_hash: str, code_revision: str) -> EvidenceRef:
+        manifest = {
+            "producer_kind": "acr_local_add_evaluator",
+            "schema_version": "1.0",
+            "evaluator_version": "local_add_evaluator_v1",
+            "code_revision": code_revision,
+            "private_spec_sha256": spec_hash,
+        }
+        raw = json.dumps(manifest, sort_keys=True, indent=2).encode() + b"\n"
         ref = ingest_evaluator_bytes(raw, self._data_root, run_id, "/evaluation/producer-manifest")
         persist_evaluation_json(self._data_root, run_id, "producer_manifest.json", manifest)
         persist_evaluation_json(self._data_root, run_id, "producer_ref.json", ref)

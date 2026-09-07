@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from acr.contracts import Run
 from acr.evaluation import EvaluationHandoffRejected, LocalAddEvaluator, require_sealed_run
 from acr.runtime.runner import CapturedRuntime, RunSealedError, RuntimeTask, run_deepseek_add_smoke
 from acr.state import WorkspaceViolation, initial_tree_manifest
-from acr.store import ingest_runtime_bytes, load_blob
+from acr.store import ingest_evaluator_bytes, ingest_runtime_bytes, load_blob
 
 
 def _runtime(tmp_path: Path, *, with_usage: bool = True) -> tuple[CapturedRuntime, list[bytes]]:
@@ -680,7 +681,9 @@ def test_private_add_evaluator_is_sealed_only_persisted_and_fail_closed(tmp_path
     runtime = CapturedRuntime(data_root=tmp_path / "data", run_id="eval-run", task=RuntimeTask("public/add", "public"), workspace=workspace, config_bytes=b"{}")
     private_spec = tmp_path / "private.json"
     private_spec.write_text(json.dumps({"private_marker": "PRIVATE_EVALUATOR_ONLY", "tests": [{"args": [1, 2], "expected": 3}, {"args": [-1, 1], "expected": 0}, {"args": [0, 0], "expected": 0}]}))
-    evaluator = LocalAddEvaluator(data_root=tmp_path / "data", sealed_workspace=workspace)
+    evaluator = LocalAddEvaluator(
+        data_root=tmp_path / "data", sealed_workspace=workspace, code_revision="a" * 40
+    )
     with pytest.raises(EvaluationHandoffRejected):
         evaluator.evaluate(
             Run(
@@ -721,3 +724,98 @@ def test_private_add_evaluator_is_sealed_only_persisted_and_fail_closed(tmp_path
     tampered["raw_result_ref"] = ingest_runtime_bytes(b"other", tmp_path / "data", "eval-run", "/other").model_dump()
     result_path.write_text(json.dumps(tampered))
     assert "evaluation_raw_reference_mismatch" in audit_evaluation(tmp_path / "data", "eval-run", str(private_spec)).blocks
+
+
+def _fresh_evaluation(root: Path) -> tuple[Path, Path]:
+    """Create a sealed runtime plus evaluator artifacts for persisted mutations."""
+
+    workspace = root / "workspace"
+    workspace.mkdir(parents=True)
+    (workspace / "target.py").write_text("def add(a, b):\n    # TODO\n    pass\n")
+    runtime = CapturedRuntime(
+        data_root=root / "data",
+        run_id="eval-run",
+        task=RuntimeTask("public/add", "public"),
+        workspace=workspace,
+        config_bytes=b"{}",
+    )
+    private_spec = root / "private.json"
+    private_spec.write_text(json.dumps({"tests": [{"args": [1, 2], "expected": 3}]}))
+    run = runtime.seal(status="completed")
+    LocalAddEvaluator(
+        data_root=root / "data", sealed_workspace=workspace, code_revision="a" * 40
+    ).evaluate(run, str(private_spec))
+    assert audit_evaluation(root / "data", "eval-run", str(private_spec)).status == "PASS"
+    return root / "data", private_spec
+
+
+def _replace_evaluator_producer(root: Path, private_spec: Path, manifest: dict[str, str]) -> None:
+    """Make all persisted producer links agree, so a targeted invariant is tested."""
+
+    content = json.dumps(manifest, sort_keys=True, indent=2).encode() + b"\n"
+    ref = ingest_evaluator_bytes(content, root, "eval-run", "/evaluation/producer-manifest")
+    evaluation_root = root / "evaluations" / "eval-run"
+    (evaluation_root / "producer_manifest.json").write_bytes(content)
+    (evaluation_root / "producer_ref.json").write_text(ref.model_dump_json())
+    value = json.loads((evaluation_root / "evaluation_result.json").read_text())
+    value["producer_ref"] = ref.model_dump()
+    (evaluation_root / "evaluation_result.json").write_text(json.dumps(value))
+    assert private_spec.exists()
+
+
+def test_evaluator_producer_and_private_spec_identity_mutations_block(tmp_path: Path) -> None:
+    # Result producer ref cannot select another valid evaluator-domain blob.
+    root, private_spec = _fresh_evaluation(tmp_path / "result-ref")
+    alternate = ingest_evaluator_bytes(b"alternate valid evaluator blob", root, "eval-run", "/evaluation/producer-manifest")
+    result_path = root / "evaluations" / "eval-run" / "evaluation_result.json"
+    value = json.loads(result_path.read_text()); value["producer_ref"] = alternate.model_dump(); result_path.write_text(json.dumps(value))
+    assert "evaluation_producer_mismatch" in audit_evaluation(root, "eval-run", str(private_spec)).blocks
+
+    # The persisted ref is run- and locator-bound, independently of its blob hash.
+    root, private_spec = _fresh_evaluation(tmp_path / "ref-run")
+    ref_path = root / "evaluations" / "eval-run" / "producer_ref.json"
+    value = json.loads(ref_path.read_text()); value["trajectory_key"] = "other-run"; ref_path.write_text(json.dumps(value))
+    assert "evaluation_producer_mismatch" in audit_evaluation(root, "eval-run", str(private_spec)).blocks
+    root, private_spec = _fresh_evaluation(tmp_path / "ref-locator")
+    ref_path = root / "evaluations" / "eval-run" / "producer_ref.json"
+    value = json.loads(ref_path.read_text()); value["locator"] = "/other"; ref_path.write_text(json.dumps(value))
+    assert "evaluation_producer_mismatch" in audit_evaluation(root, "eval-run", str(private_spec)).blocks
+
+    # File/blob divergence is not repaired by parsing a plausible manifest file.
+    root, private_spec = _fresh_evaluation(tmp_path / "manifest-file")
+    (root / "evaluations" / "eval-run" / "producer_manifest.json").write_text('{"producer_kind":"tampered"}\n')
+    assert "evaluation_producer_mismatch" in audit_evaluation(root, "eval-run", str(private_spec)).blocks
+
+    def valid_manifest(spec_hash: str) -> dict[str, str]:
+        return {
+            "producer_kind": "acr_local_add_evaluator",
+            "schema_version": "1.0",
+            "evaluator_version": "local_add_evaluator_v1",
+            "code_revision": "a" * 40,
+            "private_spec_sha256": spec_hash,
+        }
+
+    # The static evaluator version and EvaluationResult revision are both frozen.
+    root, private_spec = _fresh_evaluation(tmp_path / "version")
+    manifest = valid_manifest("0" * 64); manifest["evaluator_version"] = "local_add_evaluator_v2"
+    _replace_evaluator_producer(root, private_spec, manifest)
+    assert "evaluation_producer_mismatch" in audit_evaluation(root, "eval-run", str(private_spec)).blocks
+    root, private_spec = _fresh_evaluation(tmp_path / "revision")
+    result_path = root / "evaluations" / "eval-run" / "evaluation_result.json"
+    value = json.loads(result_path.read_text()); value["evaluator_revision"] = "local_add_evaluator_v2"; result_path.write_text(json.dumps(value))
+    assert "evaluation_producer_mismatch" in audit_evaluation(root, "eval-run", str(private_spec)).blocks
+
+    # The hash in a fully self-consistent producer artifact still must name the
+    # exact private spec supplied to the audit.
+    root, private_spec = _fresh_evaluation(tmp_path / "spec-hash")
+    _replace_evaluator_producer(root, private_spec, valid_manifest("0" * 64))
+    assert "evaluation_private_spec_mismatch" in audit_evaluation(root, "eval-run", str(private_spec)).blocks
+    root, private_spec = _fresh_evaluation(tmp_path / "spec-replaced")
+    private_spec.write_text(json.dumps({"tests": [{"args": [5, 5], "expected": 10}]}))
+    assert "evaluation_private_spec_mismatch" in audit_evaluation(root, "eval-run", str(private_spec)).blocks
+
+    root, private_spec = _fresh_evaluation(tmp_path / "code-revision")
+    manifest = valid_manifest(hashlib.sha256(private_spec.read_bytes()).hexdigest())
+    manifest["code_revision"] = "not-a-revision"
+    _replace_evaluator_producer(root, private_spec, manifest)
+    assert "evaluation_producer_mismatch" in audit_evaluation(root, "eval-run", str(private_spec)).blocks
