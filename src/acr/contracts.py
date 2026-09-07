@@ -116,6 +116,7 @@ class Event(Envelope):
     kind: Literal[
         "request",
         "response",
+        "provider_failure",
         "tool_start",
         "tool_finish",
         "state_check",
@@ -146,11 +147,23 @@ class RequestSnapshot(Envelope):
 
 class RepositoryState(Envelope):
     run_id: str
-    initial_tree_hash: str
+    state_phase: Literal["initial", "final"] = "initial"
+    initial_tree_hash: str | None = None
+    final_tree_hash: str | None = None
+    tree_ref: EvidenceRef | None = None
     image_digest: Fact[str]
     observed_seq: int = Field(ge=0)
     files: list[FileBinding]
     state_caps: dict[str, str]
+
+    @model_validator(mode="after")
+    def require_phase_specific_tree_hash(self) -> RepositoryState:
+        if self.state_phase == "initial":
+            if not self.initial_tree_hash or self.final_tree_hash is not None:
+                raise ValueError("initial state requires only initial_tree_hash")
+        elif not self.final_tree_hash or self.initial_tree_hash is not None:
+            raise ValueError("final state requires only final_tree_hash")
+        return self
 
 
 class FileComparison(ContractModel):
@@ -220,6 +233,7 @@ class Run(Envelope):
     status: str
     stop_reason: str | None = None
     events_ref: EvidenceRef
+    final_state_ref: EvidenceRef | None = None
     sealed_artifact_ref: EvidenceRef | None = None
     sealed_artifact_hash: str | None = None
 

@@ -4,8 +4,8 @@ M0: DONE
 M1: DONE
 M2: IN PROGRESS
 
-Latest implementation checkpoint: repository HEAD — M1.2 final integrity
-closure.
+Latest implementation checkpoint: repository HEAD — M2 trusted-capture
+engineering integrity closure in progress.
 
 Current context/document baseline: repository HEAD (including the Git
 credential-hygiene handoff protocol).
@@ -50,7 +50,12 @@ reason to broaden this milestone.
 M2 is authorized for the observation-protocol and engineering-only trusted
 capture slice. The runtime captures persisted request/attempt/response/tool/
 file/state/seal evidence and audits it through an explicitly synthetic
-engineering transport fixture.
+engineering transport fixture. Its closure now includes exception attempts,
+one-to-one attempt sets, raw-response usage binding, phase-specific repository
+state, sealed-state closure, and exact file-read occurrence binding.
+
+M2 trusted-capture engineering integrity closure: COMPLETE. This is not whole
+M2 completion; real smoke and evaluator gates remain unstarted.
 
 Real provider smoke: BLOCKED / NOT RUN. `configs/pilot.json` remains a template
 and does not freeze a provider, model, task manifest, image digest, or budget.

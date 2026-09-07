@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -11,8 +12,18 @@ from typing import Any
 from pydantic import ValidationError
 
 from acr.adapters.legacy import ADAPTER_VERSION, parse_document
-from acr.contracts import Event, EvidenceRef, FileBinding, Provenance, RequestSnapshot, Run
+from acr.contracts import (
+    Event,
+    EvidenceRef,
+    Fact,
+    FileBinding,
+    Provenance,
+    RepositoryState,
+    RequestSnapshot,
+    Run,
+)
 from acr.provenance import resolve_json_pointer
+from acr.state import tree_manifest_hash
 from acr.store import (
     load_blob,
     load_import,
@@ -254,13 +265,15 @@ def _audit_runtime(root: Path, run_id: str, blocks: list[str]) -> None:
     run_root = root / "runs" / run_id
     try:
         run = Run.model_validate(load_run_json(root, run_id, "run.json"))
-        initial = load_run_json(root, run_id, "initial_state.json")
-        final = load_run_json(root, run_id, "final_state.json")
+        initial = RepositoryState.model_validate(load_run_json(root, run_id, "initial_state.json"))
+        final = RepositoryState.model_validate(load_run_json(root, run_id, "final_state.json"))
     except (FileNotFoundError, OSError, json.JSONDecodeError, ValidationError, ValueError):
         blocks.append("malformed_persisted_runtime_evidence")
         return
     if run.id != run_id or run.events_ref.locator != "/events.jsonl":
         blocks.append("runtime_run_identity_mismatch")
+    producer = _load_runtime_producer(root, run_id, run, blocks)
+    _audit_repository_states(root, run_id, run, initial, final, producer, blocks)
     events = _load_jsonl_models(run_root / "events.jsonl", Event, blocks)
     snapshots = _load_jsonl_models(run_root / "requests.jsonl", RequestSnapshot, blocks)
     bindings = _load_jsonl_models(run_root / "file_bindings.jsonl", FileBinding, blocks)
@@ -274,36 +287,92 @@ def _audit_runtime(root: Path, run_id: str, blocks: list[str]) -> None:
         blocks.append("run_not_closed")
     if [event.event_seq for event in events] != list(range(len(events))):
         blocks.append("runtime_event_sequence_mismatch")
-    if any(event.run_id != run_id for event in events):
-        blocks.append("wrong_run_evidence_reference")
+    for event in events:
+        if event.run_id != run_id or event.producer_ref != producer:
+            blocks.append("wrong_run_evidence_reference")
+        if event.id != f"event:{run_id}:{event.event_seq}":
+            blocks.append("runtime_event_identity_mismatch")
+        if event.payload_ref.locator != f"/events/{event.event_seq}/payload":
+            blocks.append("runtime_event_payload_mismatch")
     payloads: dict[int, Any] = {}
-    starts: set[str] = set()
-    finishes: set[str] = set()
     for event in events:
         payload = _load_json_ref(root, run_id, event.payload_ref, blocks)
         if payload is None:
             continue
         payloads[event.event_seq] = payload
-        if event.kind == "tool_start" and event.call_id:
-            starts.add(event.call_id)
-        if event.kind == "tool_finish" and event.call_id:
-            finishes.add(event.call_id)
-            if event.available_seq != event.event_seq:
-                blocks.append("unfinished_tool_result_visible")
-    if starts != finishes:
-        blocks.append("incomplete_tool_call")
-    _audit_requests(root, run_id, snapshots, events, payloads, blocks)
-    _audit_file_bindings(root, run_id, bindings, events, payloads, blocks)
-    if initial.get("run_id") != run_id or final.get("run_id") != run_id:
-        blocks.append("wrong_run_evidence_reference")
-    if initial.get("state_caps", {}).get("initial_repository") != "verified":
+    _audit_requests(root, run_id, snapshots, events, payloads, producer, blocks)
+    _audit_file_bindings(root, run_id, bindings, events, payloads, final, blocks)
+
+
+def _load_runtime_producer(root: Path, run_id: str, run: Run, blocks: list[str]) -> EvidenceRef:
+    try:
+        persisted_ref = EvidenceRef.model_validate(load_run_json(root, run_id, "producer_ref.json"))
+        persisted_file = (root / "runs" / run_id / "producer_manifest.json").read_bytes()
+    except (FileNotFoundError, OSError, json.JSONDecodeError, ValidationError, ValueError):
+        blocks.append("malformed_persisted_runtime_evidence")
+        return run.producer_ref
+    producer_blob = _runtime_ref(root, run_id, persisted_ref, blocks)
+    if run.producer_ref != persisted_ref or producer_blob != persisted_file:
+        blocks.append("runtime_producer_mismatch")
+    return persisted_ref
+
+
+def _audit_repository_states(
+    root: Path,
+    run_id: str,
+    run: Run,
+    initial: RepositoryState,
+    final: RepositoryState,
+    producer: EvidenceRef,
+    blocks: list[str],
+) -> None:
+    for state, phase, state_ref in (
+        (initial, "initial", run.initial_state_ref),
+        (final, "final", run.final_state_ref),
+    ):
+        if state_ref is None:
+            blocks.append("repository_state_reference_missing")
+            continue
+        if state_ref.locator != f"/{phase}_state.json":
+            blocks.append("repository_state_reference_mismatch")
+        raw_state = _runtime_ref(root, run_id, state_ref, blocks)
+        path = root / "runs" / run_id / f"{phase}_state.json"
+        try:
+            file_state = path.read_bytes()
+        except OSError:
+            blocks.append("malformed_persisted_runtime_evidence")
+            continue
+        if raw_state != file_state:
+            blocks.append("repository_state_artifact_mismatch")
+        if state.run_id != run_id or state.producer_ref != producer:
+            blocks.append("repository_state_identity_mismatch")
+        if state.state_phase != phase or state.tree_ref is None:
+            blocks.append("repository_state_phase_mismatch")
+            continue
+        if state.tree_ref.locator != f"/state/{phase}-tree":
+            blocks.append("repository_tree_reference_mismatch")
+        tree_raw = _runtime_ref(root, run_id, state.tree_ref, blocks)
+        if tree_raw is None:
+            continue
+        try:
+            tree = json.loads(tree_raw)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            blocks.append("malformed_persisted_runtime_evidence")
+            continue
+        expected_hash = tree_manifest_hash(tree) if isinstance(tree, dict) else None
+        recorded_hash = state.initial_tree_hash if phase == "initial" else state.final_tree_hash
+        if expected_hash != recorded_hash:
+            blocks.append("repository_tree_hash_mismatch")
+    if initial.state_caps.get("initial_repository") != "verified":
         blocks.append("initial_workspace_not_verified")
     if run.sealed_artifact_ref is None or run.sealed_artifact_hash is None:
         blocks.append("run_not_sealed")
-    elif _runtime_ref(root, run_id, run.sealed_artifact_ref, blocks) is not None:
-        actual = hashlib.sha256(_runtime_ref(root, run_id, run.sealed_artifact_ref, blocks) or b"").hexdigest()
-        if actual != run.sealed_artifact_hash:
+    else:
+        sealed = _runtime_ref(root, run_id, run.sealed_artifact_ref, blocks)
+        if sealed is not None and hashlib.sha256(sealed).hexdigest() != run.sealed_artifact_hash:
             blocks.append("sealed_artifact_hash_mismatch")
+        if final.tree_ref != run.sealed_artifact_ref:
+            blocks.append("final_state_sealed_artifact_mismatch")
 
 
 def _audit_requests(
@@ -312,52 +381,153 @@ def _audit_requests(
     snapshots: list[RequestSnapshot],
     events: list[Event],
     payloads: dict[int, Any],
+    producer: EvidenceRef,
     blocks: list[str],
 ) -> None:
-    attempt_ids = [snapshot.attempt_id for snapshot in snapshots]
-    if len(attempt_ids) != len(set(attempt_ids)):
-        blocks.append("provider_attempt_merged")
-    request_events = {payload.get("attempt_id"): payload for event, payload in ((event, payloads.get(event.event_seq)) for event in events) if event.kind == "request" and isinstance(payload, dict)}
-    response_events = {payload.get("attempt_id"): payload for event, payload in ((event, payloads.get(event.event_seq)) for event in events) if event.kind == "response" and isinstance(payload, dict)}
+    request_events = [(event, payloads.get(event.event_seq)) for event in events if event.kind == "request"]
+    terminal_events = [
+        (event, payloads.get(event.event_seq))
+        for event in events
+        if event.kind in {"response", "provider_failure"}
+    ]
+    snapshot_ids = [snapshot.attempt_id for snapshot in snapshots]
+    request_ids = [payload.get("attempt_id") for _, payload in request_events if isinstance(payload, dict)]
+    terminal_ids = [payload.get("attempt_id") for _, payload in terminal_events if isinstance(payload, dict)]
+    if any(not isinstance(value, str) for value in request_ids + terminal_ids):
+        blocks.append("malformed_persisted_runtime_evidence")
+        return
+    for ids, reason in (
+        (snapshot_ids, "duplicate_attempt_id"),
+        (request_ids, "duplicate_request_event"),
+        (terminal_ids, "duplicate_terminal_event"),
+    ):
+        if len(ids) != len(set(ids)):
+            blocks.append(reason)
+    snapshot_set, request_set, terminal_set = set(snapshot_ids), set(request_ids), set(terminal_ids)
+    if snapshot_set != request_set or snapshot_set != terminal_set:
+        blocks.append("attempt_set_mismatch")
+    if request_set - snapshot_set:
+        blocks.append("orphan_request_event")
+    if terminal_set - snapshot_set:
+        blocks.append("orphan_terminal_event")
+    if snapshot_set - request_set or snapshot_set - terminal_set:
+        blocks.append("attempt_occurrence_missing")
+    request_by_id = {payload["attempt_id"]: (event, payload) for event, payload in request_events if isinstance(payload, dict)}
+    terminal_by_id = {payload["attempt_id"]: (event, payload) for event, payload in terminal_events if isinstance(payload, dict)}
     for snapshot in snapshots:
-        if snapshot.run_id != run_id:
+        if snapshot.run_id != run_id or snapshot.producer_ref != producer:
             blocks.append("wrong_run_evidence_reference")
             continue
-        request = request_events.get(snapshot.attempt_id)
-        response = response_events.get(snapshot.attempt_id)
-        if request is None or response is None:
-            blocks.append("provider_attempt_missing_event")
+        request_item = request_by_id.get(snapshot.attempt_id)
+        terminal_item = terminal_by_id.get(snapshot.attempt_id)
+        if request_item is None or terminal_item is None:
+            blocks.append("attempt_occurrence_missing")
             continue
+        request_event, request = request_item
+        terminal_event, terminal = terminal_item
+        if (
+            request_event.call_id != snapshot.logical_call_id
+            or terminal_event.call_id != snapshot.logical_call_id
+            or request.get("logical_call_id") != snapshot.logical_call_id
+            or terminal.get("logical_call_id") != snapshot.logical_call_id
+        ):
+            blocks.append("attempt_logical_call_mismatch")
         for name, ref in (("before_body_ref", snapshot.before_body_ref), ("prepared_body_ref", snapshot.prepared_body_ref), ("sent_body_ref", snapshot.sent_body_ref)):
             if ref is None or _runtime_ref(root, run_id, ref, blocks) is None:
                 blocks.append("request_evidence_missing")
                 continue
             if request.get(name) != ref.model_dump():
                 blocks.append("request_send_boundary_mismatch")
-        raw_response = response.get("raw_response_ref")
-        if not isinstance(raw_response, dict):
-            blocks.append("provider_attempt_missing_event")
-            continue
+        _audit_terminal_attempt(root, run_id, snapshot, terminal_event, terminal, blocks)
+
+
+def _audit_terminal_attempt(
+    root: Path,
+    run_id: str,
+    snapshot: RequestSnapshot,
+    event: Event,
+    terminal: dict[str, Any],
+    blocks: list[str],
+) -> None:
+    raw_response, failure = terminal.get("raw_response_ref"), terminal.get("failure_ref")
+    if event.kind == "provider_failure":
+        if raw_response is not None or not isinstance(failure, dict):
+            blocks.append("transport_failure_evidence_missing")
+        else:
+            try:
+                failure_ref = EvidenceRef.model_validate(failure)
+            except ValidationError:
+                blocks.append("malformed_persisted_runtime_evidence")
+            else:
+                _runtime_ref(root, run_id, failure_ref, blocks)
+                if failure_ref.locator != f"/attempts/{snapshot.attempt_id}/transport-failure":
+                    blocks.append("transport_failure_identity_mismatch")
+        if terminal.get("raw_usage_ref") is not None or terminal.get("provider_request_id") is not None:
+            blocks.append("transport_failure_semantics_mismatch")
         try:
-            response_ref = EvidenceRef.model_validate(raw_response)
+            usage = Fact[dict].model_validate(terminal.get("usage"))
         except ValidationError:
             blocks.append("malformed_persisted_runtime_evidence")
-            continue
-        response_bytes = _runtime_ref(root, run_id, response_ref, blocks)
-        usage = response.get("usage")
-        usage_ref_raw = response.get("raw_usage_ref")
-        if response_bytes is None:
-            continue
-        try:
-            response_json = json.loads(response_bytes)
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            response_json = None
-        has_usage = isinstance(response_json, dict) and isinstance(response_json.get("usage"), dict)
-        if has_usage:
-            if not isinstance(usage, dict) or usage.get("status") != "observed" or not isinstance(usage_ref_raw, dict):
-                blocks.append("provider_usage_not_observed")
-        elif not isinstance(usage, dict) or usage.get("status") != "unknown" or usage.get("value") is not None:
+        else:
+            if (
+                usage.status != "unknown"
+                or usage.value is not None
+                or usage.reason != "transport_exception_before_response"
+                or usage.refs
+            ):
+                blocks.append("transport_failure_semantics_mismatch")
+        return
+    if not isinstance(raw_response, dict) or failure is not None:
+        blocks.append("provider_attempt_missing_event")
+        return
+    try:
+        response_ref = EvidenceRef.model_validate(raw_response)
+    except ValidationError:
+        blocks.append("malformed_persisted_runtime_evidence")
+        return
+    response_bytes = _runtime_ref(root, run_id, response_ref, blocks)
+    if response_bytes is None:
+        return
+    if response_ref.locator != f"/attempts/{snapshot.attempt_id}/response":
+        blocks.append("provider_response_identity_mismatch")
+    try:
+        response_json = json.loads(response_bytes)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        response_json = None
+    _audit_usage(response_json, response_ref, terminal, blocks)
+
+
+def _audit_usage(response_json: Any, response_ref: EvidenceRef, terminal: dict[str, Any], blocks: list[str]) -> None:
+    try:
+        usage = Fact[dict].model_validate(terminal.get("usage"))
+    except ValidationError:
+        blocks.append("malformed_persisted_runtime_evidence")
+        return
+    raw_usage = terminal.get("raw_usage_ref")
+    observed_usage = isinstance(response_json, dict) and isinstance(response_json.get("usage"), dict)
+    if not observed_usage:
+        if (
+            usage.status != "unknown"
+            or usage.value is not None
+            or usage.reason != "provider_did_not_report_usage"
+            or usage.refs
+            or raw_usage is not None
+        ):
             blocks.append("provider_usage_invented")
+        return
+    if not isinstance(raw_usage, dict):
+        blocks.append("provider_usage_not_observed")
+        return
+    try:
+        usage_ref = EvidenceRef.model_validate(raw_usage)
+    except ValidationError:
+        blocks.append("malformed_persisted_runtime_evidence")
+        return
+    expected_ref = response_ref.model_copy(update={"locator": "/usage"})
+    if usage_ref != expected_ref or usage.refs != [expected_ref] or usage.status != "observed":
+        blocks.append("provider_usage_reference_mismatch")
+    if usage.value != response_json["usage"]:
+        blocks.append("provider_usage_value_mismatch")
 
 
 def _audit_file_bindings(
@@ -366,11 +536,26 @@ def _audit_file_bindings(
     bindings: list[FileBinding],
     events: list[Event],
     payloads: dict[int, Any],
+    final: RepositoryState,
     blocks: list[str],
 ) -> None:
-    finishes = {event.id: payloads.get(event.event_seq) for event in events if event.kind == "tool_finish"}
+    starts = [(event, payloads.get(event.event_seq)) for event in events if event.kind == "tool_start"]
+    finishes = [(event, payloads.get(event.event_seq)) for event in events if event.kind == "tool_finish"]
+    start_ids = [event.call_id for event, _ in starts]
+    finish_ids = [event.call_id for event, _ in finishes]
+    if None in start_ids or None in finish_ids or Counter(start_ids) != Counter(finish_ids):
+        blocks.append("incomplete_tool_call")
+    if any(count != 1 for count in Counter(start_ids).values()) or any(count != 1 for count in Counter(finish_ids).values()):
+        blocks.append("duplicate_tool_occurrence")
+    finish_by_id = {event.id: (event, payload) for event, payload in finishes}
+    if len({binding.read_event_id for binding in bindings}) != len(bindings):
+        blocks.append("file_binding_occurrence_duplicate")
     for binding in bindings:
-        result = finishes.get(binding.read_event_id)
+        item = finish_by_id.get(binding.read_event_id)
+        if item is None:
+            blocks.append("file_binding_without_closed_tool")
+            continue
+        event, result = item
         if not isinstance(result, dict) or result.get("complete") is not True:
             blocks.append("file_binding_without_closed_tool")
             continue
@@ -382,10 +567,16 @@ def _audit_file_bindings(
         raw = _runtime_ref(root, run_id, ref, blocks)
         if raw is None:
             continue
+        if ref.locator != f"/tools/{event.call_id}/body":
+            blocks.append("file_binding_occurrence_mismatch")
+        if binding.observed_seq != event.event_seq or binding.observed_seq != event.available_seq:
+            blocks.append("file_binding_sequence_mismatch")
         if hashlib.sha256(raw).hexdigest() != binding.file_sha256 or result.get("sha256") != binding.file_sha256:
             blocks.append("file_binding_bytes_mismatch")
         if result.get("path") != binding.repo_relative_path or binding.observed_seq < 0:
             blocks.append("file_binding_identity_mismatch")
+    if final.files != bindings:
+        blocks.append("final_state_file_bindings_mismatch")
 
 
 def audit_run(root: Path, run_id: str) -> AuditResult:

@@ -74,6 +74,7 @@ class CapturedRuntime:
             producer_ref=self._producer_ref,
             run_id=run_id,
             initial_tree_hash=tree_hash,
+            tree_ref=self._initial_tree_ref,
             image_digest=image,
             observed_seq=0,
             files=[],
@@ -84,6 +85,12 @@ class CapturedRuntime:
             },
         )
         persist_run_json(data_root, run_id, "initial_state.json", self._initial_state)
+        self._initial_state_ref = ingest_runtime_bytes(
+            self._initial_state.model_dump_json(indent=2).encode() + b"\n",
+            data_root,
+            run_id,
+            "/initial_state.json",
+        )
         self.tools = RuntimeTools(self.workspace, data_root, run_id, self.record_event)
 
     @property
@@ -102,7 +109,7 @@ class CapturedRuntime:
             "schema_version": "1.0",
             "runtime_version": "m2_capture_v1",
         }
-        raw = json.dumps(manifest, sort_keys=True).encode()
+        raw = json.dumps(manifest, sort_keys=True, indent=2).encode() + b"\n"
         ref = ingest_runtime_bytes(raw, self.data_root, self.run_id, "/producer-manifest")
         persist_run_json(self.data_root, self.run_id, "producer_manifest.json", manifest)
         persist_run_json(self.data_root, self.run_id, "producer_ref.json", ref)
@@ -153,12 +160,8 @@ class CapturedRuntime:
         attempt_id = f"attempt:{self.run_id}:{self._attempt_seq}"
         self._attempt_seq += 1
         prepared = provider.prepare(RequestDraft(body=body))
-        attempt = provider.capture_attempt(
-            prepared,
-            attempt_id,
-            data_root=self.data_root,
-            run_id=self.run_id,
-        )
+        provider.bind_capture(data_root=self.data_root, run_id=self.run_id)
+        attempt = provider.send(prepared, attempt_id)
         cutoff_seq = max((event.available_seq or 0 for event in self._events), default=0)
         snapshot = RequestSnapshot(
             kind="request_snapshot",
@@ -186,19 +189,25 @@ class CapturedRuntime:
                 "prepared_body_ref": attempt.prepared_body_ref.model_dump(),
                 "sent_body_ref": attempt.sent_body_ref.model_dump(),
                 "transport_status": attempt.transport_status,
+                "logical_call_id": logical_call_id,
             },
             True,
         )
+        terminal_kind = "provider_failure" if attempt.failure_ref else "response"
         self.record_event(
-            "response",
+            terminal_kind,
             logical_call_id,
             {
                 "attempt_id": attempt_id,
-                "raw_response_ref": attempt.raw_response_ref.model_dump(),
+                "raw_response_ref": (
+                    attempt.raw_response_ref.model_dump() if attempt.raw_response_ref else None
+                ),
+                "failure_ref": attempt.failure_ref.model_dump() if attempt.failure_ref else None,
                 "raw_usage_ref": attempt.raw_usage_ref.model_dump() if attempt.raw_usage_ref else None,
                 "usage": attempt.usage.model_dump(),
                 "transport_status": attempt.transport_status,
                 "provider_request_id": attempt.provider_request_id,
+                "logical_call_id": logical_call_id,
             },
             True,
         )
@@ -221,12 +230,21 @@ class CapturedRuntime:
         final_state = self._initial_state.model_copy(
             update={
                 "id": f"state:{self.run_id}:final",
-                "initial_tree_hash": final_hash,
+                "state_phase": "final",
+                "initial_tree_hash": None,
+                "final_tree_hash": final_hash,
+                "tree_ref": final_ref,
                 "observed_seq": self._events[-1].event_seq,
                 "files": self.tools.bindings,
             }
         )
         persist_run_json(self.data_root, self.run_id, "final_state.json", final_state)
+        final_state_ref = ingest_runtime_bytes(
+            final_state.model_dump_json(indent=2).encode() + b"\n",
+            self.data_root,
+            self.run_id,
+            "/final_state.json",
+        )
         run = Run(
             kind="run",
             id=self.run_id,
@@ -240,12 +258,13 @@ class CapturedRuntime:
                 "execution_restore": "unsupported",
                 "evaluation": "not_run",
             },
-            initial_state_ref=self._initial_tree_ref,
+            initial_state_ref=self._initial_state_ref,
             start=self._events[0].start if self._events else None,
             end=datetime.now(timezone.utc),
             status=status,
             stop_reason=stop_reason,
             events_ref=events_ref,
+            final_state_ref=final_state_ref,
             sealed_artifact_ref=final_ref,
             sealed_artifact_hash=hashlib.sha256(final_tree_bytes).hexdigest(),
         )

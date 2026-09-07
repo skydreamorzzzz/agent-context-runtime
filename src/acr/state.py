@@ -62,9 +62,15 @@ def initial_tree_manifest(workspace: Path) -> tuple[dict[str, object], str]:
                     "sha256": hashlib.sha256(raw).hexdigest(),
                 }
             )
-    manifest: dict[str, object] = {"workspace": root.name, "files": files}
+    manifest: dict[str, object] = {"files": files}
+    return manifest, tree_manifest_hash(manifest)
+
+
+def tree_manifest_hash(manifest: dict[str, object]) -> str:
+    """Hash repository-relative state, never the executor's directory name."""
+
     encoded = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()
-    return manifest, hashlib.sha256(encoded).hexdigest()
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def read_workspace_file(workspace: Path, repo_relative_path: str) -> tuple[Path, bytes]:

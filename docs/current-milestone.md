@@ -16,13 +16,17 @@ to satisfy a newer M1.2 gate.
   adversarial test for actual request, attempt, response, usage, tools, reads,
   state, final artifacts, and evaluation.
 - Actual sent bytes are captured at the physical transport call, distinct from
-  draft/prepared bytes. Every physical attempt is retained, including failure.
+  draft/prepared bytes. Every physical attempt is retained, including a thrown
+  transport exception with failure evidence rather than a fake response.
+- Snapshot, request-event, and terminal-event attempt sets must be exactly
+  one-to-one. Usage facts must exactly resolve from their raw response `/usage`.
 - Runtime events have authoritative serial `event_seq`; raw payloads precede
   normalized events. The audit reads persisted run artifacts only.
 - `read_file` binds relative path, actual bytes, SHA256, UTF-8 full-read mode,
   read occurrence, run identity, and closed tool event.
 - Initial workspace is verified without symlinks; protected data/evaluator roots
-  cannot overlap workspace. Final tree/state binds to a sealed run.
+  cannot overlap workspace. Initial/final state hashes have separate semantics
+  and raw refs; final tree/state binds to a sealed run.
 - Evaluation remains outside runtime. No evaluator result may be fabricated.
 
 ## Retained M1/M1.1 regressions
@@ -42,9 +46,10 @@ to satisfy a newer M1.2 gate.
 
 - Keep every M1/M1.1/M1.2 regression.
 - Prepared/sent divergence, retry merge, lost failed attempt, missing usage
-  default, unfinished tool, file-byte replacement, same-path mutation,
+  default, usage value/ref/locator mutation, unfinished tool, file-byte replacement, same-path mutation,
   workspace escape, evaluator-root overlap, post-seal event, wrong-run ref,
-  and malformed persisted runtime evidence must each reject or BLOCK.
+  malformed persisted runtime evidence, state mismatch, and file-occurrence
+  laundering must each reject or BLOCK.
 - Run a clean engineering-fixture capture and persisted `audit-run`; it is not
   a real provider smoke.
 
@@ -61,3 +66,6 @@ until a separately frozen, real provider/model/task/environment is available,
 one real smoke is captured and sealed, and the required runtime/evaluator
 conditions in the frozen MVP plan are met. A real task failure is evidence, not
 an engineering failure, if capture and sealing remain complete.
+
+The engineering integrity closure is complete: persisted audit now blocks
+attempt-set, raw-usage, state-reference/tree, and file-occurrence laundering.
