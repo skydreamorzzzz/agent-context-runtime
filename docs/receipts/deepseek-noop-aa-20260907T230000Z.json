@@ -1,0 +1,36 @@
+{
+  "receipt_kind": "real_noop_aa_pair",
+  "pair_id": "aa-deepseek-20260907T230000Z",
+  "replicate_id": "aa-1",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "code_revision": "a833b6274088cb461e8f2244f3decbc917313a3b",
+  "intervention_A": "noop",
+  "intervention_B": "noop",
+  "execution_order": "AB",
+  "cache_isolation": "unsupported",
+  "run_A": {
+    "run_id": "aa-deepseek-20260907T230000Z-A",
+    "physical_attempts": 2,
+    "file_reads": 1,
+    "provider_usage_status": "observed",
+    "provider_usage_total_tokens": 328,
+    "sealed_artifact_hash": "c92fe58b80cda93e02080ccc768aebdb3b226700f130ef2f28a282600f11a701",
+    "resolved": false,
+    "runtime_audit": "PASS",
+    "evaluation_audit": "PASS"
+  },
+  "run_B": {
+    "run_id": "aa-deepseek-20260907T230000Z-B",
+    "physical_attempts": 2,
+    "file_reads": 1,
+    "provider_usage_status": "observed",
+    "provider_usage_total_tokens": 546,
+    "sealed_artifact_hash": "c92fe58b80cda93e02080ccc768aebdb3b226700f130ef2f28a282600f11a701",
+    "resolved": false,
+    "runtime_audit": "PASS",
+    "evaluation_audit": "PASS"
+  },
+  "pair_audit": "PASS",
+  "observation_note": "Raw request, response, run, evaluator, and private-spec evidence remains local-only and is not represented by this receipt."
+}
