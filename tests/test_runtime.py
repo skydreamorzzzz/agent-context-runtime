@@ -701,8 +701,16 @@ def test_public_task_instruction_is_the_actual_sent_user_message(tmp_path: Path)
     assert len(sent) == 1
     request = json.loads(sent[0])
     user_messages = [message["content"] for message in request["messages"] if message["role"] == "user"]
+    system_messages = [
+        message["content"] for message in request["messages"] if message["role"] == "system"
+    ]
     assert user_messages == [marker]
     assert "Inspect target.py and implement add(a, b)." not in user_messages
+    assert len(system_messages) == 1
+    for command in ("READ target.py", "WRITE target.py", "TEST", "FINAL"):
+        assert command in system_messages[0]
+    assert "exactly ONE command per turn" in system_messages[0]
+    assert "Returning Python code without WRITE does not modify the workspace" in system_messages[0]
 
 
 def test_duplicate_read_context_blocks_bind_each_exact_occurrence(tmp_path: Path) -> None:

@@ -395,7 +395,17 @@ def run_deepseek_add_smoke(
     messages = [
         ConversationMessage(
             "system",
-            "Use READ target.py, WRITE target.py followed by complete Python, TEST, or FINAL. Edit before FINAL.",
+            "You are operating through a strict command protocol.\n"
+            "Reply with exactly ONE command per turn. Do not explain. Do not use Markdown code fences. "
+            "Do not add text before or after the command.\n\n"
+            "Allowed commands:\n\n"
+            "READ target.py\n\n"
+            "WRITE target.py\n"
+            "<complete file contents>\n\n"
+            "TEST\n\n"
+            "FINAL\n\n"
+            "Before editing an unseen target.py, first use READ target.py. To modify the file, you MUST "
+            "use WRITE. Returning Python code without WRITE does not modify the workspace.",
         ),
         ConversationMessage("user", runtime.task.public_instruction),
     ]
