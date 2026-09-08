@@ -4,15 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 from acr.contracts import EvaluationResult, EvidenceRef, Fact, Run
-from acr.state import initial_tree_manifest
-from acr.store import ingest_evaluator_bytes, persist_evaluation_json
+from acr.store import ingest_evaluator_bytes, load_blob, persist_evaluation_json
 
 
 class EvaluationHandoffRejected(ValueError):
@@ -31,7 +29,7 @@ class LocalAddEvaluator:
         self,
         *,
         data_root: Path,
-        sealed_workspace: Path,
+        sealed_workspace: Path | None = None,
         code_revision: str | None = None,
     ) -> None:
         self._data_root = data_root
@@ -44,10 +42,6 @@ class LocalAddEvaluator:
     def evaluate(self, sealed_run: Run, private_spec_ref: str) -> EvaluationResult:
         require_sealed_run(sealed_run)
         code_revision = self._execution_code_revision()
-        tree, _ = initial_tree_manifest(self._sealed_workspace)
-        tree_hash = hashlib.sha256(json.dumps(tree, sort_keys=True).encode()).hexdigest()
-        if tree_hash != sealed_run.sealed_artifact_hash:
-            raise EvaluationHandoffRejected("sealed workspace does not match sealed artifact")
         # The private spec is first opened only after both sealed checks.
         private_spec = Path(private_spec_ref)
         spec_bytes = private_spec.read_bytes()
@@ -57,7 +51,7 @@ class LocalAddEvaluator:
         # mutate the sealed artifact used as the submission identity.
         with tempfile.TemporaryDirectory(prefix="acr-evaluator-") as temporary:
             execution_workspace = Path(temporary) / "workspace"
-            shutil.copytree(self._sealed_workspace, execution_workspace)
+            self._materialize_sealed_workspace(sealed_run, execution_workspace)
             completed = subprocess.run(
                 [
                     sys.executable,
@@ -104,6 +98,32 @@ class LocalAddEvaluator:
             )
         persist_evaluation_json(self._data_root, sealed_run.id, "evaluation_result.json", result)
         return result
+
+    def _materialize_sealed_workspace(self, sealed_run: Run, destination: Path) -> None:
+        """Reconstruct the submitted regular files from persisted blobs only."""
+        assert sealed_run.sealed_artifact_ref is not None
+        try:
+            raw = load_blob(self._data_root, sealed_run.sealed_artifact_ref.blob_hash)
+            if hashlib.sha256(raw).hexdigest() != sealed_run.sealed_artifact_hash:
+                raise ValueError("sealed artifact hash mismatch")
+            artifact = json.loads(raw)
+            files = artifact["files"]
+            if not isinstance(files, list):
+                raise TypeError("sealed artifact files malformed")
+            destination.mkdir(parents=True)
+            for item in files:
+                path = item["path"]
+                ref = EvidenceRef.model_validate(item["body_ref"])
+                if not isinstance(path, str) or Path(path).is_absolute() or ".." in Path(path).parts:
+                    raise ValueError("sealed artifact path invalid")
+                body = load_blob(self._data_root, ref.blob_hash)
+                if hashlib.sha256(body).hexdigest() != item["sha256"]:
+                    raise ValueError("sealed file hash mismatch")
+                target = destination / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(body)
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+            raise EvaluationHandoffRejected("sealed artifact cannot be materialized") from error
 
     def _execution_code_revision(self) -> str:
         if self._code_revision is not None:

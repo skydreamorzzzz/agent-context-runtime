@@ -92,6 +92,24 @@ def persist_run_jsonl(data_root: Path, run_id: str, name: str, values: list[Any]
     _write_once(data_root / "runs" / run_id / name, content)
 
 
+def append_run_jsonl(data_root: Path, run_id: str, name: str, value: Any) -> None:
+    """Append one occurrence to a crash-survivable runtime journal.
+
+    Journals are intentionally separate from the sealed immutable JSONL
+    artifacts.  A crashed run is not resumed, but observations made before the
+    crash must not disappear with process memory.
+    """
+
+    if "/" in name or name in {"", ".", ".."}:
+        raise ValueError("invalid runtime journal name")
+    path = data_root / "runs" / run_id / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    line = (value.model_dump_json() if hasattr(value, "model_dump_json") else json.dumps(value, sort_keys=True)).encode() + b"\n"
+    with path.open("ab") as handle:
+        handle.write(line)
+        handle.flush()
+
+
 def persist_physical_attempt(data_root: Path, run_id: str, value: Any) -> None:
     """Persist one physical attempt occurrence once; retries require a new ID."""
 

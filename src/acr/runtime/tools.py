@@ -22,7 +22,7 @@ class FileReadResult:
 
 
 class RuntimeTools:
-    """Serial read-file instrumentation; no shell or generic tool framework."""
+    """The fixed add-task tool boundary; no shell or generic tool framework."""
 
     def __init__(
         self,
@@ -103,6 +103,46 @@ class RuntimeTools:
             body_ref=body_ref,
             text=raw.decode("utf-8"),
         )
+
+    def write_file(self, repo_relative_path: str, text: str) -> None:
+        """Write one UTF-8 regular workspace file with start/finish evidence."""
+
+        tool_call_id = f"tool:{self._run_id}:{self._counter}"
+        self._counter += 1
+        self._record("tool_start", tool_call_id, {"tool": "write_file", "path": repo_relative_path}, False)
+        try:
+            resolved, _ = read_workspace_file(self._workspace, repo_relative_path)
+            raw = text.encode("utf-8")
+            resolved.write_bytes(raw)
+            body_ref = ingest_runtime_bytes(raw, self._data_root, self._run_id, f"/tools/{tool_call_id}/body")
+            self._record(
+                "tool_finish", tool_call_id,
+                {"tool": "write_file", "path": repo_relative_path, "body_ref": body_ref.model_dump(), "sha256": hashlib.sha256(raw).hexdigest(), "complete": True},
+                True,
+            )
+        except Exception as error:
+            self._record("tool_finish", tool_call_id, {"tool": "write_file", "path": repo_relative_path, "error": type(error).__name__, "complete": False}, True)
+            raise
+
+    def run_test(self) -> dict[str, object]:
+        """Run the public add-task check only; execution is fully recorded."""
+
+        import subprocess
+        import sys
+
+        tool_call_id = f"tool:{self._run_id}:{self._counter}"
+        self._counter += 1
+        self._record("tool_start", tool_call_id, {"tool": "run_test", "command": "public-add-check"}, False)
+        probe = (
+            "import importlib.util; p=importlib.util.spec_from_file_location('target','target.py'); "
+            "m=importlib.util.module_from_spec(p); p.loader.exec_module(m); "
+            "assert m.add(1,2)==3; assert m.add(-1,1)==0"
+        )
+        completed = subprocess.run([sys.executable, "-c", probe], cwd=self._workspace, capture_output=True, check=False)
+        raw = json.dumps({"returncode": completed.returncode, "stdout": completed.stdout.decode(errors="replace"), "stderr": completed.stderr.decode(errors="replace")}, sort_keys=True).encode()
+        body_ref = ingest_runtime_bytes(raw, self._data_root, self._run_id, f"/tools/{tool_call_id}/body")
+        self._record("tool_finish", tool_call_id, {"tool": "run_test", "body_ref": body_ref.model_dump(), "returncode": completed.returncode, "complete": True}, True)
+        return json.loads(raw)
 
 
 def tool_result_payload(result: FileReadResult) -> bytes:

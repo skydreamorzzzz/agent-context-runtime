@@ -1,14 +1,33 @@
-# Current milestone: M3 — Noop / A-A Paired-Run Feasibility
+# Current milestone: M2/M3 real-loop integrity closure
 
-M0, M1, and M2 are DONE. This M3 gate is limited to one real DeepSeek noop
-A/A pair. It validates a paired-run harness, not an intervention, benchmark,
-or context-optimization result.
+M0 and M1 are DONE. M2 capture/evaluation and the first M3 noop A/A harness
+are accepted, but this gate closes the minimum real coding loop needed before
+any context-necessity experiment: model-directed read/write/test, reconstructible
+seal, persisted usage, and semantic-condition-to-execution pair audit.
 
 New integrity gates are cumulative. Do not delete, weaken, replace, or stop
 executing any established M0/M1/M2 invariant or regression merely to satisfy a
 new M3 gate.
 
 ## Required gates
+
+- The add-task runtime remains a bounded synchronous loop (at most five
+  physical attempts and tool steps): model-directed `read_file`, `write_file`,
+  and public `run_test` only. A text answer is not a solved submission.
+- Every runtime-built request records ordered `ContextBlock` occurrences. A
+  tool-result block must bind its exact `tool_finish`, `tool_call_id`, and file
+  binding; content equality never substitutes for occurrence identity.
+- Sealing stores an immutable manifest plus regular-file body blobs. Evaluation
+  materializes an isolated submission from those blobs, never from the live
+  execution workspace. Submission syntax/import/runtime errors are completed
+  task failures; evaluator protocol failures alone are `infra_error`.
+- Events and snapshots have append-only journals before seal. Interrupted runs
+  are not resumed, but prior observations remain available for audit.
+- Usage ledger entries and a run aggregate are derived only from persisted
+  provider usage evidence; absent fields and money remain unknown.
+- Pair audit binds frozen provider/model/base URL/noop/cache/budget/runtime
+  revision/evaluator revision/private-spec hash to both persisted runs and
+  evaluations, not merely to A/A manifest equality.
 
 - Persist the pair manifest before either physical provider request. It freezes
   pair/replicate/task IDs, both preallocated run IDs, provider/model, task

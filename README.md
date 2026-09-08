@@ -13,10 +13,9 @@ The repository is intentionally organized around evidence boundaries rather than
 
 The MVP performs clean, from-scratch baseline/treatment pairs. It may omit one verified old duplicate `read_file` result from one outbound request. Every conclusion must be reconstructible from raw blobs, normalized records, provenance, audit findings, sealed runs, evaluation results, and the cost ledger. Missing evidence remains `unknown`; it is never inferred.
 
-Implementation status: M0/M1 are complete and M2 is in progress. M2 has one
-real DeepSeek public-task smoke through the persisted
-request/attempt/response/tool/file/state/seal chain; the resulting runtime
-evidence remains local. It does **not** claim an evaluator result, task-quality
-outcome, or experiment.
+Implementation status: M0/M1 are complete. M2 has real provider capture and an
+independent evaluator; the current gate closes the bounded model-directed
+read/write/test loop, reconstructible sealed submission, and persisted usage
+ledger before any context intervention. Real runtime evidence remains local.
 
 See [the architecture guide](docs/architecture.md), [audit checklist](docs/audit-checklist.md), and the frozen [MVP plan](agent-context-runtime-mvp-plan.md).

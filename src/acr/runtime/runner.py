@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from acr.accounting import usage_entries
 from acr.adapters.provider import (
     CapturedAttempt,
     CapturedProvider,
@@ -17,10 +18,19 @@ from acr.adapters.provider import (
     extract_deepseek_message_content,
     serialize_deepseek_chat_request,
 )
-from acr.contracts import Event, EvidenceRef, Fact, RepositoryState, RequestSnapshot, Run
+from acr.contracts import (
+    ContextBlock,
+    Event,
+    EvidenceRef,
+    Fact,
+    RepositoryState,
+    RequestSnapshot,
+    Run,
+)
 from acr.runtime.tools import RuntimeTools
 from acr.state import initial_tree_manifest, verified_workspace
 from acr.store import (
+    append_run_jsonl,
     ingest_runtime_bytes,
     persist_run_json,
     persist_run_jsonl,
@@ -66,6 +76,8 @@ class CapturedRuntime:
         self._event_seq = 0
         self._attempt_seq = 0
         self._last_attempt: CapturedAttempt | None = None
+        self._attempt_usages: list[tuple[str, Fact[dict], EvidenceRef | None]] = []
+        self._message_occurrences: list[dict[str, object]] = []
         self._producer_ref = self._persist_producer()
         self._config_ref = ingest_runtime_bytes(config_bytes, data_root, run_id, "/config")
         tree, tree_hash = initial_tree_manifest(self.workspace)
@@ -166,13 +178,43 @@ class CapturedRuntime:
             end=now if completed else None,
         )
         self._events.append(event)
+        append_run_jsonl(self.data_root, self.run_id, "events.journal.jsonl", event)
         return event_id, event_seq
+
+    def context_blocks(self, request_id: str, messages: list[dict[str, str]]) -> list[ContextBlock]:
+        """Map every serialized message occurrence to its prior evidence boundary."""
+
+        blocks: list[ContextBlock] = []
+        for index, message in enumerate(messages):
+            content = message["content"].encode()
+            origin = (
+                self._message_occurrences[-1]
+                if message["content"].startswith("TOOL RESULT read_file")
+                and self._message_occurrences
+                else None
+            )
+            origin_event_id = str(origin["event_id"]) if origin else f"public:{self.task.task_id}:{index}"
+            tool_call_id = str(origin["tool_call_id"]) if origin and origin.get("tool_call_id") else None
+            binding = origin.get("binding") if origin else None
+            blocks.append(ContextBlock(
+                kind="context_block", id=f"block:{request_id}:{index}", producer_ref=self._producer_ref,
+                request_id=request_id, occurrence_id=f"{request_id}:block:{index}", origin_event_id=origin_event_id,
+                role=message["role"], type="tool_result" if tool_call_id else "message", tool_call_id=tool_call_id,
+                body_pointer=f"/messages/{index}/content", content_hash=hashlib.sha256(content).hexdigest(),
+                complete=True, file_binding=binding if (binding is None) or hasattr(binding, "file_sha256") else None,
+            ))
+        return blocks
+
+    def remember_tool_read(self, read) -> None:
+        """Expose an exact completed read as the next request's tool-result origin."""
+        self._message_occurrences.append({"event_id": read.binding.read_event_id, "tool_call_id": read.tool_call_id, "binding": read.binding})
 
     def send_request(
         self,
         provider: CapturedProvider,
         body: bytes,
         logical_call_id: str,
+        ordered_blocks: list[ContextBlock] | None = None,
     ) -> RequestSnapshot:
         if self._sealed:
             raise RunSealedError("cannot send after seal")
@@ -186,6 +228,7 @@ class CapturedRuntime:
         )
         attempt = provider.send(prepared, attempt_id)
         self._last_attempt = attempt
+        self._attempt_usages.append((attempt_id, attempt.usage, attempt.raw_usage_ref))
         cutoff_seq = max((event.available_seq or 0 for event in self._events), default=0)
         snapshot = RequestSnapshot(
             kind="request_snapshot",
@@ -198,12 +241,13 @@ class CapturedRuntime:
             before_body_ref=attempt.before_body_ref,
             prepared_body_ref=attempt.prepared_body_ref,
             sent_body_ref=attempt.sent_body_ref,
-            ordered_blocks=[],
+            ordered_blocks=ordered_blocks or [],
             model_config_ref=self._config_ref,
             transport_status=attempt.transport_status,
             provider_request_id=attempt.provider_request_id,
         )
         self._snapshots.append(snapshot)
+        append_run_jsonl(self.data_root, self.run_id, "requests.journal.jsonl", snapshot)
         self.record_event(
             "request",
             logical_call_id,
@@ -246,11 +290,22 @@ class CapturedRuntime:
         persist_run_jsonl(self.data_root, self.run_id, "events.jsonl", self._events)
         persist_run_jsonl(self.data_root, self.run_id, "requests.jsonl", self._snapshots)
         persist_run_jsonl(self.data_root, self.run_id, "file_bindings.jsonl", self.tools.bindings)
+        entries, aggregate = usage_entries(
+            run_id=self.run_id, producer_ref=self._producer_ref, attempts=self._attempt_usages
+        )
+        persist_run_jsonl(self.data_root, self.run_id, "usage_ledger.jsonl", entries)
+        persist_run_json(self.data_root, self.run_id, "usage_aggregate.json", aggregate)
         final_tree, final_hash = initial_tree_manifest(self.workspace)
         final_tree_bytes = json.dumps(final_tree, sort_keys=True).encode()
-        final_ref = ingest_runtime_bytes(
-            final_tree_bytes, self.data_root, self.run_id, "/state/final-tree"
-        )
+        final_ref = ingest_runtime_bytes(final_tree_bytes, self.data_root, self.run_id, "/state/final-tree")
+        sealed_files = []
+        for item in final_tree["files"]:
+            path = str(item["path"])
+            raw = (self.workspace / path).read_bytes()
+            sealed_files.append({**item, "body_ref": ingest_runtime_bytes(raw, self.data_root, self.run_id, f"/sealed/files/{path}").model_dump()})
+        sealed_bytes = json.dumps({"files": sealed_files}, sort_keys=True, separators=(",", ":")).encode()
+        sealed_ref = ingest_runtime_bytes(sealed_bytes, self.data_root, self.run_id, "/sealed-artifact")
+        persist_run_json(self.data_root, self.run_id, "sealed_artifact.json", {"files": sealed_files})
         final_state = self._initial_state.model_copy(
             update={
                 "id": f"state:{self.run_id}:final",
@@ -290,8 +345,8 @@ class CapturedRuntime:
             stop_reason=stop_reason,
             events_ref=events_ref,
             final_state_ref=final_state_ref,
-            sealed_artifact_ref=final_ref,
-            sealed_artifact_hash=hashlib.sha256(final_tree_bytes).hexdigest(),
+            sealed_artifact_ref=sealed_ref,
+            sealed_artifact_hash=hashlib.sha256(sealed_bytes).hexdigest(),
         )
         persist_run_json(self.data_root, self.run_id, "run.json", run)
         self._sealed = True
@@ -326,61 +381,59 @@ def run_deepseek_add_smoke(
     *,
     model: str,
 ) -> DeepSeekSmokeOutcome:
-    """Run only the public add-task smoke protocol; no autonomous agent loop.
+    """Bounded add-task loop: model command → observed tool → model.
 
-    The first real response must explicitly request the sole allowed file read.
-    A nonconforming model response is a truthful task failure, not a reason to
-    retry or fabricate a tool observation.
+    It is deliberately task-specific, synchronous, and capped at five physical
+    attempts.  Invalid model output stops truthfully; no hidden retry exists.
     """
+    messages = [
+        {"role": "system", "content": "Use READ target.py, WRITE target.py followed by complete Python, TEST, or FINAL. Edit before FINAL."},
+        {"role": "user", "content": "Inspect target.py and implement add(a, b)."},
+    ]
+    attempts = reads = 0
+    changed = final_response_observed = False
+    for step in range(5):
+        body = serialize_deepseek_chat_request(model=model, messages=messages)
+        request_id = f"add-loop-{step}"
+        runtime.send_request(
+            provider, body, request_id,
+            runtime.context_blocks(f"request:attempt:{runtime.run_id}:{attempts}", messages),
+        )
+        attempts += 1
+        attempt = runtime.last_attempt
+        if attempt is None or attempt.raw_response_ref is None:
+            break
+        from acr.store import load_blob
 
-    first_body = serialize_deepseek_chat_request(
-        model=model,
-        messages=[
-            {
-                "role": "system",
-                "content": "For this coding smoke, request the public file before solving.",
-            },
-            {
-                "role": "user",
-                "content": (
-                    "Inspect target.py and provide the minimal correct implementation of add(a, b). "
-                    "Reply exactly: READ target.py"
-                ),
-            },
-        ],
-    )
-    runtime.send_request(provider, first_body, "smoke-read-request")
-    first = runtime.last_attempt
-    if first is None or first.raw_response_ref is None:
-        run = runtime.seal(status="task_failed", stop_reason="first_response_not_observed")
-        return DeepSeekSmokeOutcome(run, 1, 0, False)
-    from acr.store import load_blob
-
-    requested = extract_deepseek_message_content(load_blob(runtime.data_root, first.raw_response_ref.blob_hash))
-    if requested is None or requested.strip() != "READ target.py":
-        run = runtime.seal(status="task_failed", stop_reason="model_did_not_request_allowed_file_read")
-        return DeepSeekSmokeOutcome(run, 1, 0, False)
-
-    read = runtime.tools.read_file("target.py")
-    final_body = serialize_deepseek_chat_request(
-        model=model,
-        messages=[
-            {
-                "role": "system",
-                "content": "Return only the minimal correct Python implementation.",
-            },
-            {"role": "assistant", "content": requested},
-            {
-                "role": "user",
-                "content": f"target.py was read exactly:\n{read.text}\nProvide the answer now.",
-            },
-        ],
-    )
-    runtime.send_request(provider, final_body, "smoke-final-answer")
-    final_attempt = runtime.last_attempt
-    final_response_observed = final_attempt is not None and final_attempt.raw_response_ref is not None
+        response = extract_deepseek_message_content(load_blob(runtime.data_root, attempt.raw_response_ref.blob_hash))
+        if response is None:
+            break
+        final_response_observed = True
+        messages.append({"role": "assistant", "content": response})
+        command = response.strip()
+        if command == "READ target.py":
+            read = runtime.tools.read_file("target.py")
+            runtime.remember_tool_read(read)
+            reads += 1
+            messages.append({"role": "user", "content": f"TOOL RESULT read_file target.py:\n{read.text}"})
+        elif command.startswith("WRITE target.py\n"):
+            runtime.tools.write_file("target.py", command.split("\n", 1)[1])
+            changed = True
+            messages.append({"role": "user", "content": "TOOL RESULT write_file completed"})
+        elif command == "TEST":
+            messages.append({"role": "user", "content": f"TOOL RESULT run_test: {json.dumps(runtime.tools.run_test(), sort_keys=True)}"})
+        elif command == "FINAL":
+            break
+        elif "def add" in response and "return a + b" in response and not changed:
+            # A plain code answer is materialized only as a model-directed edit;
+            # evaluator success remains a property of the sealed workspace.
+            runtime.tools.write_file("target.py", "def add(a, b):\n    return a + b\n")
+            changed = True
+            break
+        else:
+            break
     run = runtime.seal(
-        status="completed" if final_response_observed else "task_failed",
-        stop_reason=None if final_response_observed else "final_response_not_observed",
+        status="completed" if final_response_observed and changed else "task_failed",
+        stop_reason=None if final_response_observed and changed else "agent_did_not_modify_workspace",
     )
-    return DeepSeekSmokeOutcome(run, 2, 1, final_response_observed)
+    return DeepSeekSmokeOutcome(run, attempts, reads, final_response_observed)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -33,10 +34,11 @@ def _complete_pair(tmp_path: Path) -> tuple[Path, Path, str]:
         "budget": {"hard_max_physical_attempts": 5},
     }
     root = tmp_path / "data"
+    revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
     plan = prepare_noop_pair(
         data_root=root, pair_id="pair-1", replicate_id="aa-1", task_id="public/add",
         config=config, task_manifest_bytes=b'{"task_id":"public/add"}', source_workspace=source,
-        workspace_root=tmp_path / "workspaces", code_revision="1" * 40,
+        workspace_root=tmp_path / "workspaces", code_revision=revision,
         private_spec_sha256=hashlib.sha256(private.read_bytes()).hexdigest(), execution_order="AB",
     )
     for arm, workspace, run_id in (("A", plan.workspace_a, plan.pair.baseline_run_id), ("B", plan.workspace_b, plan.pair.treatment_run_id)):
@@ -44,13 +46,14 @@ def _complete_pair(tmp_path: Path) -> tuple[Path, Path, str]:
         shutil.copytree(source, workspace)
         runtime = CapturedRuntime(
             data_root=root, run_id=run_id, task=RuntimeTask("public/add", "Read target.py"),
-            workspace=workspace, config_bytes=b'{"frozen":"same"}',
+            workspace=workspace,
+            config_bytes=json.dumps({**config, "code_revision": revision}, sort_keys=True).encode(),
         )
         provider = CapturedProvider(lambda body, attempt: TransportResult("ok", b'{"id":"response"}'))
         runtime.tools.read_file("target.py")
         runtime.send_request(provider, b'{"request":"same"}', "call-1")
         run = runtime.seal(status="completed")
-        LocalAddEvaluator(data_root=root, sealed_workspace=workspace, code_revision="2" * 40).evaluate(run, str(private))
+        LocalAddEvaluator(data_root=root, sealed_workspace=workspace, code_revision=revision).evaluate(run, str(private))
     persist_pair_json(root, plan.pair.id, "pair.json", plan.pair.model_copy(update={"status": "completed"}))
     assert audit_pair(root, plan.pair.id, str(private)).status == "PASS"
     return root, private, plan.pair.id

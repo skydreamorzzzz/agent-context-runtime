@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -673,6 +674,55 @@ def test_deepseek_transport_exception_uses_the_existing_failure_path(tmp_path: P
     runtime.seal(status="task_failed", stop_reason="provider_exception")
     assert snapshot.transport_status == "transport_exception"
     assert audit_run(tmp_path / "data", "run-1").status == "PASS"
+
+
+def test_add_loop_edits_workspace_maps_context_and_seals_reconstructible_artifact(tmp_path: Path) -> None:
+    responses = [
+        b'{"choices":[{"message":{"content":"READ target.py"}}]}',
+        b'{"choices":[{"message":{"content":"WRITE target.py\\ndef add(a, b):\\n    return a + b\\n"}}]}',
+    ]
+    runtime, _ = _runtime(tmp_path)
+    (runtime.workspace / "target.py").write_text("def add(a, b):\n    pass\n")
+    outcome = run_deepseek_add_smoke(
+        runtime,
+        CapturedProvider(lambda body, attempt: TransportResult("ok", responses.pop(0))),
+        model="deepseek-v4-flash",
+    )
+    assert outcome.run.status == "completed"
+    assert "return a + b" in (runtime.workspace / "target.py").read_text()
+    snapshots = _jsonl(tmp_path / "data" / "runs" / "run-1" / "requests.jsonl")
+    assert snapshots[1]["ordered_blocks"]
+    tool_blocks = [block for block in snapshots[1]["ordered_blocks"] if block["tool_call_id"]]
+    assert len(tool_blocks) == 1
+    assert tool_blocks[0]["file_binding"]["read_event_id"] == tool_blocks[0]["origin_event_id"]
+    shutil.rmtree(runtime.workspace)
+    private = tmp_path / "private.json"
+    private.write_text(json.dumps({"tests": [{"args": [1, 2], "expected": 3}]}))
+    result = LocalAddEvaluator(data_root=tmp_path / "data", code_revision="a" * 40).evaluate(outcome.run, str(private))
+    assert result.status == "completed" and result.resolved.value is True
+    assert audit_run(tmp_path / "data", "run-1").status == "PASS"
+
+
+def test_submission_error_is_task_failure_and_journal_survives_before_seal(tmp_path: Path) -> None:
+    runtime, _ = _runtime(tmp_path)
+    runtime.tools.read_file("a.py")
+    assert (tmp_path / "data" / "runs" / "run-1" / "events.journal.jsonl").read_text()
+    runtime.tools.write_file("a.py", "def broken(:\n")
+    run = runtime.seal(status="completed")
+    private = tmp_path / "private.json"
+    private.write_text(json.dumps({"tests": [{"args": [1, 2], "expected": 3}]}))
+    result = LocalAddEvaluator(data_root=tmp_path / "data", code_revision="a" * 40).evaluate(run, str(private))
+    assert result.status == "completed"
+    assert result.resolved.value is False
+
+
+def test_usage_ledger_is_persisted_and_rebuildable(tmp_path: Path) -> None:
+    runtime, _ = _runtime(tmp_path)
+    _complete(runtime)
+    aggregate = json.loads((tmp_path / "data" / "runs" / "run-1" / "usage_aggregate.json").read_text())
+    assert aggregate["physical_attempt_count"] == 1
+    assert aggregate["usage_complete"] is False
+    assert (tmp_path / "data" / "runs" / "run-1" / "usage_ledger.jsonl").read_text()
 
 
 def test_private_add_evaluator_is_sealed_only_persisted_and_fail_closed(tmp_path: Path) -> None:

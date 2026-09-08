@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 from acr.adapters.legacy import ADAPTER_VERSION, parse_document
 from acr.contracts import (
+    CostEntry,
     EvaluationResult,
     Event,
     EvidenceRef,
@@ -308,6 +309,56 @@ def _audit_runtime(root: Path, run_id: str, blocks: list[str]) -> None:
         payloads[event.event_seq] = payload
     _audit_requests(root, run_id, snapshots, events, payloads, physical_attempts, producer, run, blocks)
     _audit_file_bindings(root, run_id, bindings, events, payloads, final, blocks)
+    _audit_usage_ledger(root, run_id, snapshots, events, payloads, blocks)
+
+
+def _audit_usage_ledger(
+    root: Path, run_id: str, snapshots: list[RequestSnapshot], events: list[Event], payloads: dict[int, Any], blocks: list[str]
+) -> None:
+    """Ensure persisted normalized token totals are rebuildable from terminal evidence."""
+    try:
+        entries = _load_jsonl_models(root / "runs" / run_id / "usage_ledger.jsonl", CostEntry, blocks)
+        aggregate = load_run_json(root, run_id, "usage_aggregate.json")
+    except (FileNotFoundError, OSError, json.JSONDecodeError, ValueError):
+        blocks.append("usage_ledger_missing")
+        return
+    if entries is None or not isinstance(aggregate, dict):
+        blocks.append("usage_ledger_malformed")
+        return
+    expected_ids = {snapshot.attempt_id for snapshot in snapshots}
+    if aggregate.get("physical_attempt_count") != len(expected_ids):
+        blocks.append("usage_aggregate_mismatch")
+    if {entry.attempt_id for entry in entries} != expected_ids:
+        blocks.append("usage_ledger_attempt_mismatch")
+    terminal = {
+        payload.get("attempt_id"): payload
+        for event in events
+        for payload in [payloads.get(event.event_seq)]
+        if event.kind in {"response", "provider_failure"} and isinstance(payload, dict)
+    }
+    totals = {"input_tokens": 0.0, "output_tokens": 0.0, "total_tokens": 0.0}
+    complete = True
+    for attempt_id in expected_ids:
+        usage = terminal.get(attempt_id, {}).get("usage")
+        try:
+            fact = Fact[dict].model_validate(usage)
+        except ValidationError:
+            blocks.append("usage_ledger_malformed")
+            continue
+        if fact.status != "observed" or not isinstance(fact.value, dict):
+            complete = False
+            continue
+        raw = fact.value
+        values = {"input_tokens": raw.get("input_tokens", raw.get("prompt_tokens")), "output_tokens": raw.get("output_tokens", raw.get("completion_tokens")), "total_tokens": raw.get("total_tokens")}
+        if values["total_tokens"] is None and all(isinstance(values[x], (int, float)) for x in ("input_tokens", "output_tokens")):
+            values["total_tokens"] = values["input_tokens"] + values["output_tokens"]
+        for key, value in values.items():
+            if isinstance(value, (int, float)):
+                totals[key] += float(value)
+            else:
+                complete = False
+    if aggregate.get("usage_complete") != complete or any(aggregate.get(key) != (value if complete else None) for key, value in totals.items()):
+        blocks.append("usage_aggregate_mismatch")
 
 
 def _load_runtime_producer(root: Path, run_id: str, run: Run, blocks: list[str]) -> EvidenceRef:
@@ -404,6 +455,8 @@ def _audit_repository_states(
             continue
         if state.tree_ref.locator != f"/state/{phase}-tree":
             blocks.append("repository_tree_reference_mismatch")
+            if phase == "final":
+                blocks.append("final_state_sealed_artifact_mismatch")
         tree_raw = _runtime_ref(root, run_id, state.tree_ref, blocks)
         if tree_raw is None:
             continue
@@ -424,8 +477,21 @@ def _audit_repository_states(
         sealed = _runtime_ref(root, run_id, run.sealed_artifact_ref, blocks)
         if sealed is not None and hashlib.sha256(sealed).hexdigest() != run.sealed_artifact_hash:
             blocks.append("sealed_artifact_hash_mismatch")
-        if final.tree_ref != run.sealed_artifact_ref:
-            blocks.append("final_state_sealed_artifact_mismatch")
+        try:
+            artifact = json.loads(sealed) if sealed is not None else None
+            entries = artifact["files"] if isinstance(artifact, dict) else None
+            if not isinstance(entries, list):
+                raise TypeError("sealed files must be a list")
+            tree = {"files": [{key: item[key] for key in ("path", "mode", "sha256")} for item in entries]}
+            if tree_manifest_hash(tree) != final.final_tree_hash:
+                blocks.append("final_state_sealed_artifact_mismatch")
+            for item in entries:
+                ref = EvidenceRef.model_validate(item["body_ref"])
+                body = _runtime_ref(root, run_id, ref, blocks)
+                if body is None or hashlib.sha256(body).hexdigest() != item["sha256"]:
+                    blocks.append("sealed_artifact_file_mismatch")
+        except (KeyError, TypeError, ValueError, ValidationError, json.JSONDecodeError):
+            blocks.append("sealed_artifact_malformed")
 
 
 def _audit_requests(
@@ -509,6 +575,30 @@ def _audit_requests(
                 blocks.append("request_occurrence_mismatch")
             if request.get(name) != ref.model_dump():
                 blocks.append("request_send_boundary_mismatch")
+        sent = _runtime_ref(root, run_id, snapshot.sent_body_ref, blocks) if snapshot.sent_body_ref else None
+        try:
+            sent_messages = json.loads(sent).get("messages") if sent else None
+        except (UnicodeDecodeError, json.JSONDecodeError, AttributeError):
+            sent_messages = None
+        if snapshot.ordered_blocks and (not isinstance(sent_messages, list) or len(snapshot.ordered_blocks) != len(sent_messages)):
+            blocks.append("request_context_mapping_mismatch")
+        elif snapshot.ordered_blocks:
+            for index, block in enumerate(snapshot.ordered_blocks):
+                message = sent_messages[index]
+                if (
+                    block.request_id != snapshot.id
+                    or block.occurrence_id != f"{snapshot.id}:block:{index}"
+                    or block.body_pointer != f"/messages/{index}/content"
+                    or not isinstance(message, dict)
+                    or block.role != message.get("role")
+                    or not isinstance(message.get("content"), str)
+                    or block.content_hash != hashlib.sha256(message["content"].encode()).hexdigest()
+                ):
+                    blocks.append("request_context_mapping_mismatch")
+                if block.tool_call_id is not None:
+                    matching = [event for event in events if event.id == block.origin_event_id and event.kind == "tool_finish" and event.call_id == block.tool_call_id]
+                    if len(matching) != 1 or block.file_binding is None:
+                        blocks.append("request_context_occurrence_mismatch")
         inventory = physical.get(snapshot.attempt_id)
         entered = inventory.get("entered") if inventory is not None else None
         terminal_inventory = inventory.get("terminal") if inventory is not None else None
@@ -825,7 +915,7 @@ def audit_pair(root: Path, pair_id: str, private_spec_ref: str) -> AuditResult:
         blocks.append("pair_producer_mismatch")
     if not isinstance(manifest, dict):
         return AuditResult("BLOCK", tuple(sorted(set(blocks + ["malformed_persisted_pair_evidence"]))))
-    _audit_pair_manifest(pair, manifest, run_a, run_b, initial_a, initial_b, blocks)
+    _audit_pair_manifest(root, pair, manifest, run_a, run_b, initial_a, initial_b, blocks)
     if audit_run(root, pair.baseline_run_id).status != "PASS" or audit_run(root, pair.treatment_run_id).status != "PASS":
         blocks.append("pair_run_audit_block")
     if audit_evaluation(root, pair.baseline_run_id, private_spec_ref).status != "PASS" or audit_evaluation(root, pair.treatment_run_id, private_spec_ref).status != "PASS":
@@ -834,6 +924,7 @@ def audit_pair(root: Path, pair_id: str, private_spec_ref: str) -> AuditResult:
 
 
 def _audit_pair_manifest(
+    root: Path,
     pair: Pair,
     manifest: dict[str, Any],
     run_a: Run,
@@ -897,6 +988,41 @@ def _audit_pair_manifest(
         blocks.append("pair_workspace_isolation_mismatch")
     if run_a.config_ref.blob_hash != run_b.config_ref.blob_hash:
         blocks.append("pair_runtime_config_mismatch")
+        return
+    try:
+        config_a_raw = _runtime_ref(root, run_a.id, run_a.config_ref, blocks)
+        config_b_raw = _runtime_ref(root, run_b.id, run_b.config_ref, blocks)
+        actual_a = json.loads(config_a_raw) if config_a_raw else None
+        actual_b = json.loads(config_b_raw) if config_b_raw else None
+    except (UnicodeDecodeError, json.JSONDecodeError, TypeError):
+        blocks.append("pair_runtime_config_mismatch")
+        return
+    semantic_fields = ("provider", "model", "base_url", "intervention", "cache_isolation")
+    for key in semantic_fields:
+        if actual_a is None or actual_b is None or actual_a.get(key) != config_a.get(key) or actual_b.get(key) != config_b.get(key):
+            blocks.append("pair_actual_execution_binding_mismatch")
+    budget_a = actual_a.get("budget") if isinstance(actual_a, dict) else None
+    budget_b = actual_b.get("budget") if isinstance(actual_b, dict) else None
+    if budget_a != config_a.get("attempt_budget") or budget_b != config_b.get("attempt_budget"):
+        blocks.append("pair_actual_execution_binding_mismatch")
+    for run in (run_a, run_b):
+        producer = _load_runtime_producer(root, run.id, run, blocks)
+        raw = _runtime_ref(root, run.id, producer, blocks)
+        try:
+            producer_manifest = json.loads(raw) if raw else None
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            producer_manifest = None
+        if not isinstance(producer_manifest, dict) or producer_manifest.get("code_revision") != config_a.get("runtime_code_revision"):
+            blocks.append("pair_runtime_revision_mismatch")
+    for run in (run_a, run_b):
+        try:
+            result = EvaluationResult.model_validate_json((root / "evaluations" / run.id / "evaluation_result.json").read_text())
+            eproducer = json.loads((root / "evaluations" / run.id / "producer_manifest.json").read_text())
+        except (OSError, ValidationError, json.JSONDecodeError):
+            blocks.append("pair_evaluator_binding_mismatch")
+            continue
+        if result.evaluator_revision != config_a.get("evaluator_version") or eproducer.get("private_spec_sha256") != config_a.get("private_spec_sha256"):
+            blocks.append("pair_evaluator_binding_mismatch")
 
 
 def _audit_evaluation_producer(

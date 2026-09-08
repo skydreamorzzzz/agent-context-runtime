@@ -2,8 +2,11 @@
 
 M0: DONE
 M1: DONE
-M2: DONE
+M2 provider/runtime capture: PASS
+M2 independent evaluator: PASS
+M2 real coding-agent loop / reconstructible seal / usage ledger: IN PROGRESS
 M3 Noop/A-A paired-run feasibility: PASS
+M3 semantic/execution binding: IN PROGRESS
 M3 overall: IN PROGRESS
 
 Latest implementation checkpoint: `a833b62` — persisted M3 noop A/A pair
@@ -25,5 +28,6 @@ persisted pair audit all passed. Provider-cache isolation remains unsupported.
 This is a single-pair M3 feasibility result, not the frozen plan's full
 multi-task M3 completion and not evidence of intervention effectiveness.
 
-Next gate: authorize one deterministic candidate and the smallest real
-baseline/treatment intervention pair; do not expand A/A synthetic scope.
+Next gate: finish and verify the real coding-loop integrity closure. Do not
+authorize a candidate or intervention until its persisted runtime, evaluator,
+usage, and pair binding audits pass.
