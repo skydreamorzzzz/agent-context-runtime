@@ -22,6 +22,7 @@ from acr.contracts import (
     EvidenceRef,
     Fact,
     FileBinding,
+    InformationLabel,
     Pair,
     PhysicalAttempt,
     Provenance,
@@ -313,7 +314,7 @@ def _audit_runtime(root: Path, run_id: str, blocks: list[str]) -> None:
         payloads[event.event_seq] = payload
     _audit_requests(root, run_id, snapshots, events, payloads, physical_attempts, producer, run, blocks)
     _audit_file_bindings(root, run_id, bindings, events, payloads, final, blocks)
-    _audit_decision_views(root, run_id, run, producer, events, snapshots, blocks)
+    _audit_decision_views(root, run_id, run, producer, events, payloads, snapshots, blocks)
     _audit_usage_ledger(root, run_id, snapshots, events, payloads, blocks)
 
 
@@ -508,6 +509,24 @@ def _same_evidence_occurrence(left: EvidenceRef, right: EvidenceRef) -> bool:
     )
 
 
+def _canonical_event_labels(event: Event) -> list[InformationLabel]:
+    taints = sorted(
+        {
+            taint
+            for label in event.payload_ref.labels
+            for taint in label.taints
+        }
+    )
+    return [
+        InformationLabel(
+            scope="runtime",
+            run_id=event.run_id,
+            available_seq=event.available_seq,
+            taints=taints,
+        )
+    ]
+
+
 def _context_blob(root: Path, ref: EvidenceRef, blocks: list[str]) -> bytes | None:
     raw = _load_ref_blob(root, ref, blocks)
     if raw is None:
@@ -544,6 +563,7 @@ def _audit_context_block(
             or ref.trajectory_key != "deepseek_command_protocol_v1"
             or ref.locator != "/system-prompt"
             or raw != content.encode()
+            or ref.labels != [InformationLabel(scope="public")]
         ):
             blocks.append("context_origin_occurrence_mismatch")
         return
@@ -554,6 +574,7 @@ def _audit_context_block(
             or ref.trajectory_key != run.task_id
             or ref.locator != "/public-instruction"
             or raw != content.encode()
+            or ref.labels != [InformationLabel(scope="public")]
         ):
             blocks.append("context_origin_occurrence_mismatch")
         return
@@ -566,6 +587,8 @@ def _audit_context_block(
     if not isinstance(payload, dict):
         blocks.append("context_origin_occurrence_mismatch")
         return
+    if ref.labels != _canonical_event_labels(event):
+        blocks.append("context_provenance_label_mismatch")
     if block.type == "assistant_response":
         try:
             payload_ref = EvidenceRef.model_validate(payload["raw_response_ref"])
@@ -934,6 +957,7 @@ def _audit_decision_views(
     run: Run,
     producer: EvidenceRef,
     events: list[Event],
+    payloads: dict[int, Any],
     snapshots: list[RequestSnapshot],
     blocks: list[str],
 ) -> None:
@@ -988,6 +1012,34 @@ def _audit_decision_views(
                 continue
             binding = matching_blocks[0].file_binding
             assert binding is not None
+            state_checks = [
+                event
+                for event in events
+                if event.kind == "state_check"
+                and event.run_id == run_id
+                and event.available_seq == comparison.checked_seq
+                and event.call_id == binding.read_event_id
+            ]
+            if len(state_checks) != 1:
+                blocks.append("file_comparison_state_check_mismatch")
+                continue
+            state_check = state_checks[0]
+            state_payload = payloads.get(state_check.event_seq)
+            expected_payload = {
+                "binding_ref": comparison.binding_ref.model_dump(),
+                "repo_relative_path": binding.repo_relative_path,
+                "historical_file_sha256": binding.file_sha256,
+                "current_file_ref": (
+                    comparison.current_file_ref.model_dump()
+                    if comparison.current_file_ref is not None
+                    else None
+                ),
+                "current_file_sha256": comparison.current_file_sha256,
+                "status": comparison.status,
+                "reason": comparison.reason,
+            }
+            if state_payload != expected_payload:
+                blocks.append("file_comparison_state_check_mismatch")
             historical = _load_ref_blob(root, comparison.binding_ref, blocks)
             if historical is None or hashlib.sha256(historical).hexdigest() != binding.file_sha256:
                 blocks.append("file_comparison_binding_mismatch")
@@ -1008,6 +1060,7 @@ def _audit_decision_views(
                 or comparison.current_file_ref.labels[0].run_id != run_id
                 or comparison.current_file_ref.labels[0].available_seq != comparison.checked_seq
                 or comparison.current_file_ref.labels[0].taints
+                or comparison.current_file_ref.labels != _canonical_event_labels(state_check)
                 or hashlib.sha256(current).hexdigest() != comparison.current_file_sha256
             ):
                 blocks.append("file_comparison_evidence_mismatch")

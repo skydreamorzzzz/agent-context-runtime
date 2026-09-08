@@ -18,10 +18,16 @@ from acr.adapters.provider import (
 )
 from acr.audit import audit_evaluation, audit_run
 from acr.cli import _within_attempt_budget
-from acr.contracts import Event, RequestSnapshot, Run
+from acr.contracts import Run
 from acr.evaluation import EvaluationHandoffRejected, LocalAddEvaluator, require_sealed_run
-from acr.runtime.runner import CapturedRuntime, RunSealedError, RuntimeTask, run_deepseek_add_smoke
-from acr.state import WorkspaceViolation, compare_file, initial_tree_manifest
+from acr.runtime.runner import (
+    CapturedRuntime,
+    ConversationMessage,
+    RunSealedError,
+    RuntimeTask,
+    run_deepseek_add_smoke,
+)
+from acr.state import WorkspaceViolation, initial_tree_manifest
 from acr.store import (
     ingest_evaluator_bytes,
     ingest_runtime_bytes,
@@ -750,45 +756,73 @@ def test_duplicate_read_context_blocks_bind_each_exact_occurrence(tmp_path: Path
 
 
 def _persisted_decision_fixture(tmp_path: Path) -> Path:
-    responses = [
-        b'{"choices":[{"message":{"content":"READ target.py"}}]}',
-        b'{"choices":[{"message":{"content":"FINAL"}}]}',
-    ]
     runtime, _ = _runtime(tmp_path)
     (runtime.workspace / "target.py").write_text("def add(a, b):\n    pass\n")
-    run_deepseek_add_smoke(
-        runtime,
-        CapturedProvider(lambda body, attempt: TransportResult("ok", responses.pop(0))),
-        model="deepseek-v4-flash",
+    read = runtime.tools.read_file("target.py")
+    comparison = runtime.compare_bound_file(read.binding, read.body_ref)
+    system = "strict public system"
+    system_ref = runtime.public_context_ref(
+        system,
+        source_id="acr_runtime_config",
+        trajectory_key="deepseek_command_protocol_v1",
+        locator="/system-prompt",
+    )
+    task_ref = runtime.public_context_ref(
+        runtime.task.public_instruction,
+        source_id="acr_public_task",
+        trajectory_key=runtime.task.task_id,
+        locator="/public-instruction",
+    )
+    messages = [
+        ConversationMessage(
+            "system",
+            system,
+            origin_event_id="public:system:deepseek_command_protocol_v1",
+            provenance_ref=system_ref,
+        ),
+        ConversationMessage(
+            "user",
+            runtime.task.public_instruction,
+            origin_event_id=f"public-task:{runtime.task.task_id}:instruction",
+            provenance_ref=task_ref,
+        ),
+        ConversationMessage(
+            "user",
+            f"TOOL RESULT read_file target.py:\n{read.text}",
+            origin_event_id=read.binding.read_event_id,
+            tool_call_id=read.tool_call_id,
+            file_binding=read.binding,
+            provenance_ref=read.body_ref,
+        ),
+    ]
+    request_id = "request:attempt:run-1:0"
+    blocks = runtime.context_blocks(request_id, messages)
+    body = serialize_deepseek_chat_request(
+        model="deepseek-v4-flash", messages=[message.wire() for message in messages]
     )
     root = tmp_path / "data"
-    snapshots = [
-        RequestSnapshot.model_validate(row)
-        for row in _jsonl(root / "runs" / "run-1" / "requests.jsonl")
-    ]
-    events = [Event.model_validate(row) for row in _jsonl(root / "runs" / "run-1" / "events.jsonl")]
-    snapshot = snapshots[1]
-    read_block = next(block for block in snapshot.ordered_blocks if block.file_binding is not None)
-    assert read_block.provenance_ref is not None
-    comparison = compare_file(
-        runtime.workspace,
-        read_block.file_binding,
-        read_block.provenance_ref,
-        data_root=root,
-        run_id="run-1",
-        checked_seq=snapshot.cutoff_seq,
-    )
     view = build_view(
         run_id="run-1",
-        cutoff_seq=snapshot.cutoff_seq,
-        request_draft_hash=snapshot.before_body_ref.blob_hash,
-        blocks=snapshot.ordered_blocks,
+        cutoff_seq=comparison.checked_seq,
+        request_draft_hash=hashlib.sha256(body).hexdigest(),
+        blocks=blocks,
         file_comparisons=[comparison],
-        events=events,
+        events=list(runtime.event_prefix),
         producer_ref=runtime.producer_ref,
         view_id="view-1",
     )
     persist_decision_view(root, view)
+    runtime.send_request(
+        CapturedProvider(
+            lambda sent, attempt: TransportResult(
+                "ok", b'{"choices":[{"message":{"content":"FINAL"}}]}'
+            )
+        ),
+        body,
+        "decision-call",
+        blocks,
+    )
+    runtime.seal(status="task_failed", stop_reason="fixture")
     assert audit_run(root, "run-1").status == "PASS"
     return root
 
@@ -803,6 +837,7 @@ def _persisted_decision_fixture(tmp_path: Path) -> Path:
         ("unknown", "decision_visibility_unknown_visibility"),
         ("origin", "decision_visibility_origin_occurrence_mismatch"),
         ("comparison", "file_comparison_evidence_mismatch"),
+        ("checked_seq", "decision_visibility_file_comparison_state_check_mismatch"),
     ],
 )
 def test_persisted_decision_audit_blocks_visibility_and_comparison_mutations(
@@ -823,9 +858,69 @@ def test_persisted_decision_audit_blocks_visibility_and_comparison_mutations(
         view["blocks"][2]["provenance_ref"]["labels"] = []
     elif mutation == "origin":
         view["blocks"][2]["origin_event_id"] = "event:run-1:999"
-    else:
+    elif mutation == "comparison":
         view["file_comparisons"][0]["current_file_sha256"] = "f" * 64
+    else:
+        view["file_comparisons"][0]["checked_seq"] -= 1
     path.write_text(json.dumps(view))
+    assert expected in audit_run(root, "run-1").blocks
+
+
+def test_persisted_decision_audit_blocks_missing_state_check_event(tmp_path: Path) -> None:
+    root = _persisted_decision_fixture(tmp_path)
+    path = root / "runs" / "run-1" / "events.jsonl"
+    events = _jsonl(path)
+    events[:] = [event for event in events if event["kind"] != "state_check"]
+    _write_jsonl(path, events)
+    assert "decision_visibility_file_comparison_state_check_mismatch" in audit_run(
+        root, "run-1"
+    ).blocks
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected"),
+    [
+        ("runtime_to_public", "context_provenance_label_mismatch"),
+        ("future_to_public", "decision_visibility_future_evidence"),
+        ("wrong_seq", "context_provenance_label_mismatch"),
+        ("wrong_run", "decision_visibility_cross_run_evidence"),
+        ("taint_removed", "context_provenance_label_mismatch"),
+        ("public_metadata", "decision_visibility_provenance_label_mismatch"),
+    ],
+)
+def test_context_provenance_labels_cannot_be_laundered(
+    tmp_path: Path, mutation: str, expected: str
+) -> None:
+    root = _persisted_decision_fixture(tmp_path)
+    requests_path = root / "runs" / "run-1" / "requests.jsonl"
+    events_path = root / "runs" / "run-1" / "events.jsonl"
+    requests = _jsonl(requests_path)
+    events = _jsonl(events_path)
+    label = requests[0]["ordered_blocks"][2]["provenance_ref"]["labels"][0]
+    if mutation == "runtime_to_public":
+        requests[0]["ordered_blocks"][2]["provenance_ref"]["labels"] = [
+            {"scope": "public", "run_id": None, "available_seq": None, "taints": []}
+        ]
+    elif mutation == "future_to_public":
+        finish = next(event for event in events if event["kind"] == "tool_finish")
+        finish["available_seq"] = 99
+        requests[0]["ordered_blocks"][2]["provenance_ref"]["labels"] = [
+            {"scope": "public", "run_id": None, "available_seq": None, "taints": []}
+        ]
+    elif mutation == "wrong_seq":
+        label["available_seq"] -= 1
+    elif mutation == "wrong_run":
+        label["run_id"] = "run-2"
+    elif mutation == "public_metadata":
+        requests[0]["ordered_blocks"][0]["provenance_ref"]["labels"][0][
+            "available_seq"
+        ] = 0
+    else:
+        finish = next(event for event in events if event["kind"] == "tool_finish")
+        finish["payload_ref"]["labels"][0]["taints"] = ["gold"]
+        label["taints"] = []
+    _write_jsonl(requests_path, requests)
+    _write_jsonl(events_path, events)
     assert expected in audit_run(root, "run-1").blocks
 
 

@@ -24,13 +24,14 @@ from acr.contracts import (
     EvidenceRef,
     Fact,
     FileBinding,
+    FileComparison,
     InformationLabel,
     RepositoryState,
     RequestSnapshot,
     Run,
 )
 from acr.runtime.tools import RuntimeTools
-from acr.state import initial_tree_manifest, verified_workspace
+from acr.state import _compare_file_at_seq, initial_tree_manifest, verified_workspace
 from acr.store import (
     append_run_jsonl,
     ingest_bytes,
@@ -159,6 +160,12 @@ class CapturedRuntime:
     def last_terminal_seq(self) -> int | None:
         return self._last_terminal_seq
 
+    @property
+    def event_prefix(self) -> tuple[Event, ...]:
+        """Return the recorded prefix without exposing mutable runtime state."""
+
+        return tuple(self._events)
+
     def public_context_ref(
         self, content: str, *, source_id: str, trajectory_key: str, locator: str
     ) -> EvidenceRef:
@@ -216,6 +223,44 @@ class CapturedRuntime:
         self._events.append(event)
         append_run_jsonl(self.data_root, self.run_id, "events.journal.jsonl", event)
         return event_id, event_seq
+
+    def compare_bound_file(
+        self, binding: FileBinding, binding_ref: EvidenceRef
+    ) -> FileComparison:
+        """Re-read a bound file and attest its actual observation sequence."""
+
+        if self._sealed:
+            raise RunSealedError("cannot check file state after sealing")
+        reserved_seq = self._event_seq
+        comparison = _compare_file_at_seq(
+            self.workspace,
+            binding,
+            binding_ref,
+            data_root=self.data_root,
+            run_id=self.run_id,
+            checked_seq=reserved_seq,
+        )
+        _, event_seq = self.record_event(
+            "state_check",
+            binding.read_event_id,
+            {
+                "binding_ref": comparison.binding_ref.model_dump(),
+                "repo_relative_path": binding.repo_relative_path,
+                "historical_file_sha256": binding.file_sha256,
+                "current_file_ref": (
+                    comparison.current_file_ref.model_dump()
+                    if comparison.current_file_ref is not None
+                    else None
+                ),
+                "current_file_sha256": comparison.current_file_sha256,
+                "status": comparison.status,
+                "reason": comparison.reason,
+            },
+            True,
+        )
+        if event_seq != comparison.checked_seq:
+            raise RuntimeError("state-check sequence reservation changed")
+        return comparison
 
     def context_blocks(
         self, request_id: str, messages: list[ConversationMessage]

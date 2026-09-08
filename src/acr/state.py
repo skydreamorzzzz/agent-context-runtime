@@ -97,7 +97,7 @@ def read_workspace_file(workspace: Path, repo_relative_path: str) -> tuple[Path,
     return resolved, raw
 
 
-def compare_file(
+def _compare_file_at_seq(
     workspace: Path,
     binding: FileBinding,
     binding_ref: EvidenceRef,
@@ -106,7 +106,7 @@ def compare_file(
     run_id: str,
     checked_seq: int,
 ) -> FileComparison:
-    """Re-read one bound file conservatively at a synchronous decision boundary."""
+    """Re-read one bound file at a sequence reserved by the owning runtime."""
 
     binding_labels = [
         label

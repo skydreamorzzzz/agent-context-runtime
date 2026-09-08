@@ -63,6 +63,28 @@ def _completed_event(
     return event
 
 
+def _public_label() -> list[InformationLabel]:
+    return [InformationLabel(scope="public")]
+
+
+def _event_label(event: Event) -> list[InformationLabel]:
+    taints = sorted(
+        {
+            taint
+            for label in event.payload_ref.labels
+            for taint in label.taints
+        }
+    )
+    return [
+        InformationLabel(
+            scope="runtime",
+            run_id=event.run_id,
+            available_seq=event.available_seq,
+            taints=taints,
+        )
+    ]
+
+
 def build_view(
     *,
     run_id: str,
@@ -84,10 +106,12 @@ def build_view(
             raise VisibilityViolation("unknown_visibility")
         _authorize_ref(block.provenance_ref, run_id, cutoff_seq)
         if block.type in {"system_prompt", "task_instruction"}:
-            if any(label.scope != "public" for label in block.provenance_ref.labels):
-                raise VisibilityViolation("unauthorized_scope")
+            if block.provenance_ref.labels != _public_label():
+                raise VisibilityViolation("provenance_label_mismatch")
         elif block.type in {"assistant_response", "tool_result"}:
-            _completed_event(events, block, run_id, cutoff_seq)
+            origin = _completed_event(events, block, run_id, cutoff_seq)
+            if block.provenance_ref.labels != _event_label(origin):
+                raise VisibilityViolation("provenance_label_mismatch")
         else:
             raise VisibilityViolation("unknown_visibility")
     for comparison in file_comparisons:
@@ -96,6 +120,37 @@ def build_view(
         _authorize_ref(comparison.binding_ref, run_id, cutoff_seq)
         if comparison.current_file_ref is not None:
             _authorize_ref(comparison.current_file_ref, run_id, cutoff_seq)
+        matching_blocks = [
+            block
+            for block in blocks
+            if block.file_binding is not None
+            and block.provenance_ref == comparison.binding_ref
+        ]
+        if len(matching_blocks) != 1:
+            raise VisibilityViolation("file_comparison_binding_mismatch")
+        block = matching_blocks[0]
+        binding = block.file_binding
+        assert binding is not None
+        if (
+            binding.file_sha256 != comparison.binding_ref.blob_hash
+            or binding.read_event_id != block.origin_event_id
+            or comparison.binding_ref.trajectory_key != run_id
+        ):
+            raise VisibilityViolation("file_comparison_binding_mismatch")
+        state_checks = [
+            event
+            for event in events
+            if event.kind == "state_check"
+            and event.run_id == run_id
+            and event.available_seq == comparison.checked_seq
+            and event.call_id == binding.read_event_id
+        ]
+        if len(state_checks) != 1:
+            raise VisibilityViolation("file_comparison_state_check_mismatch")
+        if comparison.current_file_ref is not None and (
+            comparison.current_file_ref.labels != _event_label(state_checks[0])
+        ):
+            raise VisibilityViolation("provenance_label_mismatch")
     identifier = view_id or f"decision-view:{run_id}:{cutoff_seq}:{request_draft_hash[:12]}"
     return DecisionView(
         kind="decision_view",
