@@ -423,7 +423,7 @@ class CapturedRuntime:
                 "execution_restore": "unsupported",
                 "evaluation": "not_run",
                 "execution_isolation": "linux_namespaces_bwrap",
-                "network_isolation": "disabled",
+                "network_access": "disabled",
                 "workspace_identity": hashlib.sha256(str(self.workspace).encode()).hexdigest(),
             },
             initial_state_ref=self._initial_state_ref,

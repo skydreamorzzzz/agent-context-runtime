@@ -23,6 +23,10 @@ def _write_json(path: Path, value: dict) -> None:
     path.write_text(json.dumps(value, sort_keys=True, indent=2) + "\n")
 
 
+def _write_jsonl(path: Path, values: list[dict]) -> None:
+    path.write_text("".join(json.dumps(value) + "\n" for value in values))
+
+
 def _complete_pair(tmp_path: Path) -> tuple[Path, Path, str]:
     source = tmp_path / "source"
     source.mkdir(parents=True)
@@ -236,11 +240,16 @@ def test_pair_audit_blocks_private_spec_and_evaluator_version_divergence(tmp_pat
 
 def test_pair_audit_blocks_evaluation_before_both_runs_seal(tmp_path: Path) -> None:
     root, private, pair_id = _complete_pair(tmp_path)
-    run_b = json.loads((root / "runs" / f"{pair_id}-B" / "run.json").read_text())
+    events_b = [
+        json.loads(line)
+        for line in (root / "runs" / f"{pair_id}-B" / "events.jsonl").read_text().splitlines()
+    ]
+    run_stop_b = next(event for event in events_b if event["kind"] == "run_stop")
     evaluation_root = root / "evaluations" / f"{pair_id}-A"
     manifest = json.loads((evaluation_root / "producer_manifest.json").read_text())
     manifest["evaluation_started_at"] = (
-        datetime.fromisoformat(run_b["end"].replace("Z", "+00:00")) - timedelta(seconds=1)
+        datetime.fromisoformat(run_stop_b["end"].replace("Z", "+00:00"))
+        - timedelta(seconds=1)
     ).isoformat()
     raw = json.dumps(manifest, sort_keys=True, indent=2).encode() + b"\n"
     ref = ingest_evaluator_bytes(
@@ -258,3 +267,22 @@ def test_pair_audit_blocks_evaluation_before_both_runs_seal(tmp_path: Path) -> N
     audit = audit_pair(root, pair_id, str(private))
     assert "pair_phase_order_mismatch" in audit.blocks
     assert "pair_evaluation_audit_block" not in audit.blocks
+
+
+def test_pair_ordering_ignores_run_end_but_binds_run_stop_end(tmp_path: Path) -> None:
+    root, private, pair_id = _complete_pair(tmp_path / "run-end")
+    run_path = root / "runs" / f"{pair_id}-B" / "run.json"
+    run = json.loads(run_path.read_text())
+    run["end"] = "2999-01-01T00:00:00Z"
+    _write_json(run_path, run)
+    assert audit_pair(root, pair_id, str(private)).status == "PASS"
+
+    root, private, pair_id = _complete_pair(tmp_path / "run-stop")
+    events_path = root / "runs" / f"{pair_id}-B" / "events.jsonl"
+    events = [json.loads(line) for line in events_path.read_text().splitlines()]
+    run_stop = next(event for event in events if event["kind"] == "run_stop")
+    run_stop["end"] = "2999-01-01T00:00:00Z"
+    _write_jsonl(events_path, events)
+    audit = audit_pair(root, pair_id, str(private))
+    assert "pair_phase_order_mismatch" in audit.blocks
+    assert "pair_run_audit_block" in audit.blocks

@@ -32,7 +32,7 @@ class IsolatedExecution:
 
 
 def _sandbox_command(workspace: Path, script: str) -> list[str]:
-    """Build the fixed Linux namespace boundary; only the workspace is writable."""
+    """Build the fixed Linux namespace boundary with a read-only workspace."""
 
     required = (
         Path("/usr/bin/unshare"),
@@ -82,7 +82,7 @@ def _sandbox_command(workspace: Path, script: str) -> list[str]:
         "/dev",
         "--tmpfs",
         "/tmp",
-        "--bind",
+        "--ro-bind",
         str(workspace),
         "/workspace",
         "--chdir",
@@ -153,13 +153,28 @@ def run_isolated_python(
         os.set_blocking(stream.fileno(), False)
         selector.register(stream, selectors.EVENT_READ)
     deadline = time.monotonic() + timeout_seconds
+    cleanup_deadline: float | None = None
     timed_out = False
-    while selector.get_map():
-        remaining = deadline - time.monotonic()
-        if remaining <= 0 and process.poll() is None:
+    while process.poll() is None or selector.get_map():
+        now = time.monotonic()
+        if now >= deadline and not timed_out:
             timed_out = True
-            os.killpg(process.pid, signal.SIGKILL)
-        for key, _ in selector.select(max(min(remaining, 0.05), 0)):
+            cleanup_deadline = now + 0.5
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        if cleanup_deadline is not None and now >= cleanup_deadline:
+            for key in list(selector.get_map().values()):
+                selector.unregister(key.fileobj)
+                key.fileobj.close()
+            break
+        active_deadline = cleanup_deadline if cleanup_deadline is not None else deadline
+        wait_seconds = max(min(active_deadline - now, 0.05), 0)
+        ready = selector.select(wait_seconds) if selector.get_map() else ()
+        if not selector.get_map() and wait_seconds:
+            time.sleep(wait_seconds)
+        for key, _ in ready:
             stream = key.fileobj
             try:
                 chunk = os.read(stream.fileno(), 8192)
@@ -170,9 +185,18 @@ def run_isolated_python(
                 stream.close()
                 continue
             truncated[stream] |= _append_bounded(streams[stream], chunk, output_limit)
-        if process.poll() is not None and not selector.get_map():
-            break
-    returncode = process.wait()
+    returncode = process.poll()
+    if returncode is None:
+        try:
+            returncode = process.wait(timeout=0.2)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            try:
+                returncode = process.wait(timeout=0.2)
+            except subprocess.TimeoutExpired as error:
+                raise IsolationUnavailable(
+                    "isolated execution could not be terminated"
+                ) from error
     stderr = bytes(streams[process.stderr])
     if not stderr.startswith(_READY):
         raise IsolationUnavailable("linux namespace execution boundary failed")

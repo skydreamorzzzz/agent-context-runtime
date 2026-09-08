@@ -10,7 +10,7 @@
     "workspace": "fresh_public_host_directory",
     "execution_isolation": "linux_user_mount_pid_network_namespaces_bubblewrap",
     "submission_environment": "explicit_minimal_allowlist",
-    "network_isolation": "disabled",
+    "network_access": "disabled",
     "execution_timeout_seconds": 2,
     "stdout_stderr_limit_bytes": 65536,
     "container_image": {

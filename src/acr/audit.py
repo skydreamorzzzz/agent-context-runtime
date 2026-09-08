@@ -1201,6 +1201,29 @@ def audit_pair(root: Path, pair_id: str, private_spec_ref: str) -> AuditResult:
     return AuditResult("BLOCK" if blocks else "PASS", tuple(sorted(set(blocks))))
 
 
+def _authoritative_run_stop(
+    root: Path, run_id: str, blocks: list[str]
+) -> datetime | None:
+    """Return the sole completed final run-stop occurrence from persisted events."""
+
+    events = _load_jsonl_models(root / "runs" / run_id / "events.jsonl", Event, blocks)
+    if events is None:
+        blocks.append("pair_phase_order_mismatch")
+        return None
+    stops = [event for event in events if event.kind == "run_stop"]
+    if (
+        len(stops) != 1
+        or events[-1] != stops[0]
+        or stops[0].run_id != run_id
+        or stops[0].end is None
+        or stops[0].end.tzinfo is None
+        or stops[0].available_seq != stops[0].event_seq
+    ):
+        blocks.append("pair_phase_order_mismatch")
+        return None
+    return stops[0].end
+
+
 def _audit_pair_manifest(
     root: Path,
     pair: Pair,
@@ -1323,12 +1346,15 @@ def _audit_pair_manifest(
             evaluation_starts.append(started)
         except (KeyError, TypeError, ValueError):
             blocks.append("pair_phase_order_mismatch")
-    run_ends = (run_a.end, run_b.end)
-    valid_run_ends = [end for end in run_ends if end is not None and end.tzinfo is not None]
+    run_stops = (
+        _authoritative_run_stop(root, run_a.id, blocks),
+        _authoritative_run_stop(root, run_b.id, blocks),
+    )
+    valid_run_stops = [stop for stop in run_stops if stop is not None]
     if (
-        len(valid_run_ends) != 2
+        len(valid_run_stops) != 2
         or len(evaluation_starts) != 2
-        or any(started < max(valid_run_ends) for started in evaluation_starts)
+        or any(started < max(valid_run_stops) for started in evaluation_starts)
     ):
         blocks.append("pair_phase_order_mismatch")
 

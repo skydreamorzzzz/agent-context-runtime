@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 
 import pytest
@@ -82,6 +83,31 @@ def add(a, b):
     assert not (runtime.workspace / "__pycache__").exists()
 
 
+def test_runtime_test_cannot_mutate_authoritative_workspace(tmp_path: Path) -> None:
+    target = """
+from pathlib import Path
+
+try:
+    Path("/workspace/target.py").write_text("modified")
+    mutation_blocked = False
+except OSError:
+    mutation_blocked = True
+
+def add(a, b):
+    return a + b if mutation_blocked else -999
+"""
+    runtime = _runtime(tmp_path, target)
+    before = (runtime.workspace / "target.py").read_bytes()
+    result = runtime.tools.run_test()
+    assert result.value["result"] == {"passed": True, "status": "completed"}
+    assert (runtime.workspace / "target.py").read_bytes() == before
+    run = runtime.seal(status="completed")
+    assert run.sealed_artifact_ref is not None
+    artifact = json.loads(load_blob(runtime.data_root, run.sealed_artifact_ref.blob_hash))
+    target_item = next(item for item in artifact["files"] if item["path"] == "target.py")
+    assert load_blob(runtime.data_root, target_item["body_ref"]["blob_hash"]) == before
+
+
 def test_runtime_test_kills_import_loop_and_bounds_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -101,6 +127,20 @@ def test_runtime_test_kills_import_loop_and_bounds_output(
     )
     assert execution.stdout_truncated is True
     assert len(execution.stdout) == 1024
+
+
+def test_closed_output_pipes_cannot_bypass_hard_timeout(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    started = time.monotonic()
+    execution = run_isolated_python(
+        workspace,
+        "import os\nos.close(1)\nos.close(2)\nwhile True:\n    pass\n",
+        timeout_seconds=0.1,
+    )
+    elapsed = time.monotonic() - started
+    assert execution.status == "timeout"
+    assert elapsed < 1.5
 
 
 def test_evaluator_submission_cannot_observe_private_spec_or_trusted_process(
@@ -157,6 +197,42 @@ def test_evaluator_submission_timeout_is_completed_task_failure(tmp_path: Path) 
     raw = json.loads(load_blob(runtime.data_root, result.raw_result_ref.blob_hash))
     assert raw["submission_timeouts"] == 1
     assert audit_evaluation(runtime.data_root, run.id, str(private)).status == "PASS"
+
+
+def test_evaluator_cases_cannot_persist_workspace_state(tmp_path: Path) -> None:
+    target = """
+from pathlib import Path
+
+def add(case, unused):
+    state = Path("/workspace/case-state")
+    if case == 1:
+        try:
+            state.write_text("persisted")
+            return False
+        except OSError:
+            return True
+    return not state.exists()
+"""
+    runtime, run = _sealed_run(tmp_path, target)
+    private = tmp_path / "private.json"
+    private.write_text(
+        json.dumps(
+            {
+                "tests": [
+                    {"args": [1, 0], "expected": True},
+                    {"args": [2, 0], "expected": True},
+                ]
+            }
+        )
+    )
+    result = LocalAddEvaluator(
+        data_root=runtime.data_root,
+        code_revision="a" * 40,
+    ).evaluate(run, str(private))
+    assert result.status == "completed"
+    assert result.passed.value == 2
+    assert result.resolved.value is True
+    assert not (runtime.workspace / "case-state").exists()
 
 
 def test_true_isolation_failure_remains_evaluator_infra_error(
