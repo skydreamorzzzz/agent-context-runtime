@@ -33,10 +33,11 @@ Next gate: finish and verify the real coding-loop integrity closure. Do not
 authorize a candidate or intervention until its persisted runtime, evaluator,
 usage, and pair binding audits pass.
 
-Latest local-only real-loop attempt at revision `bb7ab63` retained a first
-physical provider attempt ending in `transport_exception`; its persisted
-runtime audit passed, but no provider response, file read, or workspace edit
-occurred. It is not accepted as a real coding-agent-loop result.
+Latest local-only real-loop attempt at revision `669a78b` completed one HTTP
+provider attempt and retained the real response; its persisted runtime audit
+passed, but the model did not request a file read or edit the workspace. The run
+was truthfully sealed as `task_failed` and is not accepted as a completed real
+coding-agent-loop result. No automatic retry was made.
 
 The four confirmed code-level closure items are now covered: text-only answers
 cannot edit the workspace, duplicate read messages retain exact occurrence
