@@ -75,6 +75,7 @@ def test_json_round_trip_preserves_nested_contract_fields() -> None:
             FileComparison(
                 binding_ref=evidence(locator="/bindings/0"),
                 current_file_sha256="b" * 64,
+                current_file_ref=evidence(locator="/checks/3"),
                 checked_seq=3,
                 status="same",
             )

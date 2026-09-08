@@ -12,8 +12,11 @@ from typing import Any
 from pydantic import ValidationError
 
 from acr.adapters.legacy import ADAPTER_VERSION, parse_document
+from acr.adapters.provider import extract_deepseek_message_content
 from acr.contracts import (
+    ContextBlock,
     CostEntry,
+    DecisionView,
     EvaluationResult,
     Event,
     EvidenceRef,
@@ -38,6 +41,7 @@ from acr.store import (
     load_provenance,
     load_run_json,
 )
+from acr.visibility import VisibilityViolation, build_view
 
 _FIELDS = ("action", "observation", "response")
 _REQUIRED_MANIFEST = (
@@ -309,6 +313,7 @@ def _audit_runtime(root: Path, run_id: str, blocks: list[str]) -> None:
         payloads[event.event_seq] = payload
     _audit_requests(root, run_id, snapshots, events, payloads, physical_attempts, producer, run, blocks)
     _audit_file_bindings(root, run_id, bindings, events, payloads, final, blocks)
+    _audit_decision_views(root, run_id, run, producer, events, snapshots, blocks)
     _audit_usage_ledger(root, run_id, snapshots, events, payloads, blocks)
 
 
@@ -494,6 +499,123 @@ def _audit_repository_states(
             blocks.append("sealed_artifact_malformed")
 
 
+def _same_evidence_occurrence(left: EvidenceRef, right: EvidenceRef) -> bool:
+    return (
+        left.blob_hash == right.blob_hash
+        and left.source_id == right.source_id
+        and left.trajectory_key == right.trajectory_key
+        and left.locator == right.locator
+    )
+
+
+def _context_blob(root: Path, ref: EvidenceRef, blocks: list[str]) -> bytes | None:
+    raw = _load_ref_blob(root, ref, blocks)
+    if raw is None:
+        return None
+    if not ref.labels:
+        blocks.append("context_unknown_authorization")
+    return raw
+
+
+def _audit_context_block(
+    root: Path,
+    run: Run,
+    block: ContextBlock,
+    message: dict[str, Any],
+    events: list[Event],
+    payloads: dict[int, Any],
+    blocks: list[str],
+) -> None:
+    ref = block.provenance_ref
+    if ref is None:
+        blocks.append("context_provenance_missing")
+        return
+    raw = _context_blob(root, ref, blocks)
+    if raw is None:
+        return
+    content = message.get("content")
+    if not isinstance(content, str):
+        blocks.append("request_context_mapping_mismatch")
+        return
+    if block.type == "system_prompt":
+        if (
+            block.origin_event_id != "public:system:deepseek_command_protocol_v1"
+            or ref.source_id != "acr_runtime_config"
+            or ref.trajectory_key != "deepseek_command_protocol_v1"
+            or ref.locator != "/system-prompt"
+            or raw != content.encode()
+        ):
+            blocks.append("context_origin_occurrence_mismatch")
+        return
+    if block.type == "task_instruction":
+        if (
+            block.origin_event_id != f"public-task:{run.task_id}:instruction"
+            or ref.source_id != "acr_public_task"
+            or ref.trajectory_key != run.task_id
+            or ref.locator != "/public-instruction"
+            or raw != content.encode()
+        ):
+            blocks.append("context_origin_occurrence_mismatch")
+        return
+    matches = [event for event in events if event.id == block.origin_event_id]
+    if len(matches) != 1:
+        blocks.append("context_origin_occurrence_mismatch")
+        return
+    event = matches[0]
+    payload = payloads.get(event.event_seq)
+    if not isinstance(payload, dict):
+        blocks.append("context_origin_occurrence_mismatch")
+        return
+    if block.type == "assistant_response":
+        try:
+            payload_ref = EvidenceRef.model_validate(payload["raw_response_ref"])
+        except (KeyError, ValidationError):
+            blocks.append("context_origin_occurrence_mismatch")
+            return
+        if (
+            event.kind != "response"
+            or event.call_id is None
+            or not _same_evidence_occurrence(ref, payload_ref)
+            or extract_deepseek_message_content(raw) != content
+        ):
+            blocks.append("context_origin_occurrence_mismatch")
+        return
+    if block.type != "tool_result" or event.kind != "tool_finish":
+        blocks.append("context_origin_occurrence_mismatch")
+        return
+    try:
+        body_ref = EvidenceRef.model_validate(payload["body_ref"])
+    except (KeyError, ValidationError):
+        blocks.append("context_origin_occurrence_mismatch")
+        return
+    if event.call_id != block.tool_call_id or not _same_evidence_occurrence(ref, body_ref):
+        blocks.append("context_origin_occurrence_mismatch")
+        return
+    tool = payload.get("tool")
+    if tool == "read_file":
+        expected = f"TOOL RESULT read_file {payload.get('path')}:\n{raw.decode('utf-8')}"
+        if (
+            block.file_binding is None
+            or block.file_binding.read_event_id != event.id
+            or block.file_binding.observed_seq != event.available_seq
+            or expected != content
+        ):
+            blocks.append("request_context_occurrence_mismatch")
+    elif tool == "write_file":
+        if block.file_binding is not None or content != "TOOL RESULT write_file completed":
+            blocks.append("request_context_occurrence_mismatch")
+    elif tool == "run_test":
+        try:
+            expected = f"TOOL RESULT run_test: {json.dumps(json.loads(raw), sort_keys=True)}"
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            blocks.append("request_context_occurrence_mismatch")
+            return
+        if block.file_binding is not None or content != expected:
+            blocks.append("request_context_occurrence_mismatch")
+    else:
+        blocks.append("request_context_occurrence_mismatch")
+
+
 def _audit_requests(
     root: Path,
     run_id: str,
@@ -583,6 +705,19 @@ def _audit_requests(
         if snapshot.ordered_blocks and (not isinstance(sent_messages, list) or len(snapshot.ordered_blocks) != len(sent_messages)):
             blocks.append("request_context_mapping_mismatch")
         elif snapshot.ordered_blocks:
+            try:
+                build_view(
+                    run_id=run_id,
+                    cutoff_seq=snapshot.cutoff_seq,
+                    request_draft_hash=snapshot.before_body_ref.blob_hash,
+                    blocks=snapshot.ordered_blocks,
+                    file_comparisons=[],
+                    events=events,
+                    producer_ref=producer,
+                    view_id=f"audit:{snapshot.id}",
+                )
+            except VisibilityViolation as error:
+                blocks.append(f"decision_visibility_{error.code}")
             for index, block in enumerate(snapshot.ordered_blocks):
                 message = sent_messages[index]
                 if (
@@ -595,14 +730,8 @@ def _audit_requests(
                     or block.content_hash != hashlib.sha256(message["content"].encode()).hexdigest()
                 ):
                     blocks.append("request_context_mapping_mismatch")
-                if block.tool_call_id is not None:
-                    matching = [event for event in events if event.id == block.origin_event_id and event.kind == "tool_finish" and event.call_id == block.tool_call_id]
-                    if (
-                        len(matching) != 1
-                        or block.file_binding is None
-                        or block.file_binding.read_event_id != block.origin_event_id
-                    ):
-                        blocks.append("request_context_occurrence_mismatch")
+                if isinstance(message, dict):
+                    _audit_context_block(root, run, block, message, events, payloads, blocks)
         inventory = physical.get(snapshot.attempt_id)
         entered = inventory.get("entered") if inventory is not None else None
         terminal_inventory = inventory.get("terminal") if inventory is not None else None
@@ -797,6 +926,97 @@ def _audit_file_bindings(
             blocks.append("file_binding_identity_mismatch")
     if final.files != bindings:
         blocks.append("final_state_file_bindings_mismatch")
+
+
+def _audit_decision_views(
+    root: Path,
+    run_id: str,
+    run: Run,
+    producer: EvidenceRef,
+    events: list[Event],
+    snapshots: list[RequestSnapshot],
+    blocks: list[str],
+) -> None:
+    directory = root / "runs" / run_id / "decision_views"
+    if not directory.exists():
+        return
+    try:
+        paths = sorted(directory.glob("*.json"))
+        views = [DecisionView.model_validate_json(path.read_text()) for path in paths]
+    except (OSError, UnicodeDecodeError, ValidationError, ValueError):
+        blocks.append("malformed_persisted_decision_evidence")
+        return
+    for path, view in zip(paths, views, strict=True):
+        if path.stem != view.id or view.run_id != run_id or view.producer_ref != producer:
+            blocks.append("decision_view_identity_mismatch")
+        matching_snapshots = [
+            snapshot
+            for snapshot in snapshots
+            if snapshot.ordered_blocks == view.blocks
+            and snapshot.cutoff_seq == view.cutoff_seq
+            and snapshot.before_body_ref.blob_hash == view.request_draft_hash
+        ]
+        if len(matching_snapshots) != 1:
+            blocks.append("decision_view_request_mismatch")
+        try:
+            rebuilt = build_view(
+                run_id=run_id,
+                cutoff_seq=view.cutoff_seq,
+                request_draft_hash=view.request_draft_hash,
+                blocks=view.blocks,
+                file_comparisons=view.file_comparisons,
+                events=events,
+                producer_ref=producer,
+                policy_version=view.policy_version,
+                view_id=view.id,
+            )
+        except VisibilityViolation as error:
+            blocks.append(f"decision_visibility_{error.code}")
+            continue
+        if rebuilt != view:
+            blocks.append("decision_view_derivation_mismatch")
+        for comparison in view.file_comparisons:
+            matching_blocks = [
+                block
+                for block in view.blocks
+                if block.file_binding is not None
+                and block.provenance_ref is not None
+                and block.provenance_ref == comparison.binding_ref
+            ]
+            if len(matching_blocks) != 1:
+                blocks.append("file_comparison_binding_mismatch")
+                continue
+            binding = matching_blocks[0].file_binding
+            assert binding is not None
+            historical = _load_ref_blob(root, comparison.binding_ref, blocks)
+            if historical is None or hashlib.sha256(historical).hexdigest() != binding.file_sha256:
+                blocks.append("file_comparison_binding_mismatch")
+            if comparison.status == "unknown":
+                continue
+            assert comparison.current_file_ref is not None
+            current = _load_ref_blob(root, comparison.current_file_ref, blocks)
+            expected_locator = (
+                f"/state-checks/{comparison.checked_seq}/{binding.repo_relative_path}"
+            )
+            if (
+                current is None
+                or comparison.current_file_ref.source_id != "acr_runtime"
+                or comparison.current_file_ref.trajectory_key != run_id
+                or comparison.current_file_ref.locator != expected_locator
+                or len(comparison.current_file_ref.labels) != 1
+                or comparison.current_file_ref.labels[0].scope != "runtime"
+                or comparison.current_file_ref.labels[0].run_id != run_id
+                or comparison.current_file_ref.labels[0].available_seq != comparison.checked_seq
+                or comparison.current_file_ref.labels[0].taints
+                or hashlib.sha256(current).hexdigest() != comparison.current_file_sha256
+            ):
+                blocks.append("file_comparison_evidence_mismatch")
+                continue
+            expected_status = (
+                "same" if comparison.current_file_sha256 == binding.file_sha256 else "changed"
+            )
+            if comparison.status != expected_status:
+                blocks.append("file_comparison_status_mismatch")
 
 
 def audit_run(root: Path, run_id: str) -> AuditResult:

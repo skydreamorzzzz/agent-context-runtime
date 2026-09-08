@@ -196,14 +196,20 @@ class RepositoryState(Envelope):
 class FileComparison(ContractModel):
     binding_ref: EvidenceRef
     current_file_sha256: str | None = None
+    current_file_ref: EvidenceRef | None = None
     checked_seq: int = Field(ge=0)
     status: Literal["same", "changed", "unknown"]
     reason: str | None = None
 
     @model_validator(mode="after")
     def require_reason_for_unknown(self) -> FileComparison:
-        if self.status == "unknown" and not self.reason:
-            raise ValueError("unknown file comparisons require a reason")
+        if self.status == "unknown":
+            if not self.reason:
+                raise ValueError("unknown file comparisons require a reason")
+            if self.current_file_sha256 is not None or self.current_file_ref is not None:
+                raise ValueError("unknown file comparisons cannot claim current file evidence")
+        elif self.current_file_sha256 is None or self.current_file_ref is None:
+            raise ValueError("same/changed file comparisons require current file evidence")
         return self
 
 

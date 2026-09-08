@@ -18,11 +18,17 @@ from acr.adapters.provider import (
 )
 from acr.audit import audit_evaluation, audit_run
 from acr.cli import _within_attempt_budget
-from acr.contracts import Run
+from acr.contracts import Event, RequestSnapshot, Run
 from acr.evaluation import EvaluationHandoffRejected, LocalAddEvaluator, require_sealed_run
 from acr.runtime.runner import CapturedRuntime, RunSealedError, RuntimeTask, run_deepseek_add_smoke
-from acr.state import WorkspaceViolation, initial_tree_manifest
-from acr.store import ingest_evaluator_bytes, ingest_runtime_bytes, load_blob
+from acr.state import WorkspaceViolation, compare_file, initial_tree_manifest
+from acr.store import (
+    ingest_evaluator_bytes,
+    ingest_runtime_bytes,
+    load_blob,
+    persist_decision_view,
+)
+from acr.visibility import build_view
 
 
 def _runtime(tmp_path: Path, *, with_usage: bool = True) -> tuple[CapturedRuntime, list[bytes]]:
@@ -743,6 +749,86 @@ def test_duplicate_read_context_blocks_bind_each_exact_occurrence(tmp_path: Path
     assert audit_run(tmp_path / "data", "run-1").status == "PASS"
 
 
+def _persisted_decision_fixture(tmp_path: Path) -> Path:
+    responses = [
+        b'{"choices":[{"message":{"content":"READ target.py"}}]}',
+        b'{"choices":[{"message":{"content":"FINAL"}}]}',
+    ]
+    runtime, _ = _runtime(tmp_path)
+    (runtime.workspace / "target.py").write_text("def add(a, b):\n    pass\n")
+    run_deepseek_add_smoke(
+        runtime,
+        CapturedProvider(lambda body, attempt: TransportResult("ok", responses.pop(0))),
+        model="deepseek-v4-flash",
+    )
+    root = tmp_path / "data"
+    snapshots = [
+        RequestSnapshot.model_validate(row)
+        for row in _jsonl(root / "runs" / "run-1" / "requests.jsonl")
+    ]
+    events = [Event.model_validate(row) for row in _jsonl(root / "runs" / "run-1" / "events.jsonl")]
+    snapshot = snapshots[1]
+    read_block = next(block for block in snapshot.ordered_blocks if block.file_binding is not None)
+    assert read_block.provenance_ref is not None
+    comparison = compare_file(
+        runtime.workspace,
+        read_block.file_binding,
+        read_block.provenance_ref,
+        data_root=root,
+        run_id="run-1",
+        checked_seq=snapshot.cutoff_seq,
+    )
+    view = build_view(
+        run_id="run-1",
+        cutoff_seq=snapshot.cutoff_seq,
+        request_draft_hash=snapshot.before_body_ref.blob_hash,
+        blocks=snapshot.ordered_blocks,
+        file_comparisons=[comparison],
+        events=events,
+        producer_ref=runtime.producer_ref,
+        view_id="view-1",
+    )
+    persist_decision_view(root, view)
+    assert audit_run(root, "run-1").status == "PASS"
+    return root
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected"),
+    [
+        ("wrong_run", "decision_view_identity_mismatch"),
+        ("future", "decision_visibility_future_evidence"),
+        ("evaluator", "decision_visibility_unauthorized_scope"),
+        ("tainted", "decision_visibility_tainted_evidence"),
+        ("unknown", "decision_visibility_unknown_visibility"),
+        ("origin", "decision_visibility_origin_occurrence_mismatch"),
+        ("comparison", "file_comparison_evidence_mismatch"),
+    ],
+)
+def test_persisted_decision_audit_blocks_visibility_and_comparison_mutations(
+    tmp_path: Path, mutation: str, expected: str
+) -> None:
+    root = _persisted_decision_fixture(tmp_path)
+    path = root / "runs" / "run-1" / "decision_views" / "view-1.json"
+    view = json.loads(path.read_text())
+    if mutation == "wrong_run":
+        view["run_id"] = "run-2"
+    elif mutation == "future":
+        view["blocks"][2]["provenance_ref"]["labels"][0]["available_seq"] = 99
+    elif mutation == "evaluator":
+        view["blocks"][2]["provenance_ref"]["labels"][0]["scope"] = "evaluator"
+    elif mutation == "tainted":
+        view["blocks"][2]["provenance_ref"]["labels"][0]["taints"] = ["gold"]
+    elif mutation == "unknown":
+        view["blocks"][2]["provenance_ref"]["labels"] = []
+    elif mutation == "origin":
+        view["blocks"][2]["origin_event_id"] = "event:run-1:999"
+    else:
+        view["file_comparisons"][0]["current_file_sha256"] = "f" * 64
+    path.write_text(json.dumps(view))
+    assert expected in audit_run(root, "run-1").blocks
+
+
 def test_cli_attempt_acceptance_uses_frozen_hard_maximum() -> None:
     config = {"budget": {"hard_max_physical_attempts": 5, "target_physical_attempts": 2}}
     assert _within_attempt_budget(1, config)
@@ -780,6 +866,8 @@ def test_add_loop_edits_workspace_maps_context_and_seals_reconstructible_artifac
     responses = [
         b'{"choices":[{"message":{"content":"READ target.py"}}]}',
         b'{"choices":[{"message":{"content":"WRITE target.py\\ndef add(a, b):\\n    return a + b\\n"}}]}',
+        b'{"choices":[{"message":{"content":"TEST"}}]}',
+        b'{"choices":[{"message":{"content":"FINAL"}}]}',
     ]
     runtime, _ = _runtime(tmp_path)
     (runtime.workspace / "target.py").write_text("def add(a, b):\n    pass\n")
@@ -795,6 +883,16 @@ def test_add_loop_edits_workspace_maps_context_and_seals_reconstructible_artifac
     tool_blocks = [block for block in snapshots[1]["ordered_blocks"] if block["tool_call_id"]]
     assert len(tool_blocks) == 1
     assert tool_blocks[0]["file_binding"]["read_event_id"] == tool_blocks[0]["origin_event_id"]
+    final_blocks = snapshots[-1]["ordered_blocks"]
+    assert [block["type"] for block in final_blocks[:2]] == ["system_prompt", "task_instruction"]
+    assert final_blocks[0]["provenance_ref"]["source_id"] == "acr_runtime_config"
+    assert final_blocks[1]["provenance_ref"]["source_id"] == "acr_public_task"
+    assistant_blocks = [block for block in final_blocks if block["type"] == "assistant_response"]
+    assert len(assistant_blocks) == 3
+    assert all(block["provenance_ref"]["locator"].endswith("/response") for block in assistant_blocks)
+    tool_blocks = [block for block in final_blocks if block["type"] == "tool_result"]
+    assert [block["tool_call_id"] for block in tool_blocks] == ["tool:run-1:0", "tool:run-1:1", "tool:run-1:2"]
+    assert all(block["origin_event_id"].startswith("event:run-1:") for block in tool_blocks)
     shutil.rmtree(runtime.workspace)
     private = tmp_path / "private.json"
     private.write_text(json.dumps({"tests": [{"args": [1, 2], "expected": 3}]}))

@@ -24,6 +24,7 @@ from acr.contracts import (
     EvidenceRef,
     Fact,
     FileBinding,
+    InformationLabel,
     RepositoryState,
     RequestSnapshot,
     Run,
@@ -32,6 +33,7 @@ from acr.runtime.tools import RuntimeTools
 from acr.state import initial_tree_manifest, verified_workspace
 from acr.store import (
     append_run_jsonl,
+    ingest_bytes,
     ingest_runtime_bytes,
     persist_run_json,
     persist_run_jsonl,
@@ -59,6 +61,7 @@ class ConversationMessage:
     origin_event_id: str | None = None
     tool_call_id: str | None = None
     file_binding: FileBinding | None = None
+    provenance_ref: EvidenceRef | None = None
 
     def wire(self) -> dict[str, str]:
         return {"role": self.role, "content": self.content}
@@ -91,6 +94,8 @@ class CapturedRuntime:
         self._event_seq = 0
         self._attempt_seq = 0
         self._last_attempt: CapturedAttempt | None = None
+        self._last_terminal_event_id: str | None = None
+        self._last_terminal_seq: int | None = None
         self._attempt_usages: list[tuple[str, Fact[dict], EvidenceRef | None]] = []
         self._producer_ref = self._persist_producer()
         self._config_ref = ingest_runtime_bytes(config_bytes, data_root, run_id, "/config")
@@ -145,6 +150,23 @@ class CapturedRuntime:
         """Most recent captured physical attempt for this synchronous runtime."""
 
         return self._last_attempt
+
+    @property
+    def last_terminal_event_id(self) -> str | None:
+        return self._last_terminal_event_id
+
+    @property
+    def last_terminal_seq(self) -> int | None:
+        return self._last_terminal_seq
+
+    def public_context_ref(
+        self, content: str, *, source_id: str, trajectory_key: str, locator: str
+    ) -> EvidenceRef:
+        """Persist an exact authorized public/config context source."""
+
+        return ingest_bytes(
+            content.encode(), self.data_root, source_id, trajectory_key, locator
+        ).model_copy(update={"labels": [InformationLabel(scope="public")]})
 
     def _persist_producer(self) -> EvidenceRef:
         code_revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
@@ -203,11 +225,22 @@ class CapturedRuntime:
         blocks: list[ContextBlock] = []
         for index, message in enumerate(messages):
             content = message.content.encode()
-            origin_event_id = message.origin_event_id or f"public:{self.task.task_id}:{index}"
+            if message.origin_event_id is None or message.provenance_ref is None:
+                raise ValueError("context message requires explicit occurrence provenance")
+            block_type = (
+                "tool_result"
+                if message.tool_call_id
+                else "system_prompt"
+                if message.role == "system"
+                else "assistant_response"
+                if message.role == "assistant"
+                else "task_instruction"
+            )
             blocks.append(ContextBlock(
                 kind="context_block", id=f"block:{request_id}:{index}", producer_ref=self._producer_ref,
-                request_id=request_id, occurrence_id=f"{request_id}:block:{index}", origin_event_id=origin_event_id,
-                role=message.role, type="tool_result" if message.tool_call_id else "message",
+                provenance_ref=message.provenance_ref,
+                request_id=request_id, occurrence_id=f"{request_id}:block:{index}", origin_event_id=message.origin_event_id,
+                role=message.role, type=block_type,
                 tool_call_id=message.tool_call_id,
                 body_pointer=f"/messages/{index}/content", content_hash=hashlib.sha256(content).hexdigest(),
                 complete=True,
@@ -268,7 +301,7 @@ class CapturedRuntime:
             True,
         )
         terminal_kind = "provider_failure" if attempt.failure_ref else "response"
-        self.record_event(
+        terminal_event_id, terminal_seq = self.record_event(
             terminal_kind,
             logical_call_id,
             {
@@ -285,6 +318,8 @@ class CapturedRuntime:
             },
             True,
         )
+        self._last_terminal_event_id = terminal_event_id
+        self._last_terminal_seq = terminal_seq
         return snapshot
 
     def seal(self, *, status: str, stop_reason: str | None = None) -> Run:
@@ -392,22 +427,44 @@ def run_deepseek_add_smoke(
     It is deliberately task-specific, synchronous, and capped at five physical
     attempts.  Invalid model output stops truthfully; no hidden retry exists.
     """
+    system_prompt = (
+        "You are operating through a strict command protocol.\n"
+        "Reply with exactly ONE command per turn. Do not explain. Do not use Markdown code fences. "
+        "Do not add text before or after the command.\n\n"
+        "Allowed commands:\n\n"
+        "READ target.py\n\n"
+        "WRITE target.py\n"
+        "<complete file contents>\n\n"
+        "TEST\n\n"
+        "FINAL\n\n"
+        "Before editing an unseen target.py, first use READ target.py. To modify the file, you MUST "
+        "use WRITE. Returning Python code without WRITE does not modify the workspace."
+    )
+    system_ref = runtime.public_context_ref(
+        system_prompt,
+        source_id="acr_runtime_config",
+        trajectory_key="deepseek_command_protocol_v1",
+        locator="/system-prompt",
+    )
+    task_ref = runtime.public_context_ref(
+        runtime.task.public_instruction,
+        source_id="acr_public_task",
+        trajectory_key=runtime.task.task_id,
+        locator="/public-instruction",
+    )
     messages = [
         ConversationMessage(
             "system",
-            "You are operating through a strict command protocol.\n"
-            "Reply with exactly ONE command per turn. Do not explain. Do not use Markdown code fences. "
-            "Do not add text before or after the command.\n\n"
-            "Allowed commands:\n\n"
-            "READ target.py\n\n"
-            "WRITE target.py\n"
-            "<complete file contents>\n\n"
-            "TEST\n\n"
-            "FINAL\n\n"
-            "Before editing an unseen target.py, first use READ target.py. To modify the file, you MUST "
-            "use WRITE. Returning Python code without WRITE does not modify the workspace.",
+            system_prompt,
+            origin_event_id="public:system:deepseek_command_protocol_v1",
+            provenance_ref=system_ref,
         ),
-        ConversationMessage("user", runtime.task.public_instruction),
+        ConversationMessage(
+            "user",
+            runtime.task.public_instruction,
+            origin_event_id=f"public-task:{runtime.task.task_id}:instruction",
+            provenance_ref=task_ref,
+        ),
     ]
     attempts = reads = 0
     changed = final_response_observed = False
@@ -430,7 +487,27 @@ def run_deepseek_add_smoke(
         if response is None:
             break
         final_response_observed = True
-        messages.append(ConversationMessage("assistant", response))
+        if runtime.last_terminal_event_id is None or runtime.last_terminal_seq is None:
+            break
+        response_ref = attempt.raw_response_ref.model_copy(
+            update={
+                "labels": [
+                    InformationLabel(
+                        scope="runtime",
+                        run_id=runtime.run_id,
+                        available_seq=runtime.last_terminal_seq,
+                    )
+                ]
+            }
+        )
+        messages.append(
+            ConversationMessage(
+                "assistant",
+                response,
+                origin_event_id=runtime.last_terminal_event_id,
+                provenance_ref=response_ref,
+            )
+        )
         command = response.strip()
         if command == "READ target.py":
             read = runtime.tools.read_file("target.py")
@@ -442,17 +519,30 @@ def run_deepseek_add_smoke(
                     origin_event_id=read.binding.read_event_id,
                     tool_call_id=read.tool_call_id,
                     file_binding=read.binding,
+                    provenance_ref=read.body_ref,
                 )
             )
         elif command.startswith("WRITE target.py\n"):
-            runtime.tools.write_file("target.py", command.split("\n", 1)[1])
+            write = runtime.tools.write_file("target.py", command.split("\n", 1)[1])
             changed = True
-            messages.append(ConversationMessage("user", "TOOL RESULT write_file completed"))
-        elif command == "TEST":
             messages.append(
                 ConversationMessage(
                     "user",
-                    f"TOOL RESULT run_test: {json.dumps(runtime.tools.run_test(), sort_keys=True)}",
+                    "TOOL RESULT write_file completed",
+                    origin_event_id=write.finish_event_id,
+                    tool_call_id=write.tool_call_id,
+                    provenance_ref=write.body_ref,
+                )
+            )
+        elif command == "TEST":
+            test = runtime.tools.run_test()
+            messages.append(
+                ConversationMessage(
+                    "user",
+                    f"TOOL RESULT run_test: {json.dumps(test.value, sort_keys=True)}",
+                    origin_event_id=test.finish_event_id,
+                    tool_call_id=test.tool_call_id,
+                    provenance_ref=test.body_ref,
                 )
             )
         elif command == "FINAL":

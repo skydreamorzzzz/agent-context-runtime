@@ -8,7 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from acr.contracts import EvidenceRef, FileBinding
+from acr.contracts import EvidenceRef, FileBinding, InformationLabel
 from acr.state import read_workspace_file
 from acr.store import ingest_runtime_bytes
 
@@ -19,6 +19,17 @@ class FileReadResult:
     binding: FileBinding
     body_ref: EvidenceRef
     text: str
+
+
+@dataclass(frozen=True)
+class ToolExecutionResult:
+    """One completed non-read tool occurrence and its exact result evidence."""
+
+    tool_call_id: str
+    finish_event_id: str
+    available_seq: int
+    body_ref: EvidenceRef
+    value: dict[str, object]
 
 
 class RuntimeTools:
@@ -88,6 +99,15 @@ class RuntimeTools:
                 True,
             )
             raise
+        visible_body_ref = body_ref.model_copy(
+            update={
+                "labels": [
+                    InformationLabel(
+                        scope="runtime", run_id=self._run_id, available_seq=available_seq
+                    )
+                ]
+            }
+        )
         binding = FileBinding(
             repo_relative_path=repo_relative_path,
             file_sha256=hashlib.sha256(raw).hexdigest(),
@@ -100,11 +120,11 @@ class RuntimeTools:
         return FileReadResult(
             tool_call_id=tool_call_id,
             binding=binding,
-            body_ref=body_ref,
+            body_ref=visible_body_ref,
             text=raw.decode("utf-8"),
         )
 
-    def write_file(self, repo_relative_path: str, text: str) -> None:
+    def write_file(self, repo_relative_path: str, text: str) -> ToolExecutionResult:
         """Write one UTF-8 regular workspace file with start/finish evidence."""
 
         tool_call_id = f"tool:{self._run_id}:{self._counter}"
@@ -115,7 +135,7 @@ class RuntimeTools:
             raw = text.encode("utf-8")
             resolved.write_bytes(raw)
             body_ref = ingest_runtime_bytes(raw, self._data_root, self._run_id, f"/tools/{tool_call_id}/body")
-            self._record(
+            finish_id, available_seq = self._record(
                 "tool_finish", tool_call_id,
                 {"tool": "write_file", "path": repo_relative_path, "body_ref": body_ref.model_dump(), "sha256": hashlib.sha256(raw).hexdigest(), "complete": True},
                 True,
@@ -123,8 +143,24 @@ class RuntimeTools:
         except Exception as error:
             self._record("tool_finish", tool_call_id, {"tool": "write_file", "path": repo_relative_path, "error": type(error).__name__, "complete": False}, True)
             raise
+        visible_body_ref = body_ref.model_copy(
+            update={
+                "labels": [
+                    InformationLabel(
+                        scope="runtime", run_id=self._run_id, available_seq=available_seq
+                    )
+                ]
+            }
+        )
+        return ToolExecutionResult(
+            tool_call_id=tool_call_id,
+            finish_event_id=finish_id,
+            available_seq=available_seq,
+            body_ref=visible_body_ref,
+            value={"status": "completed", "path": repo_relative_path},
+        )
 
-    def run_test(self) -> dict[str, object]:
+    def run_test(self) -> ToolExecutionResult:
         """Run the public add-task check only; execution is fully recorded."""
 
         import subprocess
@@ -141,8 +177,23 @@ class RuntimeTools:
         completed = subprocess.run([sys.executable, "-c", probe], cwd=self._workspace, capture_output=True, check=False)
         raw = json.dumps({"returncode": completed.returncode, "stdout": completed.stdout.decode(errors="replace"), "stderr": completed.stderr.decode(errors="replace")}, sort_keys=True).encode()
         body_ref = ingest_runtime_bytes(raw, self._data_root, self._run_id, f"/tools/{tool_call_id}/body")
-        self._record("tool_finish", tool_call_id, {"tool": "run_test", "body_ref": body_ref.model_dump(), "returncode": completed.returncode, "complete": True}, True)
-        return json.loads(raw)
+        finish_id, available_seq = self._record("tool_finish", tool_call_id, {"tool": "run_test", "body_ref": body_ref.model_dump(), "returncode": completed.returncode, "complete": True}, True)
+        visible_body_ref = body_ref.model_copy(
+            update={
+                "labels": [
+                    InformationLabel(
+                        scope="runtime", run_id=self._run_id, available_seq=available_seq
+                    )
+                ]
+            }
+        )
+        return ToolExecutionResult(
+            tool_call_id=tool_call_id,
+            finish_event_id=finish_id,
+            available_seq=available_seq,
+            body_ref=visible_body_ref,
+            value=json.loads(raw),
+        )
 
 
 def tool_result_payload(result: FileReadResult) -> bytes:

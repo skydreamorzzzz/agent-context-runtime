@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from acr.contracts import EvidenceRef, InformationLabel, Provenance
+from acr.contracts import DecisionView, EvidenceRef, InformationLabel, Provenance
 
 
 def _write_once(path: Path, content: bytes) -> None:
@@ -124,6 +124,17 @@ def persist_physical_attempt(data_root: Path, run_id: str, value: Any) -> None:
 
 def load_run_json(data_root: Path, run_id: str, name: str) -> Any:
     return json.loads((data_root / "runs" / run_id / name).read_text())
+
+
+def persist_decision_view(data_root: Path, view: DecisionView) -> None:
+    """Persist one immutable decision projection under its owning run."""
+
+    if "/" in view.id or view.id in {"", ".", ".."}:
+        raise ValueError("invalid decision view identity")
+    _write_once(
+        data_root / "runs" / view.run_id / "decision_views" / f"{view.id}.json",
+        view.model_dump_json(indent=2).encode() + b"\n",
+    )
 
 
 def persist_evaluation_json(data_root: Path, run_id: str, name: str, value: Any) -> None:
