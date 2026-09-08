@@ -10,8 +10,8 @@ M3 Noop/A-A paired-run feasibility: PASS
 M3 semantic/execution binding: CODE COMPLETE, real-pair revalidation pending
 M3 overall: IN PROGRESS
 
-Latest implementation checkpoint: `837c4a0` — four scoped runtime/pair/CLI
-integrity regressions closed.
+Latest implementation checkpoint: `9a9d83d` — frozen public task instruction
+bound to the actual serialized provider request.
 
 Current context/document baseline: repository HEAD.
 
@@ -43,3 +43,7 @@ cannot edit the workspace, duplicate read messages retain exact occurrence
 bindings, pair audit compares only the frozen hard attempt maximum, and CLI
 acceptance uses the configured 1..hard-max range. No deletion/intervention was
 implemented.
+
+The task manifest's `public_instruction` now supplies the real loop's initial
+user message; an offline transport regression verifies the exact sent request
+body. Code-level P0 closure is complete; real-provider validation is pending.
