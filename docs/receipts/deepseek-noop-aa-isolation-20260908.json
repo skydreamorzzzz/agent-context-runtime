@@ -8,7 +8,7 @@
   "intervention_A": "noop",
   "intervention_B": "noop",
   "execution_isolation": "linux_user_mount_pid_network_namespaces_bubblewrap",
-  "network_isolation": "disabled",
+  "network_access": "disabled",
   "cache_isolation": "unsupported",
   "phase_order_audit": "PASS",
   "run_A": {

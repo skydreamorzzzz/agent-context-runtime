@@ -39,8 +39,9 @@ records are made.
   transformation are not observed or claimed. The API response body is stored
   unchanged before response/usage normalization.
 - Submitted Python runs through Linux user/mount/PID/network namespaces plus
-  bubblewrap. The only writable mount is `/workspace`; `/usr/lib`, `/lib`, the
-  system Python executable, minimal devices, proc, and an empty tmpfs are the
-  only other exposed resources. The environment is rebuilt from a minimal
-  allowlist, network has its own unconfigured namespace, execution is timed out,
+  bubblewrap. `/workspace`, `/usr/lib`, `/lib`, and the system Python executable
+  are read-only; only sandbox-private `/tmp` is writable. Minimal devices, proc,
+  and that empty tmpfs are the only other exposed resources. The environment is
+  rebuilt from a minimal allowlist, network access is disabled by an
+  unconfigured namespace, execution has a closed-pipe-resistant hard timeout,
   and stdout/stderr retention is bounded.

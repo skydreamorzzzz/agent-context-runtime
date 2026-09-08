@@ -12,9 +12,8 @@ Pre-M4 trust closure: PASS
 Execution/evaluator isolation closure: PASS
 M4: NOT STARTED
 
-Latest implementation checkpoint: `1075710` — Linux namespace submission
-isolation, bounded execution, trusted/untrusted evaluator split, and auditable
-pair phase ordering.
+Latest implementation checkpoint: `58ca364` — read-only submission workspace,
+closed-pipe-resistant hard timeout, and authoritative `run_stop` pair ordering.
 
 Current context/document baseline: repository HEAD.
 
@@ -37,9 +36,16 @@ runs sealed before evaluation, both runtime audits and evaluation audits passed,
 and persisted pair audit passed. Arm A used 4 physical attempts; arm B used the
 frozen maximum of 5. Both independently read and wrote the public target and
 resolved all three private cases. Raw evidence remains local-only and ignored.
+That real validation is retained and was re-audited after the isolation
+corrections; no repeat provider call was made. Offline regressions now prove
+that submission workspaces are read-only, closed output pipes cannot bypass the
+hard timeout, and pair ordering derives from persisted `run_stop.end` evidence.
 
 Next gate: M4a deterministic duplicate-read candidate/intervention fixture.
 No candidate/deletion/intervention is implemented yet.
+
+Infrastructure P0 closure is frozen. It must not be reopened without a concrete
+experiment-blocking regression.
 
 Latest local-only real-loop attempt at clean revision `2844605` followed the
 strict protocol through `READ`, explicit `WRITE`, `TEST`, and `FINAL`. It used
