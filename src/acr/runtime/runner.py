@@ -397,7 +397,7 @@ def run_deepseek_add_smoke(
             "system",
             "Use READ target.py, WRITE target.py followed by complete Python, TEST, or FINAL. Edit before FINAL.",
         ),
-        ConversationMessage("user", "Inspect target.py and implement add(a, b)."),
+        ConversationMessage("user", runtime.task.public_instruction),
     ]
     attempts = reads = 0
     changed = final_response_observed = False

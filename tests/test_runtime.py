@@ -670,6 +670,41 @@ def test_plain_code_response_never_modifies_workspace_or_completes_run(tmp_path:
     assert outcome.run.stop_reason == "agent_did_not_modify_workspace"
 
 
+def test_public_task_instruction_is_the_actual_sent_user_message(tmp_path: Path) -> None:
+    marker = "UNIQUE_TASK_MARKER_12345"
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    (workspace / "target.py").write_text("def add(a, b):\n    pass\n")
+    sent: list[bytes] = []
+
+    def transport(body: bytes, attempt_id: str) -> TransportResult:
+        del attempt_id
+        sent.append(body)
+        return TransportResult(
+            "ok",
+            b'{"choices":[{"message":{"content":"FINAL"}}]}',
+        )
+
+    runtime = CapturedRuntime(
+        data_root=tmp_path / "data",
+        run_id="task-binding-run",
+        task=RuntimeTask("public/add", marker),
+        workspace=workspace,
+        config_bytes=b'{"provider":"engineering-fixture"}',
+    )
+    run_deepseek_add_smoke(
+        runtime,
+        CapturedProvider(transport),
+        model="deepseek-v4-flash",
+    )
+
+    assert len(sent) == 1
+    request = json.loads(sent[0])
+    user_messages = [message["content"] for message in request["messages"] if message["role"] == "user"]
+    assert user_messages == [marker]
+    assert "Inspect target.py and implement add(a, b)." not in user_messages
+
+
 def test_duplicate_read_context_blocks_bind_each_exact_occurrence(tmp_path: Path) -> None:
     responses = [
         b'{"choices":[{"message":{"content":"READ target.py"}}]}',
