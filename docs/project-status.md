@@ -11,8 +11,8 @@ M3 overall: IN PROGRESS
 Pre-M4 trust closure: PASS
 M4: NOT STARTED
 
-Latest implementation checkpoint: `871647c` — DecisionView visibility,
-current-file verification, exact ContextBlock provenance, and persisted audit.
+Latest implementation checkpoint: `3b0f1d4` — state-check temporal attestation,
+canonical provenance-label verification, and pre-send comparison binding.
 
 Current context/document baseline: repository HEAD.
 
@@ -48,3 +48,9 @@ implemented.
 The task manifest's `public_instruction` now supplies the real loop's initial
 user message; an offline transport regression verifies the exact sent request
 body. Real-provider coding-loop validation is PASS.
+
+Trust closure correction:
+
+- state-check temporal attestation: PASS
+- provenance anti-laundering: PASS
+- pre-send FileComparison binding: PASS

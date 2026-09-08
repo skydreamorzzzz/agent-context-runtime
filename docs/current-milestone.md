@@ -17,8 +17,15 @@ may be removed or weakened.
 - Every runtime-built `ContextBlock` carries its exact origin: public system or
   task input, provider response occurrence, or completed tool occurrence.
 - A historical complete UTF-8 `FileBinding` is compared with a safe current
-  workspace re-read. The result is `same`, `changed`, or explicit `unknown`;
-  only `same` can satisfy a later candidate precondition.
+  workspace re-read attested by an exact completed `state_check` event. Its
+  authoritative event sequence is the comparison `checked_seq`. The result is
+  `same`, `changed`, or explicit `unknown`; only `same` can satisfy a later
+  candidate precondition.
+- Context provenance labels must exactly equal the authorization implied by the
+  canonical public source or response/tool event; relabeling runtime evidence
+  as clean public evidence is rejected.
+- `build_view(...)` requires every file comparison to bind exactly one current
+  request block and its exact read occurrence before returning a view.
 - Persisted DecisionView and FileComparison artifacts are checked through the
   production run audit for identity, visibility, occurrence, and byte/hash
   consistency.
