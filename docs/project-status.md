@@ -4,13 +4,14 @@ M0: DONE
 M1: DONE
 M2 provider/runtime capture: PASS
 M2 independent evaluator: PASS
-M2 real coding-agent loop / reconstructible seal / usage ledger: IN PROGRESS
+M2 real coding-agent loop / reconstructible seal / usage ledger: CODE COMPLETE,
+real-provider validation pending
 M3 Noop/A-A paired-run feasibility: PASS
-M3 semantic/execution binding: IN PROGRESS
+M3 semantic/execution binding: CODE COMPLETE, real-pair revalidation pending
 M3 overall: IN PROGRESS
 
-Latest implementation checkpoint: `a833b62` — persisted M3 noop A/A pair
-harness and audit.
+Latest implementation checkpoint: `837c4a0` — four scoped runtime/pair/CLI
+integrity regressions closed.
 
 Current context/document baseline: repository HEAD.
 
@@ -36,3 +37,9 @@ Latest local-only real-loop attempt at revision `bb7ab63` retained a first
 physical provider attempt ending in `transport_exception`; its persisted
 runtime audit passed, but no provider response, file read, or workspace edit
 occurred. It is not accepted as a real coding-agent-loop result.
+
+The four confirmed code-level closure items are now covered: text-only answers
+cannot edit the workspace, duplicate read messages retain exact occurrence
+bindings, pair audit compares only the frozen hard attempt maximum, and CLI
+acceptance uses the configured 1..hard-max range. No deletion/intervention was
+implemented.
