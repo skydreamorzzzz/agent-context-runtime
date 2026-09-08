@@ -6,6 +6,7 @@ import hashlib
 import json
 from collections import Counter
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -1302,6 +1303,7 @@ def _audit_pair_manifest(
             producer_manifest = None
         if not isinstance(producer_manifest, dict) or producer_manifest.get("code_revision") != config_a.get("runtime_code_revision"):
             blocks.append("pair_runtime_revision_mismatch")
+    evaluation_starts: list[datetime] = []
     for run in (run_a, run_b):
         try:
             result = EvaluationResult.model_validate_json((root / "evaluations" / run.id / "evaluation_result.json").read_text())
@@ -1309,8 +1311,26 @@ def _audit_pair_manifest(
         except (OSError, ValidationError, json.JSONDecodeError):
             blocks.append("pair_evaluator_binding_mismatch")
             continue
+        if not isinstance(eproducer, dict):
+            blocks.extend(("pair_evaluator_binding_mismatch", "pair_phase_order_mismatch"))
+            continue
         if result.evaluator_revision != config_a.get("evaluator_version") or eproducer.get("private_spec_sha256") != config_a.get("private_spec_sha256"):
             blocks.append("pair_evaluator_binding_mismatch")
+        try:
+            started = datetime.fromisoformat(eproducer["evaluation_started_at"])
+            if started.tzinfo is None:
+                raise ValueError("evaluation start has no timezone")
+            evaluation_starts.append(started)
+        except (KeyError, TypeError, ValueError):
+            blocks.append("pair_phase_order_mismatch")
+    run_ends = (run_a.end, run_b.end)
+    valid_run_ends = [end for end in run_ends if end is not None and end.tzinfo is not None]
+    if (
+        len(valid_run_ends) != 2
+        or len(evaluation_starts) != 2
+        or any(started < max(valid_run_ends) for started in evaluation_starts)
+    ):
+        blocks.append("pair_phase_order_mismatch")
 
 
 def _audit_evaluation_producer(
@@ -1356,6 +1376,7 @@ def _audit_evaluation_producer(
         "evaluator_version",
         "code_revision",
         "private_spec_sha256",
+        "evaluation_started_at",
     )
     valid_code_revision = (
         isinstance(manifest, dict)
@@ -1369,6 +1390,11 @@ def _audit_evaluation_producer(
         and len(manifest["private_spec_sha256"]) == 64
         and all(char in "0123456789abcdef" for char in manifest["private_spec_sha256"])
     )
+    try:
+        evaluation_started_at = datetime.fromisoformat(manifest["evaluation_started_at"])
+        valid_evaluation_start = evaluation_started_at.tzinfo is not None
+    except (KeyError, TypeError, ValueError):
+        valid_evaluation_start = False
     if (
         not isinstance(manifest, dict)
         or any(not isinstance(manifest.get(key), str) or not manifest[key].strip() for key in required)
@@ -1377,6 +1403,7 @@ def _audit_evaluation_producer(
         or manifest.get("evaluator_version") != "local_add_evaluator_v1"
         or not valid_code_revision
         or not valid_spec_hash
+        or not valid_evaluation_start
         or result.evaluator_revision != manifest.get("evaluator_version")
     ):
         blocks.append("evaluation_producer_mismatch")

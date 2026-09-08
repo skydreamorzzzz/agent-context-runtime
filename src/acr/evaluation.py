@@ -5,11 +5,13 @@ from __future__ import annotations
 import hashlib
 import json
 import subprocess
-import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 from acr.contracts import EvaluationResult, EvidenceRef, Fact, Run
+from acr.evaluation_worker import SUBMISSION_WORKER_SOURCE
+from acr.execution import IsolationUnavailable, run_isolated_python
 from acr.store import ingest_evaluator_bytes, load_blob, persist_evaluation_json
 
 
@@ -31,6 +33,7 @@ class LocalAddEvaluator:
         data_root: Path,
         sealed_workspace: Path | None = None,
         code_revision: str | None = None,
+        timeout_seconds: float = 2.0,
     ) -> None:
         self._data_root = data_root
         self._sealed_workspace = sealed_workspace
@@ -38,43 +41,40 @@ class LocalAddEvaluator:
         # the clean repository revision captured below, rather than claiming a
         # post-hoc HEAD for dirty execution.
         self._code_revision = code_revision
+        self._timeout_seconds = timeout_seconds
 
     def evaluate(self, sealed_run: Run, private_spec_ref: str) -> EvaluationResult:
         require_sealed_run(sealed_run)
         code_revision = self._execution_code_revision()
-        # The private spec is first opened only after both sealed checks.
+        evaluation_started_at = datetime.now(timezone.utc)
+        # The private spec is first opened only after the sealed check and start
+        # attestation.  Its expected values remain in this trusted process.
         private_spec = Path(private_spec_ref)
         spec_bytes = private_spec.read_bytes()
         spec_hash = hashlib.sha256(spec_bytes).hexdigest()
-        # The evaluator verifies the sealed workspace, then executes private
-        # tests in an isolated copy.  Imports and test by-products must never
-        # mutate the sealed artifact used as the submission identity.
-        with tempfile.TemporaryDirectory(prefix="acr-evaluator-") as temporary:
-            execution_workspace = Path(temporary) / "workspace"
-            self._materialize_sealed_workspace(sealed_run, execution_workspace)
-            completed = subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "acr.evaluation_worker",
-                    "--workspace",
-                    str(execution_workspace),
-                    "--spec",
-                    str(private_spec),
-                ],
-                capture_output=True,
-                check=False,
-                text=False,
-            )
-        raw = completed.stdout if completed.returncode == 0 else json.dumps(
-            {"status": "infra_error", "error_type": "evaluator_worker_failed"}, sort_keys=True
-        ).encode()
-        raw_ref = ingest_evaluator_bytes(raw, self._data_root, sealed_run.id, "/evaluation/result")
-        producer_ref = self._persist_producer(sealed_run.id, spec_hash, code_revision)
         try:
-            record = json.loads(raw)
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            record = {"status": "infra_error"}
+            spec = json.loads(spec_bytes)
+            tests = spec["tests"]
+            if not isinstance(tests, list) or any(
+                not isinstance(case, dict) or "args" not in case or "expected" not in case
+                for case in tests
+            ):
+                raise ValueError("private evaluator cases are malformed")
+        except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+            record: dict[str, object] = {
+                "status": "infra_error",
+                "error_type": "private_spec_malformed",
+            }
+        else:
+            record = self._execute_cases(sealed_run, tests)
+        raw = json.dumps(record, sort_keys=True, separators=(",", ":")).encode()
+        raw_ref = ingest_evaluator_bytes(raw, self._data_root, sealed_run.id, "/evaluation/result")
+        producer_ref = self._persist_producer(
+            sealed_run.id,
+            spec_hash,
+            code_revision,
+            evaluation_started_at,
+        )
         if record.get("status") != "completed":
             unknown = Fact[int](status="unknown", reason="evaluator_infra_error")
             result = EvaluationResult(
@@ -98,6 +98,49 @@ class LocalAddEvaluator:
             )
         persist_evaluation_json(self._data_root, sealed_run.id, "evaluation_result.json", result)
         return result
+
+    def _execute_cases(self, sealed_run: Run, tests: list[dict[str, object]]) -> dict[str, object]:
+        """Compare private expected values only after isolated submissions return."""
+
+        passed = 0
+        submission_errors = 0
+        submission_timeouts = 0
+        with tempfile.TemporaryDirectory(prefix="acr-evaluator-") as temporary:
+            execution_workspace = Path(temporary) / "workspace"
+            self._materialize_sealed_workspace(sealed_run, execution_workspace)
+            for case in tests:
+                request = json.dumps({"args": case["args"]}, separators=(",", ":")).encode()
+                try:
+                    execution = run_isolated_python(
+                        execution_workspace,
+                        SUBMISSION_WORKER_SOURCE,
+                        stdin=request,
+                        timeout_seconds=self._timeout_seconds,
+                    )
+                except IsolationUnavailable:
+                    return {
+                        "status": "infra_error",
+                        "error_type": "execution_isolation_unavailable",
+                    }
+                if execution.status == "timeout":
+                    submission_timeouts += 1
+                    continue
+                worker = _worker_result(execution.stdout)
+                if worker is None or worker.get("status") != "returned":
+                    submission_errors += 1
+                    continue
+                if worker.get("value") == case["expected"]:
+                    passed += 1
+        return {
+            "status": "completed",
+            "tests_executed": len(tests),
+            "passed": passed,
+            "failed": len(tests) - passed,
+            "patch_valid": passed == len(tests),
+            "resolved": passed == len(tests),
+            "submission_errors": submission_errors,
+            "submission_timeouts": submission_timeouts,
+        }
 
     def _materialize_sealed_workspace(self, sealed_run: Run, destination: Path) -> None:
         """Reconstruct the submitted regular files from persisted blobs only."""
@@ -138,16 +181,36 @@ class LocalAddEvaluator:
             raise EvaluationHandoffRejected("evaluator code revision is malformed")
         return revision
 
-    def _persist_producer(self, run_id: str, spec_hash: str, code_revision: str) -> EvidenceRef:
+    def _persist_producer(
+        self,
+        run_id: str,
+        spec_hash: str,
+        code_revision: str,
+        evaluation_started_at: datetime,
+    ) -> EvidenceRef:
         manifest = {
             "producer_kind": "acr_local_add_evaluator",
             "schema_version": "1.0",
             "evaluator_version": "local_add_evaluator_v1",
             "code_revision": code_revision,
             "private_spec_sha256": spec_hash,
+            "evaluation_started_at": evaluation_started_at.isoformat(),
         }
         raw = json.dumps(manifest, sort_keys=True, indent=2).encode() + b"\n"
         ref = ingest_evaluator_bytes(raw, self._data_root, run_id, "/evaluation/producer-manifest")
         persist_evaluation_json(self._data_root, run_id, "producer_manifest.json", manifest)
         persist_evaluation_json(self._data_root, run_id, "producer_ref.json", ref)
         return ref
+
+
+def _worker_result(stdout: bytes) -> dict[str, object] | None:
+    """Extract the submission result without interpreting arbitrary stdout."""
+
+    for line in reversed(stdout.decode(errors="replace").splitlines()):
+        if line.startswith("ACR_RESULT="):
+            try:
+                value = json.loads(line.removeprefix("ACR_RESULT="))
+            except json.JSONDecodeError:
+                return None
+            return value if isinstance(value, dict) else None
+    return None

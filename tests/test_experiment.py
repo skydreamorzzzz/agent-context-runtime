@@ -6,6 +6,7 @@ import hashlib
 import json
 import shutil
 import subprocess
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -13,9 +14,9 @@ import pytest
 from acr.adapters.provider import CapturedProvider, TransportResult
 from acr.audit import audit_pair
 from acr.evaluation import LocalAddEvaluator
-from acr.experiment import prepare_noop_pair
-from acr.runtime.runner import CapturedRuntime, RuntimeTask
-from acr.store import ingest_runtime_bytes, persist_pair_json
+from acr.experiment import prepare_noop_pair, run_noop_pair
+from acr.runtime.runner import CapturedRuntime, DeepSeekSmokeOutcome, RuntimeTask
+from acr.store import ingest_evaluator_bytes, ingest_runtime_bytes, persist_pair_json
 
 
 def _write_json(path: Path, value: dict) -> None:
@@ -41,8 +42,11 @@ def _complete_pair(tmp_path: Path) -> tuple[Path, Path, str]:
         workspace_root=tmp_path / "workspaces", code_revision=revision,
         private_spec_sha256=hashlib.sha256(private.read_bytes()).hexdigest(), execution_order="AB",
     )
-    for arm, workspace, run_id in (("A", plan.workspace_a, plan.pair.baseline_run_id), ("B", plan.workspace_b, plan.pair.treatment_run_id)):
-        del arm
+    sealed: list[tuple[Path, object]] = []
+    for workspace, run_id in (
+        (plan.workspace_a, plan.pair.baseline_run_id),
+        (plan.workspace_b, plan.pair.treatment_run_id),
+    ):
         shutil.copytree(source, workspace)
         runtime = CapturedRuntime(
             data_root=root, run_id=run_id, task=RuntimeTask("public/add", "Read target.py"),
@@ -53,6 +57,8 @@ def _complete_pair(tmp_path: Path) -> tuple[Path, Path, str]:
         runtime.tools.read_file("target.py")
         runtime.send_request(provider, b'{"request":"same"}', "call-1")
         run = runtime.seal(status="completed")
+        sealed.append((workspace, run))
+    for workspace, run in sealed:
         LocalAddEvaluator(data_root=root, sealed_workspace=workspace, code_revision=revision).evaluate(run, str(private))
     persist_pair_json(root, plan.pair.id, "pair.json", plan.pair.model_copy(update={"status": "completed"}))
     assert audit_pair(root, plan.pair.id, str(private)).status == "PASS"
@@ -62,6 +68,70 @@ def _complete_pair(tmp_path: Path) -> tuple[Path, Path, str]:
 def test_noop_pair_persisted_audit_closes_two_fresh_runs(tmp_path: Path) -> None:
     root, private, pair_id = _complete_pair(tmp_path)
     assert audit_pair(root, pair_id, str(private)).status == "PASS"
+
+
+def test_pair_harness_seals_both_runs_before_private_evaluation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "target.py").write_text("def add(a, b):\n    pass\n")
+    private = tmp_path / "private.json"
+    private.write_text('{"tests":[]}')
+    root = tmp_path / "data"
+    config = {
+        "provider": "deepseek",
+        "model": "deepseek-v4-flash",
+        "base_url": "https://api.deepseek.com",
+        "task_manifest": "public.json",
+        "intervention": "noop",
+        "cache_isolation": "unsupported",
+        "budget": {"hard_max_physical_attempts": 5},
+    }
+    plan = prepare_noop_pair(
+        data_root=root,
+        pair_id="pair-order",
+        replicate_id="aa-1",
+        task_id="public/add",
+        config=config,
+        task_manifest_bytes=b"{}",
+        source_workspace=source,
+        workspace_root=tmp_path / "workspaces",
+        code_revision="a" * 40,
+        private_spec_sha256=hashlib.sha256(private.read_bytes()).hexdigest(),
+        execution_order="BA",
+    )
+
+    def seal_only(runtime, provider, *, model):
+        del provider, model
+        run = runtime.seal(status="task_failed", stop_reason="fixture")
+        return DeepSeekSmokeOutcome(run, 0, 0, False)
+
+    evaluations: list[str] = []
+
+    class CheckingEvaluator:
+        def __init__(self, **kwargs):
+            del kwargs
+
+        def evaluate(self, run, private_spec_ref):
+            assert private_spec_ref == str(private)
+            assert (root / "runs" / plan.pair.baseline_run_id / "run.json").is_file()
+            assert (root / "runs" / plan.pair.treatment_run_id / "run.json").is_file()
+            evaluations.append(run.id)
+
+    monkeypatch.setattr("acr.experiment.run_deepseek_add_smoke", seal_only)
+    monkeypatch.setattr("acr.experiment.LocalAddEvaluator", CheckingEvaluator)
+    run_noop_pair(
+        plan=plan,
+        data_root=root,
+        task=RuntimeTask("public/add", "public"),
+        runtime_config_bytes=json.dumps(config).encode(),
+        provider_factory=object,
+        model="deepseek-v4-flash",
+        source_workspace=source,
+        private_spec=private,
+    )
+    assert evaluations == [plan.pair.baseline_run_id, plan.pair.treatment_run_id]
 
 
 def test_pair_budget_ignores_nonsemantic_fields_but_binds_hard_maximum(tmp_path: Path) -> None:
@@ -162,3 +232,29 @@ def test_pair_audit_blocks_private_spec_and_evaluator_version_divergence(tmp_pat
     value["evaluator_revision"] = "local_add_evaluator_v2"
     _write_json(result, value)
     assert "pair_evaluation_audit_block" in audit_pair(root, pair_id, str(private)).blocks
+
+
+def test_pair_audit_blocks_evaluation_before_both_runs_seal(tmp_path: Path) -> None:
+    root, private, pair_id = _complete_pair(tmp_path)
+    run_b = json.loads((root / "runs" / f"{pair_id}-B" / "run.json").read_text())
+    evaluation_root = root / "evaluations" / f"{pair_id}-A"
+    manifest = json.loads((evaluation_root / "producer_manifest.json").read_text())
+    manifest["evaluation_started_at"] = (
+        datetime.fromisoformat(run_b["end"].replace("Z", "+00:00")) - timedelta(seconds=1)
+    ).isoformat()
+    raw = json.dumps(manifest, sort_keys=True, indent=2).encode() + b"\n"
+    ref = ingest_evaluator_bytes(
+        raw,
+        root,
+        f"{pair_id}-A",
+        "/evaluation/producer-manifest",
+    )
+    (evaluation_root / "producer_manifest.json").write_bytes(raw)
+    (evaluation_root / "producer_ref.json").write_text(ref.model_dump_json())
+    result_path = evaluation_root / "evaluation_result.json"
+    result = json.loads(result_path.read_text())
+    result["producer_ref"] = ref.model_dump()
+    _write_json(result_path, result)
+    audit = audit_pair(root, pair_id, str(private))
+    assert "pair_phase_order_mismatch" in audit.blocks
+    assert "pair_evaluation_audit_block" not in audit.blocks

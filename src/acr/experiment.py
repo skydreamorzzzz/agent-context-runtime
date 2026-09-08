@@ -198,7 +198,13 @@ def run_noop_pair(
     outcomes: dict[str, DeepSeekSmokeOutcome] = {}
     for arm in plan.pair.execution_order:
         outcomes[arm] = run_deepseek_add_smoke(runtimes[arm], provider_factory(), model=model)
-        LocalAddEvaluator(data_root=data_root, sealed_workspace=(plan.workspace_a if arm == "A" else plan.workspace_b)).evaluate(outcomes[arm].run, str(private_spec))
+    # Private evaluation starts only after both independent runtime arms have
+    # sealed.  Evaluation order is fixed and separate from randomized run order.
+    for arm, workspace in (("A", plan.workspace_a), ("B", plan.workspace_b)):
+        LocalAddEvaluator(data_root=data_root, sealed_workspace=workspace).evaluate(
+            outcomes[arm].run,
+            str(private_spec),
+        )
     completed = plan.pair.model_copy(update={"status": "completed"})
     persist_pair_json(data_root, plan.pair.id, "pair.json", completed)
     return NoopPairOutcome(completed, outcomes["A"].run, outcomes["B"].run, outcomes["A"], outcomes["B"])

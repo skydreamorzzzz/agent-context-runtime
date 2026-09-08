@@ -1137,6 +1137,7 @@ def test_evaluator_producer_and_private_spec_identity_mutations_block(tmp_path: 
             "evaluator_version": "local_add_evaluator_v1",
             "code_revision": "a" * 40,
             "private_spec_sha256": spec_hash,
+            "evaluation_started_at": "2026-09-08T00:00:00+00:00",
         }
 
     # The static evaluator version and EvaluationResult revision are both frozen.

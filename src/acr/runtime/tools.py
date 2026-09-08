@@ -9,8 +9,27 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from acr.contracts import EvidenceRef, FileBinding, InformationLabel
+from acr.execution import IsolationUnavailable, run_isolated_python
 from acr.state import read_workspace_file
 from acr.store import ingest_runtime_bytes
+
+_PUBLIC_ADD_TEST = r"""
+import importlib.util
+import json
+
+try:
+    spec = importlib.util.spec_from_file_location("submitted_target", "/workspace/target.py")
+    if spec is None or spec.loader is None:
+        raise ImportError("submitted target cannot be loaded")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    passed = callable(module.add) and module.add(1, 2) == 3 and module.add(-1, 1) == 0
+    result = {"status": "completed", "passed": bool(passed)}
+except BaseException as error:
+    result = {"status": "submission_error", "error_type": type(error).__name__}
+print("ACR_RESULT=" + json.dumps(result, sort_keys=True))
+"""
+PUBLIC_TEST_TIMEOUT_SECONDS = 2.0
 
 
 @dataclass(frozen=True)
@@ -161,23 +180,54 @@ class RuntimeTools:
         )
 
     def run_test(self) -> ToolExecutionResult:
-        """Run the public add-task check only; execution is fully recorded."""
-
-        import subprocess
-        import sys
+        """Run the public add check inside the fixed Linux isolation boundary."""
 
         tool_call_id = f"tool:{self._run_id}:{self._counter}"
         self._counter += 1
         self._record("tool_start", tool_call_id, {"tool": "run_test", "command": "public-add-check"}, False)
-        probe = (
-            "import importlib.util; p=importlib.util.spec_from_file_location('target','target.py'); "
-            "m=importlib.util.module_from_spec(p); p.loader.exec_module(m); "
-            "assert m.add(1,2)==3; assert m.add(-1,1)==0"
-        )
-        completed = subprocess.run([sys.executable, "-c", probe], cwd=self._workspace, capture_output=True, check=False)
-        raw = json.dumps({"returncode": completed.returncode, "stdout": completed.stdout.decode(errors="replace"), "stderr": completed.stderr.decode(errors="replace")}, sort_keys=True).encode()
+        try:
+            execution = run_isolated_python(
+                self._workspace,
+                _PUBLIC_ADD_TEST,
+                timeout_seconds=PUBLIC_TEST_TIMEOUT_SECONDS,
+            )
+            worker_result = _worker_result(execution.stdout)
+            status = "timeout" if execution.status == "timeout" else "completed"
+            if execution.status != "timeout" and worker_result is None:
+                status = "submission_error"
+            raw_value: dict[str, object] = {
+                "status": status,
+                "returncode": execution.returncode,
+                "stdout": execution.stdout.decode(errors="replace"),
+                "stderr": execution.stderr.decode(errors="replace"),
+                "stdout_truncated": execution.stdout_truncated,
+                "stderr_truncated": execution.stderr_truncated,
+                "result": worker_result,
+            }
+        except IsolationUnavailable as error:
+            raw_value = {
+                "status": "infra_error",
+                "error_type": type(error).__name__,
+                "stdout": "",
+                "stderr": "",
+                "stdout_truncated": False,
+                "stderr_truncated": False,
+                "result": None,
+            }
+        raw = json.dumps(raw_value, sort_keys=True).encode()
         body_ref = ingest_runtime_bytes(raw, self._data_root, self._run_id, f"/tools/{tool_call_id}/body")
-        finish_id, available_seq = self._record("tool_finish", tool_call_id, {"tool": "run_test", "body_ref": body_ref.model_dump(), "returncode": completed.returncode, "complete": True}, True)
+        finish_id, available_seq = self._record(
+            "tool_finish",
+            tool_call_id,
+            {
+                "tool": "run_test",
+                "body_ref": body_ref.model_dump(),
+                "status": raw_value["status"],
+                "returncode": raw_value.get("returncode"),
+                "complete": True,
+            },
+            True,
+        )
         visible_body_ref = body_ref.model_copy(
             update={
                 "labels": [
@@ -194,6 +244,17 @@ class RuntimeTools:
             body_ref=visible_body_ref,
             value=json.loads(raw),
         )
+
+
+def _worker_result(stdout: bytes) -> dict[str, object] | None:
+    for line in reversed(stdout.decode(errors="replace").splitlines()):
+        if line.startswith("ACR_RESULT="):
+            try:
+                result = json.loads(line.removeprefix("ACR_RESULT="))
+            except json.JSONDecodeError:
+                return None
+            return result if isinstance(result, dict) else None
+    return None
 
 
 def tool_result_payload(result: FileReadResult) -> bytes:
