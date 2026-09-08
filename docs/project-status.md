@@ -31,3 +31,8 @@ multi-task M3 completion and not evidence of intervention effectiveness.
 Next gate: finish and verify the real coding-loop integrity closure. Do not
 authorize a candidate or intervention until its persisted runtime, evaluator,
 usage, and pair binding audits pass.
+
+Latest local-only real-loop attempt at revision `bb7ab63` retained a first
+physical provider attempt ending in `transport_exception`; its persisted
+runtime audit passed, but no provider response, file read, or workspace edit
+occurred. It is not accepted as a real coding-agent-loop result.
