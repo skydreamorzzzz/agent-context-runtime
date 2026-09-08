@@ -1,78 +1,39 @@
-# Current milestone: M2/M3 real-loop integrity closure
+# Current milestone: Pre-M4 trust closure
 
-M0 and M1 are DONE. M2 capture/evaluation and the first M3 noop A/A harness
-are accepted, but this gate closes the minimum real coding loop needed before
-any context-necessity experiment: model-directed read/write/test, reconstructible
-seal, persisted usage, and semantic-condition-to-execution pair audit.
+M0 and M1 are DONE. M2 runtime/provider capture, the real coding loop, sealed
+evaluation, and the first M3 noop A/A feasibility harness have passed their
+recorded gates. M3 overall remains IN PROGRESS.
 
-New integrity gates are cumulative. Do not delete, weaken, replace, or stop
-executing any established M0/M1/M2 invariant or regression merely to satisfy a
-new M3 gate.
+This gate closes the trust boundary required before candidate code may be
+authorized. New integrity gates remain cumulative; no earlier M0–M3 regression
+may be removed or weakened.
 
 ## Required gates
 
-- The add-task runtime remains a bounded synchronous loop (at most five
-  physical attempts and tool steps): model-directed `read_file`, `write_file`,
-  and public `run_test` only. A text answer is not a solved submission.
-- Every runtime-built request records ordered `ContextBlock` occurrences. A
-  tool-result block must bind its exact `tool_finish`, `tool_call_id`, and file
-  binding; content equality never substitutes for occurrence identity.
-- Sealing stores an immutable manifest plus regular-file body blobs. Evaluation
-  materializes an isolated submission from those blobs, never from the live
-  execution workspace. Submission syntax/import/runtime errors are completed
-  task failures; evaluator protocol failures alone are `infra_error`.
-- Events and snapshots have append-only journals before seal. Interrupted runs
-  are not resumed, but prior observations remain available for audit.
-- Usage ledger entries and a run aggregate are derived only from persisted
-  provider usage evidence; absent fields and money remain unknown.
-- Pair audit binds frozen provider/model/base URL/noop/cache/budget/runtime
-  revision/evaluator revision/private-spec hash to both persisted runs and
-  evaluations, not merely to A/A manifest equality.
-
-- Persist the pair manifest before either physical provider request. It freezes
-  pair/replicate/task IDs, both preallocated run IDs, provider/model, task
-  manifest hash, source-tree hash, code revision, evaluator version,
-  private-spec hash, noop intervention, attempt budget, cache limitation,
-  execution order, and occurrence-free semantic config hashes for both arms.
-- A and A' are both `noop`; their semantic configs must be byte-canonically
-  equal. Run ID, time, provider ID, output, usage, and final artifact are
-  execution occurrences and may differ. Do not describe their difference as an
-  intervention effect.
-- Copy the same frozen public source into two distinct fresh workspaces before
-  requests. Both initial tree hashes must equal the source tree; execution
-  workspace identities must be distinct and remain separate from tree identity.
-- Each arm has a distinct runtime/provider capture instance, physical-attempt
-  inventory, events, snapshots, workspace, seal, and independent evaluator
-  execution. Each runtime and evaluation audit must PASS from persisted
-  artifacts.
-- Persist a completed `Pair` only after both arms/evaluations finish. Pair
-  audit must close the exact manifest blob, pair producer blob, run identities,
-  task/config/source equality, noop condition, execution order, runtime audits,
-  and evaluation audits.
-- Pair mutations must BLOCK through production persisted audit: same run twice,
-  task/config/intervention/source mismatch, failed runtime/evaluation audit,
-  private-spec/evaluator divergence, execution-order or manifest tamper, and
-  arm occurrence swapping.
-- Provider cache isolation remains `unsupported`; usage/cache differences are
-  observations, not causal claims.
-
-## Real A/A gate
-
-Run only one pair, sequentially, with one provider/model/task and no more than
-five physical attempts per arm. The public add task must produce at least one
-exact `read_file` binding per arm. Real runtime/evaluator evidence and private
-specs remain local-only and must never be committed. A clean Git worktree and
-available non-secret credential are mandatory preflight conditions.
+- `build_view(...)` admits only authorized public constants and completed
+  same-run runtime evidence with `available_seq <= cutoff_seq`.
+- Future, cross-run, evaluator/analysis, tainted, unknown-label, and unfinished
+  evidence is rejected deterministically.
+- Every runtime-built `ContextBlock` carries its exact origin: public system or
+  task input, provider response occurrence, or completed tool occurrence.
+- A historical complete UTF-8 `FileBinding` is compared with a safe current
+  workspace re-read. The result is `same`, `changed`, or explicit `unknown`;
+  only `same` can satisfy a later candidate precondition.
+- Persisted DecisionView and FileComparison artifacts are checked through the
+  production run audit for identity, visibility, occurrence, and byte/hash
+  consistency.
+- Existing command-loop, sealed-artifact, evaluation, accounting, and pair
+  integrity regressions remain green.
 
 ## Prohibited
 
-No candidate detection, intervention, deletion/compression, paired treatment,
-multiple replicates, benchmark execution, cost claims, A/A statistics, second
-task/provider/model, parallel execution, framework/registry expansion, or M4
-work.
+No candidate detector, intervention, deletion/replacement, treatment pair,
+rebound measurement, native tool-calling framework, second provider/task, or
+benchmark expansion is authorized in this milestone.
 
-## Completion rule
+## Completion and next gate
 
-One successful real pair may be reported as `M3 Noop/A-A paired-run feasibility:
-PASS`; M3 overall remains IN PROGRESS because frozen-plan M3 includes more
-than one small task and no actual intervention has yet been authorized.
+When all gates pass, record `Pre-M4 trust closure: PASS`; do not mark M4
+started. The next gate is execution/evaluator isolation closure, including
+runtime execution isolation, evaluator isolation, timeout behavior, pair phase
+ordering, and current-revision A/A revalidation.

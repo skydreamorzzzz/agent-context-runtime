@@ -8,9 +8,11 @@ M2 real coding-agent loop / reconstructible seal / usage ledger: PASS
 M3 Noop/A-A paired-run feasibility: PASS
 M3 semantic/execution binding: CODE COMPLETE, real-pair revalidation pending
 M3 overall: IN PROGRESS
+Pre-M4 trust closure: PASS
+M4: NOT STARTED
 
-Latest implementation checkpoint: `2844605` — strict text-command protocol
-captured in the provider request with task-manifest instruction binding intact.
+Latest implementation checkpoint: `871647c` — DecisionView visibility,
+current-file verification, exact ContextBlock provenance, and persisted audit.
 
 Current context/document baseline: repository HEAD.
 
@@ -28,8 +30,9 @@ persisted pair audit all passed. Provider-cache isolation remains unsupported.
 This is a single-pair M3 feasibility result, not the frozen plan's full
 multi-task M3 completion and not evidence of intervention effectiveness.
 
-Next gate: an exact duplicate-read candidate and a minimal intervention before
-any baseline/treatment paired rerun. No deletion/intervention is implemented yet.
+Next gate: execution/evaluator isolation closure (runtime isolation, evaluator
+isolation, timeout, pair phase ordering, and current-revision A/A revalidation).
+No candidate/deletion/intervention is implemented yet.
 
 Latest local-only real-loop attempt at clean revision `2844605` followed the
 strict protocol through `READ`, explicit `WRITE`, `TEST`, and `FINAL`. It used
