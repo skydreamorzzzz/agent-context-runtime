@@ -6,13 +6,15 @@ M2 provider/runtime capture: PASS
 M2 independent evaluator: PASS
 M2 real coding-agent loop / reconstructible seal / usage ledger: PASS
 M3 Noop/A-A paired-run feasibility: PASS
-M3 semantic/execution binding: CODE COMPLETE, real-pair revalidation pending
+M3 semantic/execution binding and current-revision revalidation: PASS
 M3 overall: IN PROGRESS
 Pre-M4 trust closure: PASS
+Execution/evaluator isolation closure: PASS
 M4: NOT STARTED
 
-Latest implementation checkpoint: `3b0f1d4` — state-check temporal attestation,
-canonical provenance-label verification, and pre-send comparison binding.
+Latest implementation checkpoint: `1075710` — Linux namespace submission
+isolation, bounded execution, trusted/untrusted evaluator split, and auditable
+pair phase ordering.
 
 Current context/document baseline: repository HEAD.
 
@@ -30,8 +32,13 @@ persisted pair audit all passed. Provider-cache isolation remains unsupported.
 This is a single-pair M3 feasibility result, not the frozen plan's full
 multi-task M3 completion and not evidence of intervention effectiveness.
 
-Next gate: execution/evaluator isolation closure (runtime isolation, evaluator
-isolation, timeout, pair phase ordering, and current-revision A/A revalidation).
+Current-revision real noop A/A revalidation `aa-isolation-1075710` passed: both
+runs sealed before evaluation, both runtime audits and evaluation audits passed,
+and persisted pair audit passed. Arm A used 4 physical attempts; arm B used the
+frozen maximum of 5. Both independently read and wrote the public target and
+resolved all three private cases. Raw evidence remains local-only and ignored.
+
+Next gate: M4a deterministic duplicate-read candidate/intervention fixture.
 No candidate/deletion/intervention is implemented yet.
 
 Latest local-only real-loop attempt at clean revision `2844605` followed the

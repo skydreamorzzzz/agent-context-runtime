@@ -1,46 +1,32 @@
-# Current milestone: Pre-M4 trust closure
+# Current milestone: Execution/evaluator isolation closure
 
-M0 and M1 are DONE. M2 runtime/provider capture, the real coding loop, sealed
-evaluation, and the first M3 noop A/A feasibility harness have passed their
-recorded gates. M3 overall remains IN PROGRESS.
+M0–M2 are DONE. M3 noop A/A feasibility has passed while M3 overall remains
+IN PROGRESS. Pre-M4 evidence and visibility trust closure remains PASS. M4 is
+NOT STARTED.
 
-This gate closes the trust boundary required before candidate code may be
-authorized. New integrity gates remain cumulative; no earlier M0–M3 regression
-may be removed or weakened.
+This gate closes the execution boundary required before any real intervention:
 
-## Required gates
+- Runtime public tests execute in Linux user/mount/PID/network namespaces with
+  bubblewrap. Only the current workspace and the minimum read-only Python
+  runtime are visible; the inherited host environment is cleared.
+- Runtime and evaluator submission execution have a hard wall-clock timeout and
+  bounded stdout/stderr evidence. Submission timeout is a task failure, not an
+  evaluator infrastructure failure.
+- The trusted evaluator reads private expected values only after seal. Each
+  untrusted submission process receives public arguments only; it cannot see the
+  private spec, runtime data root, host secrets, or trusted evaluator process.
+- A noop pair seals both runtime arms before either private evaluation starts.
+  Evaluator producer evidence records `evaluation_started_at`, and persisted
+  pair audit requires both starts to follow both run end timestamps.
+- The current-revision real noop A/A pair has passed both runtime audits, both
+  evaluation audits, and pair audit. Provider-cache isolation remains
+  unsupported and no causal claim is made.
+- All earlier M0–M3 and Pre-M4 integrity regressions remain cumulative.
 
-- `build_view(...)` admits only authorized public constants and completed
-  same-run runtime evidence with `available_seq <= cutoff_seq`.
-- Future, cross-run, evaluator/analysis, tainted, unknown-label, and unfinished
-  evidence is rejected deterministically.
-- Every runtime-built `ContextBlock` carries its exact origin: public system or
-  task input, provider response occurrence, or completed tool occurrence.
-- A historical complete UTF-8 `FileBinding` is compared with a safe current
-  workspace re-read attested by an exact completed `state_check` event. Its
-  authoritative event sequence is the comparison `checked_seq`. The result is
-  `same`, `changed`, or explicit `unknown`; only `same` can satisfy a later
-  candidate precondition.
-- Context provenance labels must exactly equal the authorization implied by the
-  canonical public source or response/tool event; relabeling runtime evidence
-  as clean public evidence is rejected.
-- `build_view(...)` requires every file comparison to bind exactly one current
-  request block and its exact read occurrence before returning a view.
-- Persisted DecisionView and FileComparison artifacts are checked through the
-  production run audit for identity, visibility, occurrence, and byte/hash
-  consistency.
-- Existing command-loop, sealed-artifact, evaluation, accounting, and pair
-  integrity regressions remain green.
+## Completion
 
-## Prohibited
+`EXECUTION_EVALUATOR_ISOLATION_CLOSURE_PASS`
 
-No candidate detector, intervention, deletion/replacement, treatment pair,
-rebound measurement, native tool-calling framework, second provider/task, or
-benchmark expansion is authorized in this milestone.
-
-## Completion and next gate
-
-When all gates pass, record `Pre-M4 trust closure: PASS`; do not mark M4
-started. The next gate is execution/evaluator isolation closure, including
-runtime execution isolation, evaluator isolation, timeout behavior, pair phase
-ordering, and current-revision A/A revalidation.
+Next gate: M4a deterministic duplicate-read candidate/intervention fixture.
+Candidate detection, intervention, request deletion, treatment pairs, and
+rebound measurement remain prohibited until explicitly authorized.

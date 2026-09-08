@@ -14,6 +14,10 @@ Before a pair is included in a report, verify:
 - The receipt proves the actual sent body, not merely an intended prepared body.
 - Baseline and treatment have independently verified initial state, frozen config, and recorded order.
 - The run is sealed before the evaluator accesses private inputs.
+- Submitted code runs with an empty/minimal environment, workspace-only writable
+  mount, disabled network namespace, bounded output, and a hard timeout.
+- Both pair arms are sealed before either evaluator producer's recorded start;
+  pair audit blocks timestamp laundering across this phase boundary.
 - Failed attempts and manager overhead remain in the ledger.
 - No unresolved `block` finding exists.
 - The report is reproducible from sealed artifacts without API calls.

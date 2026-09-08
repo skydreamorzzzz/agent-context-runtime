@@ -1,0 +1,40 @@
+{
+  "receipt_kind": "real_noop_aa_isolation_revalidation",
+  "pair_id": "aa-isolation-1075710",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "code_revision": "10757104017a9310942618ce3a1435ef337fae5e",
+  "execution_order": "AB",
+  "intervention_A": "noop",
+  "intervention_B": "noop",
+  "execution_isolation": "linux_user_mount_pid_network_namespaces_bubblewrap",
+  "network_isolation": "disabled",
+  "cache_isolation": "unsupported",
+  "phase_order_audit": "PASS",
+  "run_A": {
+    "run_id": "aa-isolation-1075710-A",
+    "status": "completed",
+    "physical_attempts": 4,
+    "file_reads": 1,
+    "file_writes": 1,
+    "public_tests": 1,
+    "sealed_artifact_hash": "6b5578ab0688ed530b24ddff68b2aba6f511ba42e32f0188f8daac69247ca9e0",
+    "resolved": true,
+    "runtime_audit": "PASS",
+    "evaluation_audit": "PASS"
+  },
+  "run_B": {
+    "run_id": "aa-isolation-1075710-B",
+    "status": "completed",
+    "physical_attempts": 5,
+    "file_reads": 1,
+    "file_writes": 1,
+    "public_tests": 2,
+    "sealed_artifact_hash": "817aabfe8d1713eb598ec84be249b375fd9c3a9209c198c976ccf809fc09c6dc",
+    "resolved": true,
+    "runtime_audit": "PASS",
+    "evaluation_audit": "PASS"
+  },
+  "pair_audit": "PASS",
+  "evidence_note": "Raw provider, runtime, evaluator, and private-spec evidence is local-only and is not represented by this receipt."
+}
