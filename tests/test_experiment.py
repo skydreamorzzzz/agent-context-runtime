@@ -15,7 +15,7 @@ from acr.audit import audit_pair
 from acr.evaluation import LocalAddEvaluator
 from acr.experiment import prepare_noop_pair
 from acr.runtime.runner import CapturedRuntime, RuntimeTask
-from acr.store import persist_pair_json
+from acr.store import ingest_runtime_bytes, persist_pair_json
 
 
 def _write_json(path: Path, value: dict) -> None:
@@ -31,7 +31,7 @@ def _complete_pair(tmp_path: Path) -> tuple[Path, Path, str]:
     config = {
         "provider": "deepseek", "model": "deepseek-v4-flash", "base_url": "https://api.deepseek.com",
         "task_manifest": "public.json", "intervention": "noop", "cache_isolation": "unsupported",
-        "budget": {"hard_max_physical_attempts": 5},
+        "budget": {"hard_max_physical_attempts": 5, "target_physical_attempts": 2},
     }
     root = tmp_path / "data"
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
@@ -62,6 +62,38 @@ def _complete_pair(tmp_path: Path) -> tuple[Path, Path, str]:
 def test_noop_pair_persisted_audit_closes_two_fresh_runs(tmp_path: Path) -> None:
     root, private, pair_id = _complete_pair(tmp_path)
     assert audit_pair(root, pair_id, str(private)).status == "PASS"
+
+
+def test_pair_budget_ignores_nonsemantic_fields_but_binds_hard_maximum(tmp_path: Path) -> None:
+    root, private, pair_id = _complete_pair(tmp_path)
+    assert audit_pair(root, pair_id, str(private)).status == "PASS"
+    replacement = {
+        "provider": "deepseek",
+        "model": "deepseek-v4-flash",
+        "base_url": "https://api.deepseek.com",
+        "task_manifest": "public.json",
+        "intervention": "noop",
+        "cache_isolation": "unsupported",
+        "budget": {"hard_max_physical_attempts": 4, "target_physical_attempts": 2},
+        "code_revision": subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], text=True
+        ).strip(),
+    }
+    raw = json.dumps(replacement, sort_keys=True).encode()
+    for run_id in (f"{pair_id}-A", f"{pair_id}-B"):
+        ref = ingest_runtime_bytes(raw, root, run_id, "/config")
+        run_path = root / "runs" / run_id / "run.json"
+        run = json.loads(run_path.read_text())
+        run["config_ref"] = ref.model_dump()
+        _write_json(run_path, run)
+        requests_path = root / "runs" / run_id / "requests.jsonl"
+        requests = [json.loads(line) for line in requests_path.read_text().splitlines()]
+        for request in requests:
+            request["model_config_ref"] = ref.model_dump()
+        requests_path.write_text("".join(json.dumps(item) + "\n" for item in requests))
+    assert "pair_actual_execution_binding_mismatch" in audit_pair(
+        root, pair_id, str(private)
+    ).blocks
 
 
 @pytest.mark.parametrize(

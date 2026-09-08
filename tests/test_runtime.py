@@ -17,6 +17,7 @@ from acr.adapters.provider import (
     serialize_deepseek_chat_request,
 )
 from acr.audit import audit_evaluation, audit_run
+from acr.cli import _within_attempt_budget
 from acr.contracts import Run
 from acr.evaluation import EvaluationHandoffRejected, LocalAddEvaluator, require_sealed_run
 from acr.runtime.runner import CapturedRuntime, RunSealedError, RuntimeTask, run_deepseek_add_smoke
@@ -640,6 +641,8 @@ def test_deepseek_transport_and_bounded_smoke_remain_offline_and_captured(tmp_pa
     assert outcome.physical_attempts == 2
     assert outcome.file_reads == 1
     assert outcome.final_response_observed
+    assert outcome.run.status == "task_failed"
+    assert "# TODO" in (runtime.workspace / "target.py").read_text()
     assert outcome.run.capabilities["runtime_level"] == "engineering_fixture_only"
     assert audit_run(tmp_path / "data", "run-1").status == "PASS"
     assert all(json.loads(body)["model"] == "deepseek-v4-flash" for body in sent)
@@ -649,6 +652,60 @@ def test_deepseek_transport_and_bounded_smoke_remain_offline_and_captured(tmp_pa
         if path.is_file()
     )
     assert "test-credential" not in persisted
+
+
+def test_plain_code_response_never_modifies_workspace_or_completes_run(tmp_path: Path) -> None:
+    runtime, _ = _runtime(tmp_path)
+    target = runtime.workspace / "target.py"
+    target.write_text("def add(a, b):\n    pass\n")
+    before = target.read_bytes()
+    response = b'{"choices":[{"message":{"content":"def add(a, b): return a + b"}}]}'
+    outcome = run_deepseek_add_smoke(
+        runtime,
+        CapturedProvider(lambda body, attempt: TransportResult("ok", response)),
+        model="deepseek-v4-flash",
+    )
+    assert target.read_bytes() == before
+    assert outcome.run.status == "task_failed"
+    assert outcome.run.stop_reason == "agent_did_not_modify_workspace"
+
+
+def test_duplicate_read_context_blocks_bind_each_exact_occurrence(tmp_path: Path) -> None:
+    responses = [
+        b'{"choices":[{"message":{"content":"READ target.py"}}]}',
+        b'{"choices":[{"message":{"content":"READ target.py"}}]}',
+        b'{"choices":[{"message":{"content":"WRITE target.py\\ndef add(a, b):\\n    return a + b\\n"}}]}',
+    ]
+    runtime, _ = _runtime(tmp_path)
+    (runtime.workspace / "target.py").write_text("def add(a, b):\n    pass\n")
+    run_deepseek_add_smoke(
+        runtime,
+        CapturedProvider(lambda body, attempt: TransportResult("ok", responses.pop(0))),
+        model="deepseek-v4-flash",
+    )
+    bindings = _jsonl(tmp_path / "data" / "runs" / "run-1" / "file_bindings.jsonl")
+    assert bindings[0]["file_sha256"] == bindings[1]["file_sha256"]
+    assert bindings[0]["read_event_id"] != bindings[1]["read_event_id"]
+    requests = _jsonl(tmp_path / "data" / "runs" / "run-1" / "requests.jsonl")
+    blocks = [
+        block
+        for block in requests[2]["ordered_blocks"]
+        if block["tool_call_id"]
+    ]
+    assert [block["origin_event_id"] for block in blocks] == [
+        bindings[0]["read_event_id"],
+        bindings[1]["read_event_id"],
+    ]
+    assert blocks[0]["tool_call_id"] != blocks[1]["tool_call_id"]
+    assert audit_run(tmp_path / "data", "run-1").status == "PASS"
+
+
+def test_cli_attempt_acceptance_uses_frozen_hard_maximum() -> None:
+    config = {"budget": {"hard_max_physical_attempts": 5, "target_physical_attempts": 2}}
+    assert _within_attempt_budget(1, config)
+    assert _within_attempt_budget(5, config)
+    assert not _within_attempt_budget(0, config)
+    assert not _within_attempt_budget(6, config)
 
 
 def test_deepseek_transport_exception_uses_the_existing_failure_path(tmp_path: Path) -> None:

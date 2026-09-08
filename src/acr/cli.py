@@ -31,6 +31,15 @@ from acr.store import (
 )
 
 
+def _within_attempt_budget(count: int, config: dict) -> bool:
+    budget = config.get("budget")
+    return (
+        isinstance(budget, dict)
+        and isinstance(budget.get("hard_max_physical_attempts"), int)
+        and 1 <= count <= budget["hard_max_physical_attempts"]
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(); commands = parser.add_subparsers(dest="command", required=True)
     ingest = commands.add_parser("ingest")
@@ -167,9 +176,10 @@ def _run_deepseek_smoke(data_root: Path, workspace_root: Path, config_path: Path
     }
     print(json.dumps(summary, sort_keys=True))
     accepted = (
-        outcome.physical_attempts in {1, 2}
+        _within_attempt_budget(outcome.physical_attempts, config)
         and outcome.file_reads >= 1
         and outcome.final_response_observed
+        and outcome.run.status == "completed"
         and outcome.run.sealed_artifact_ref is not None
         and result.status == "PASS"
     )
@@ -241,9 +251,10 @@ def _run_noop_deepseek_pair(
     }, sort_keys=True))
     accepted = (
         result.status == "PASS"
-        and outcome.outcome_a.physical_attempts in {1, 2}
-        and outcome.outcome_b.physical_attempts in {1, 2}
+        and _within_attempt_budget(outcome.outcome_a.physical_attempts, config)
+        and _within_attempt_budget(outcome.outcome_b.physical_attempts, config)
         and outcome.outcome_a.file_reads >= 1 and outcome.outcome_b.file_reads >= 1
         and outcome.outcome_a.final_response_observed and outcome.outcome_b.final_response_observed
+        and outcome.run_a.status == "completed" and outcome.run_b.status == "completed"
     )
     raise SystemExit(0 if accepted else 1)

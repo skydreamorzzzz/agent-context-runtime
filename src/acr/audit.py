@@ -597,7 +597,11 @@ def _audit_requests(
                     blocks.append("request_context_mapping_mismatch")
                 if block.tool_call_id is not None:
                     matching = [event for event in events if event.id == block.origin_event_id and event.kind == "tool_finish" and event.call_id == block.tool_call_id]
-                    if len(matching) != 1 or block.file_binding is None:
+                    if (
+                        len(matching) != 1
+                        or block.file_binding is None
+                        or block.file_binding.read_event_id != block.origin_event_id
+                    ):
                         blocks.append("request_context_occurrence_mismatch")
         inventory = physical.get(snapshot.attempt_id)
         entered = inventory.get("entered") if inventory is not None else None
@@ -1003,7 +1007,18 @@ def _audit_pair_manifest(
             blocks.append("pair_actual_execution_binding_mismatch")
     budget_a = actual_a.get("budget") if isinstance(actual_a, dict) else None
     budget_b = actual_b.get("budget") if isinstance(actual_b, dict) else None
-    if budget_a != config_a.get("attempt_budget") or budget_b != config_b.get("attempt_budget"):
+    semantic_budget = config_a.get("attempt_budget")
+    expected_attempts = (
+        semantic_budget.get("hard_max_physical_attempts")
+        if isinstance(semantic_budget, dict)
+        else None
+    )
+    if (
+        not isinstance(budget_a, dict)
+        or not isinstance(budget_b, dict)
+        or budget_a.get("hard_max_physical_attempts") != expected_attempts
+        or budget_b.get("hard_max_physical_attempts") != expected_attempts
+    ):
         blocks.append("pair_actual_execution_binding_mismatch")
     for run in (run_a, run_b):
         producer = _load_runtime_producer(root, run.id, run, blocks)

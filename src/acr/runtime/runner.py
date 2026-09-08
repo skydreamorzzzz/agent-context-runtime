@@ -23,6 +23,7 @@ from acr.contracts import (
     Event,
     EvidenceRef,
     Fact,
+    FileBinding,
     RepositoryState,
     RequestSnapshot,
     Run,
@@ -47,6 +48,20 @@ class RuntimeTask:
 
     task_id: str
     public_instruction: str
+
+
+@dataclass(frozen=True)
+class ConversationMessage:
+    """One request message plus its optional exact tool occurrence."""
+
+    role: str
+    content: str
+    origin_event_id: str | None = None
+    tool_call_id: str | None = None
+    file_binding: FileBinding | None = None
+
+    def wire(self) -> dict[str, str]:
+        return {"role": self.role, "content": self.content}
 
 
 class CapturedRuntime:
@@ -77,7 +92,6 @@ class CapturedRuntime:
         self._attempt_seq = 0
         self._last_attempt: CapturedAttempt | None = None
         self._attempt_usages: list[tuple[str, Fact[dict], EvidenceRef | None]] = []
-        self._message_occurrences: list[dict[str, object]] = []
         self._producer_ref = self._persist_producer()
         self._config_ref = ingest_runtime_bytes(config_bytes, data_root, run_id, "/config")
         tree, tree_hash = initial_tree_manifest(self.workspace)
@@ -181,33 +195,25 @@ class CapturedRuntime:
         append_run_jsonl(self.data_root, self.run_id, "events.journal.jsonl", event)
         return event_id, event_seq
 
-    def context_blocks(self, request_id: str, messages: list[dict[str, str]]) -> list[ContextBlock]:
+    def context_blocks(
+        self, request_id: str, messages: list[ConversationMessage]
+    ) -> list[ContextBlock]:
         """Map every serialized message occurrence to its prior evidence boundary."""
 
         blocks: list[ContextBlock] = []
         for index, message in enumerate(messages):
-            content = message["content"].encode()
-            origin = (
-                self._message_occurrences[-1]
-                if message["content"].startswith("TOOL RESULT read_file")
-                and self._message_occurrences
-                else None
-            )
-            origin_event_id = str(origin["event_id"]) if origin else f"public:{self.task.task_id}:{index}"
-            tool_call_id = str(origin["tool_call_id"]) if origin and origin.get("tool_call_id") else None
-            binding = origin.get("binding") if origin else None
+            content = message.content.encode()
+            origin_event_id = message.origin_event_id or f"public:{self.task.task_id}:{index}"
             blocks.append(ContextBlock(
                 kind="context_block", id=f"block:{request_id}:{index}", producer_ref=self._producer_ref,
                 request_id=request_id, occurrence_id=f"{request_id}:block:{index}", origin_event_id=origin_event_id,
-                role=message["role"], type="tool_result" if tool_call_id else "message", tool_call_id=tool_call_id,
+                role=message.role, type="tool_result" if message.tool_call_id else "message",
+                tool_call_id=message.tool_call_id,
                 body_pointer=f"/messages/{index}/content", content_hash=hashlib.sha256(content).hexdigest(),
-                complete=True, file_binding=binding if (binding is None) or hasattr(binding, "file_sha256") else None,
+                complete=True,
+                file_binding=message.file_binding,
             ))
         return blocks
-
-    def remember_tool_read(self, read) -> None:
-        """Expose an exact completed read as the next request's tool-result origin."""
-        self._message_occurrences.append({"event_id": read.binding.read_event_id, "tool_call_id": read.tool_call_id, "binding": read.binding})
 
     def send_request(
         self,
@@ -387,13 +393,18 @@ def run_deepseek_add_smoke(
     attempts.  Invalid model output stops truthfully; no hidden retry exists.
     """
     messages = [
-        {"role": "system", "content": "Use READ target.py, WRITE target.py followed by complete Python, TEST, or FINAL. Edit before FINAL."},
-        {"role": "user", "content": "Inspect target.py and implement add(a, b)."},
+        ConversationMessage(
+            "system",
+            "Use READ target.py, WRITE target.py followed by complete Python, TEST, or FINAL. Edit before FINAL.",
+        ),
+        ConversationMessage("user", "Inspect target.py and implement add(a, b)."),
     ]
     attempts = reads = 0
     changed = final_response_observed = False
     for step in range(5):
-        body = serialize_deepseek_chat_request(model=model, messages=messages)
+        body = serialize_deepseek_chat_request(
+            model=model, messages=[message.wire() for message in messages]
+        )
         request_id = f"add-loop-{step}"
         runtime.send_request(
             provider, body, request_id,
@@ -409,26 +420,32 @@ def run_deepseek_add_smoke(
         if response is None:
             break
         final_response_observed = True
-        messages.append({"role": "assistant", "content": response})
+        messages.append(ConversationMessage("assistant", response))
         command = response.strip()
         if command == "READ target.py":
             read = runtime.tools.read_file("target.py")
-            runtime.remember_tool_read(read)
             reads += 1
-            messages.append({"role": "user", "content": f"TOOL RESULT read_file target.py:\n{read.text}"})
+            messages.append(
+                ConversationMessage(
+                    "user",
+                    f"TOOL RESULT read_file target.py:\n{read.text}",
+                    origin_event_id=read.binding.read_event_id,
+                    tool_call_id=read.tool_call_id,
+                    file_binding=read.binding,
+                )
+            )
         elif command.startswith("WRITE target.py\n"):
             runtime.tools.write_file("target.py", command.split("\n", 1)[1])
             changed = True
-            messages.append({"role": "user", "content": "TOOL RESULT write_file completed"})
+            messages.append(ConversationMessage("user", "TOOL RESULT write_file completed"))
         elif command == "TEST":
-            messages.append({"role": "user", "content": f"TOOL RESULT run_test: {json.dumps(runtime.tools.run_test(), sort_keys=True)}"})
+            messages.append(
+                ConversationMessage(
+                    "user",
+                    f"TOOL RESULT run_test: {json.dumps(runtime.tools.run_test(), sort_keys=True)}",
+                )
+            )
         elif command == "FINAL":
-            break
-        elif "def add" in response and "return a + b" in response and not changed:
-            # A plain code answer is materialized only as a model-directed edit;
-            # evaluator success remains a property of the sealed workspace.
-            runtime.tools.write_file("target.py", "def add(a, b):\n    return a + b\n")
-            changed = True
             break
         else:
             break
