@@ -1,5 +1,10 @@
 # Contract conventions
 
+> **LEGACY STATUS:** This page records implemented Context Optimization contract
+> conventions. It remains historical authority for those records, but it does
+> not define the provisional Agent Forensics schemas. See
+> [`agent-forensics-mvp-plan.md`](../agent-forensics-mvp-plan.md).
+
 Persistent records use the envelope `kind`, `schema_version`, `id`, `producer_ref`, and `provenance_ref`. Observations with uncertain availability use `Fact(value, status, reason, refs)`; observed and derived facts require evidence references.
 
 Unknown is a first-class outcome. Content hashes identify bytes, while IDs identify logical or execution identity.

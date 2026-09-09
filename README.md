@@ -1,22 +1,65 @@
 # agent-context-runtime
 
-`acr` is the MVP scaffold for an auditable, cost-aware context-management runtime.
+This repository now has two explicit tracks. Planned Agent Forensics capabilities
+must not be confused with the already implemented Context Optimization research
+infrastructure.
 
-The repository is intentionally organized around evidence boundaries rather than a framework hierarchy:
+## Active — Agent Forensics MVP validation
 
-- `src/acr/` contains pure contracts and runtime-facing modules.
-- `data/` is a user-supplied evidence root selected with `--data-root`; it is ignored by Git.
-- `private_eval/` is deliberately separate from runtime code and data.
-- `docs/architecture.md` records allowed dependencies and the audit trail.
+- **Active MVP hypothesis:** Agent Forensics
+- **Status:** SELECTED FOR VALIDATION
+- **Implementation:** NOT STARTED
+- **Product validation:** NOT ESTABLISHED
+- **Research novelty:** NOT ESTABLISHED
 
-## Summary
+The provisional technical definition is **verification-bound project-state
+incident reconstruction for coding agents**. The external demo narrative may be
+**A Black Box for Coding Agents**.
 
-The MVP performs clean, from-scratch baseline/treatment pairs. It may omit one verified old duplicate `read_file` result from one outbound request. Every conclusion must be reconstructible from raw blobs, normalized records, provenance, audit findings, sealed runs, evaluation results, and the cost ledger. Missing evidence remains `unknown`; it is never inferred.
+The selected hypothesis is to observe one Claude Code session in one isolated
+Git worktree, capture explicitly scoped repository-state evidence, bind explicit
+verifier outcomes to tested pre-execution state, reconstruct an observed
+pass-to-fail window, and eventually restore or fork the captured repository
+scope. `AgentEvent`, `WorkspaceCheckpoint`, `VerificationReceipt`,
+`IncidentReport`, `ForkReceipt`, the Incident Theater frontend, and Workspace
+Fork are plans—not implemented capabilities or validated architecture.
 
-Implementation status: M0/M1 and the recorded M2 gates are complete; one M3
-noop A/A feasibility pair has passed while M3 overall remains in progress. The
-pre-M4 visibility, current-file verification, ContextBlock provenance, and
-persisted-audit trust gate is closed. M4 has not started, and real runtime
-evidence remains local.
+The next engineering gate is strictly:
 
-See [the architecture guide](docs/architecture.md), [audit checklist](docs/audit-checklist.md), and the frozen [MVP plan](agent-context-runtime-mvp-plan.md).
+> **F0 provisional contracts / fixture → F0.5 Reality Spike**
+
+F0 prepares tentative evidence schemas and a synthetic incident fixture. F0.5
+then validates current Claude Code hook reality, event correlation and process
+behavior, captured-scope restore fidelity, verifier pre-state binding, Git base
+durability, journal concurrency, privacy gaps, and checkpoint overhead. No F1+
+implementation is authorized before F0.5 PASS.
+
+See the active [`Agent Forensics MVP plan`](agent-forensics-mvp-plan.md),
+[`current milestone`](docs/current-milestone.md),
+[`MVP scope`](docs/mvp-scope.md), and
+[`provisional architecture`](docs/architecture.md).
+
+## Legacy — Context Optimization Research
+
+The existing `acr` Python package is preserved as a real historical research
+implementation. It provides evidence contracts, immutable content-addressed
+storage, provenance/audit controls, a synchronous captured runtime, provider and
+tool evidence, repository-state checks, isolated evaluation, noop A/A pairing,
+accounting, and offline duplicate-read coverage analysis.
+
+Historical status remains: M0 and M1 DONE; M2 runtime/provider/evaluator gates
+PASS; one M3 noop A/A feasibility PASS while M3 overall is incomplete; Pre-M4
+trust closure and execution/evaluator isolation PASS; the Multi-SWE-bench
+offline duplicate-read coverage audit PASS with a formal intervention decision
+of `NO_GO`. M4 never started, and no real request-deletion treatment was
+implemented.
+
+This track is frozen. Do not continue M4, provider request rewriting,
+duplicate-read intervention, or Context Optimization policy work without
+separate reauthorization. Its historical interpretation remains governed by
+the legacy [`Context Optimization MVP plan`](agent-context-runtime-mvp-plan.md),
+[`project status`](docs/project-status.md), and preserved receipts and coverage
+artifacts.
+
+Across both tracks, missing evidence stays unknown, content identity stays
+separate from occurrence identity, and unsupported claims fail closed.

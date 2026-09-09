@@ -1,5 +1,28 @@
 # Project status
 
+## Active Track — Agent Forensics
+
+- Active MVP hypothesis: Agent Forensics
+- Status: SELECTED FOR VALIDATION
+- Implementation: NOT STARTED
+- Product validation: NOT ESTABLISHED
+- Research novelty: NOT ESTABLISHED
+- F0: NOT STARTED
+- F0.5: NOT STARTED
+
+Current work is the documentation control-plane baseline and F0 preparation.
+Every detailed Forensics contract, Claude interface dependency, checkpoint
+policy, verifier binding, restore/fork mechanism, and Incident Theater interface
+remains provisional until F0.5. The only next engineering gate is:
+
+> **F0 provisional contracts / fixture → F0.5 Reality Spike**
+
+No Agent Forensics implementation exists yet. This status does not establish
+product demand, architectural feasibility, restoration fidelity, causal
+analysis, or research novelty.
+
+## Legacy Track — Context Optimization Research
+
 M0: DONE
 M1: DONE
 M2 provider/runtime capture: PASS
@@ -52,10 +75,10 @@ corrections; no repeat provider call was made. Offline regressions now prove
 that submission workspaces are read-only, closed output pipes cannot bypass the
 hard timeout, and pair ordering derives from persisted `run_stop.end` evidence.
 
-Next gate: decide whether to collect a bounded native/request-level duplicate
-read coverage sample. Historical Flash evidence alone is `NO_GO` for formal
+Historical Flash evidence alone is `NO_GO` for formal
 `omit_one_duplicate_read_v1` intervention. No request deletion or treatment
-intervention is implemented; M4 remains NOT STARTED.
+intervention is implemented; M4 remains NOT STARTED and is frozen. It is not the
+current next gate.
 
 Infrastructure P0 closure is frozen. It must not be reopened without a concrete
 experiment-blocking regression.

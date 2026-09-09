@@ -1,63 +1,80 @@
 # Agent Context Runtime: Stable Instructions
 
-## 核心原则
+## Authority
 
-1. **计划优先**：与 `agent-context-runtime-mvp-plan.md` 冲突时，以计划为准。必须先报告冲突，再扩展范围。
+The repository has two deliberately separate authority domains.
 
-2. **证据驱动**：任何结论必须有可追溯的原始证据（源 → SHA256 → 规范化产物 → 出处 → 审计）。禁止推断缺失信息（prompts、状态、缓存、提供商行为、评测结果）。
+- **Active validation authority:** [`agent-forensics-mvp-plan.md`](agent-forensics-mvp-plan.md) governs current development. When another active document conflicts with it, report the conflict before expanding scope and follow the Forensics plan.
+- **Historical authority:** [`agent-context-runtime-mvp-plan.md`](agent-context-runtime-mvp-plan.md), historical status documents, receipts, and coverage artifacts remain authoritative for interpreting the Legacy Context Optimization Research Track. Do not rewrite that track as Forensics work.
 
-3. **内容标识**：hash 标识字节内容，不标识出现次数。逻辑/事件或源位置标识独立于内容重复。
+Agent Forensics is **SELECTED FOR MVP VALIDATION**. Its architecture, contracts,
+checkpoint policy, verifier binding, restoration, and UI are not implemented or
+validated. Product validation and research novelty are not established.
 
-4. **未知处理**：`unknown`、`not_applicable`、零/空/假互不相同。缺失证据必须阻断（fail-closed）。禁止用 `"unknown"` 等魔法字符串表示认知未知；使用 `Fact/status/reason` 语义。
+## Current gate and scope control
 
-5. **审计阻断**：缺失 blob、hash 不匹配、定位符错误、出处缺失/冲突、来源/生产者不匹配、不可验证的观测声明 → 一律 BLOCK，不得静默修复。
+- The only next engineering gate is **F0 provisional contracts / fixture → F0.5 Reality Spike**.
+- F0 defines tentative evidence contracts and a synthetic incident fixture. Every new Forensics contract remains provisional until F0.5 passes.
+- F0.5 must verify current Claude Code interfaces and real runtime behavior, captured-scope repository round trips, verifier pre-state binding, operational safety, privacy gaps, and overhead before contracts or policies freeze.
+- Do not begin F1 or later work before F0.5 PASS. In particular, do not build the Incident Theater, real hook capture, checkpointing, verifier integration, replay, or Workspace Fork early.
+- The Legacy Context Optimization M4 and all duplicate-read intervention work are frozen. Do not implement request deletion or revive candidate/intervention experiments without separate reauthorization.
+- Do not extend the active product path through `audit.py`, `candidates.py`, duplicate-read detection, interventions, DeepSeek experiments, provider request rewriting, or context-optimization policies. Preserve those files as legacy assets.
+- Target v0.1 is one user, one Claude Code session, one isolated Git worktree, one local repository, explicitly configured verifiers, a local evidence store, and a local frontend. Do not broaden to concurrent writers, multiple providers/users, cloud services, or generic observability infrastructure.
 
-6. **异常安全**：格式错误的持久化证据产生确定性 BLOCK/AuditFinding；格式错误的用户输入不得转义为未处理的解析器/索引/键异常。
+## Evidence and claim discipline
 
-## 架构边界
+1. Every conclusion must have traceable original evidence: source → SHA256 → normalized artifact → provenance → audit. Never infer missing prompts, state, cache, provider behavior, interface behavior, or results.
+2. A content hash identifies bytes, not occurrences. Event/logical/source-location identity stays separate from content identity.
+3. `unknown`, `not_applicable`, zero, empty, and false are distinct. Cognitive unknowns use explicit `Fact/status/reason` semantics, never magic strings.
+4. Missing blobs, hash mismatches, invalid locators, absent/conflicting provenance, source/producer mismatches, or unverifiable observation claims BLOCK. Do not silently repair them.
+5. Malformed persisted evidence produces deterministic BLOCK/AuditFinding outcomes. Malformed user input must not escape as unhandled parser, index, or key errors.
+6. Distinguish Observed, Derived, Estimated, and Unknown. `IncidentReport` is an analyzer-version-dependent derived view; it is not primary evidence.
+7. Use **Last Observed Passing State**, **First Observed Failing State**, and **Failure Window**. Do not claim “last good,” “first bad,” causal root cause, or global project correctness.
+8. `captured_workspace_manifest_hash` covers only explicitly captured repository scope. Never describe it as complete repository, environment, process, machine, or model state.
+9. A Workspace Fork, if later validated, may claim only captured repository scope restoration and manifest verification—not deterministic replay, trajectory continuation, or complete workspace restoration.
+10. Claude hook availability, payloads, ordering, batching, process lifecycle, correlation, background behavior, journal concurrency, verifier binding, Git base pinning, restore fidelity, and checkpoint overhead are external or operational assumptions until F0.5 validates them.
 
-* contracts、visibility、state、candidates、interventions、accounting、evaluation、runtime 保持逻辑独立。**Evaluation 必须作为独立进程执行，private evaluator inputs 不得进入 runtime。**
-* `ports.py` 只包含 `TrajectoryAdapter`、`Provider`、`Runtime`、`Evaluator` 四个 Protocol。不加注册器、DI、插件系统、事件总线、DAG 引擎、ORM、通用中间件。
-* 存储只用本地 JSON/JSONL + 内容寻址 blob。不加数据库、仪表盘、图服务、分布式编排器。
-* 历史数组/消息顺序仅认 `source_position`，未经上游证明不得提升为权威运行时顺序或未来可见性。
-* 顶层持久记录使用 `Envelope` 约定（schema 版本 `1.0`），复用 `acr.contracts.Provenance`，不加平行出处 schema。
+## Privacy and capture boundaries
 
-## 里程碑隔离
+Privacy constraints take precedence over reconstruction completeness.
 
-* 只实现当前明确要求的里程碑。前一道门未关，不开始后续的 runtime、provider、candidate、intervention、paired rerun、evaluator、accounting 工作。
-* 不创建合成证据替代缺失的上游产物。缺失输入记录为 blocked/unknown + 原因。
-* 来源清单（source manifest）与生产者清单（producer manifest）分离：来源说明原始出处，生产者说明生成产物的代码/配置/格式。
-* 完成前必须：运行测试和 lint → 检查工作区 → 仅提交验证过的变更 → 按需推送。
-* 回归不变量累积：新增审计/完整性门禁时，不得移除或削弱已有门禁/测试，除非冻结架构明确替代且有文档记录。
+- Exclude sensitive artifacts, record the capture gap, and degrade capture completeness. Never bypass an exclusion to improve reconstruction.
+- Plan for `.acrignore`, sensitive default-deny patterns, blob and stdout/stderr caps, and explicit truncation, but do not build a complex redaction engine in advance.
+- Do not record full prompts by default, environment-variable values, credentials, tokens, private-key contents, or proactively read `.env`.
+- Unsupported or excluded environment, process, ignored-file, database, and network state must remain explicit `unsupported`, `unknown`, or `not captured` evidence gaps.
 
-## Git 与凭证安全
+## Architectural constraints
 
-* 使用仓库已配置的认证 Git 传输（credential helper 或 SSH agent）。
-* **禁止**在任何命令、URL、日志、文档、提交、`https://<TOKEN>@github.com/...` URL 中放入 PAT、token、密码、私钥内容。
-* **禁止** cat/echo/print/copy 或记录密钥文件、本地密钥路径、凭证环境变量值、私钥材料。敏感信息总结需安全脱敏。
-* 认证传输不可用时，停止推送并报告：`push unavailable: authenticated Git transport not available`。
-* 提交前检查暂存 diff 中是否含 `.env`、凭证、token、私钥、密钥配置。未经明确批准不得 force-push 或重写历史。
-* 安全提交流程（依赖已配置认证，不嵌入凭证）：
+- The active provisional evidence model has primary append-only `AgentEvent`, `WorkspaceCheckpoint`, and `VerificationReceipt`; derived `IncidentReport`; and action receipt `ForkReceipt`. Do not add these to Python contracts before the authorized F0 work, and do not freeze fields before F0.5 PASS.
+- Keep Claude-specific payload translation at an adapter boundary. Analyzer and frontend must consume stable evidence/view models, not raw Claude payloads.
+- A verifier receipt must bind the captured pre-execution repository state. A verifier may mutate the tree; an optional post-state is separate and cannot retroactively define the tested state.
+- Event occurrence is not checkpoint materialization. Read/search events need not scan the repository. The concrete checkpoint policy remains provisional.
+- The v0 execution contract is one instrumented Claude session per isolated worktree. Background execution may be observed while exact mutation attribution remains degraded.
+- The frontend is a legibility layer, never evidence authority. It must not generate evidence, alter evidence truth, or present heuristics as facts.
+- Reuse concepts from `contracts.py`, immutable content-addressed storage from `store.py`, and workspace/manifest safety ideas from `state.py` only after the relevant gate. Do not treat the existing initial-tree scan or unlocked append journal as a validated dynamic checkpoint design.
+- Keep local JSON/JSONL plus content-addressed blobs. Do not add databases, registries, DI systems, plugin frameworks, event buses, DAG engines, ORMs, or distributed orchestration.
+- Preserve source manifests and producer manifests as separate objects. Persistent top-level records continue to use the `Envelope` convention and existing `acr.contracts.Provenance` unless the active plan explicitly revises this after validation.
 
-```bash
-git status --short
-git diff --check
-git add -- <reviewed-paths>
-git diff --cached --check
-git diff --cached
-git commit -m "<accurate message>"
-git push origin HEAD
-git status --short
-git rev-parse HEAD
-```
+## Legacy invariants
 
-* 若需使用环境变量中的 GitHub credential，用此方式（不打印/导出/持久化）：
+The accepted Context Optimization research history remains factual: M0 DONE;
+M1 DONE; M2 runtime/provider/evaluator gates PASS; one M3 noop A/A feasibility
+PASS while M3 overall is incomplete; Pre-M4 trust closure PASS;
+execution/evaluator isolation PASS; offline Multi-SWE-bench duplicate-read
+coverage audit PASS with `NO_GO` for `omit_one_duplicate_read_v1`; M4 never
+started; no real request-deletion treatment was implemented.
 
-```bash
-GITHUB_TOKEN="${GITHUB_PAT_TOKEN:?GITHUB_PAT_TOKEN is required}" git push origin HEAD
-```
+Do not remove or weaken legacy integrity gates or tests unless a later frozen
+architecture explicitly replaces them and records the replacement. The legacy
+runtime/provider/evaluator separation remains historical truth, but it is not
+the active milestone chain. `experiment.py` and `evaluation.py` remain future
+controlled-research assets, not the active v0 product path.
 
-`GITHUB_PAT_TOKEN` 仅为环境变量标识符，值必须保密，不得显示、嵌入 URL、写入文件或提交。
+## Git and credential safety
 
-* 若 `git push origin HEAD` 认证失败，报告 push-unavailable 消息，禁止改用 token-bearing URL 或检查密钥材料。
-* 提交内容影响里程碑状态、实现检查点或交接上下文时，在同一工作会话中更新 `docs/project-status.md`。纯上下文提交可定义上下文基线为仓库 HEAD，而非嵌入会自失效的精确 SHA。
+- Use the repository's configured authenticated Git transport (credential helper or SSH agent).
+- Never put PATs, tokens, passwords, or private-key material in commands, URLs, logs, documents, or commits. Never print, copy, or inspect credential values or key material.
+- If authenticated transport is unavailable, stop and report: `push unavailable: authenticated Git transport not available`.
+- Before committing, inspect the staged diff for `.env`, credentials, tokens, private keys, and key configuration. Do not force-push or rewrite history without explicit approval.
+- Before completion: run relevant tests and lint, inspect the worktree, stage only reviewed paths, inspect the staged diff, commit only verified changes, and push only when requested or required.
+- Changes to milestone state, implementation checkpoints, or handoff context must update `docs/project-status.md` in the same work session. Pure context commits may define their baseline as repository HEAD.

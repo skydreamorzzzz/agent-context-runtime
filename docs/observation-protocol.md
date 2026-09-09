@@ -1,5 +1,9 @@
 # M2 Observation Protocol: Trusted Capture Boundaries
 
+> **LEGACY STATUS:** This protocol records accepted M2 Context Optimization
+> boundaries. It remains authoritative for that historical runtime and must not
+> be read as a validated Claude Hooks or dynamic-checkpoint protocol.
+
 This protocol freezes what the runtime may call observed across the accepted
 capture and isolated-evaluation slices. Real provider/evaluator raw evidence
 remains local-only. All persistent top-level records use the `Envelope`

@@ -1,40 +1,59 @@
-# Current milestone: offline duplicate-read candidate coverage audit
+# Current milestone: Forensics documentation baseline / F0 preparation
 
-M0–M2 are DONE. M3 noop A/A feasibility has passed while M3 overall remains
-IN PROGRESS. Infrastructure P0 and Pre-M4 trust closure remain frozen. M4 is
-NOT STARTED.
+## Current state
 
-This gate measures only the prevalence of the frozen exact duplicate complete
-`read_file` research object in historical Multi-SWE-bench data. It does not
-perform request rewriting, an intervention, or a paired treatment run.
+```text
+Strategy pivot: SELECTED
+Documentation baseline: IN PROGRESS
+Forensics implementation: NOT STARTED
+F0: NOT STARTED
+F0.5: NOT STARTED
+```
 
-## Frozen scan
+Agent Forensics is selected for MVP validation, not approved as validated
+architecture, product-market fit, or research novelty. This documentation pivot
+changes active authority while preserving the Legacy Context Optimization
+Research Track as historical fact.
 
-- Input: the official `ByteDance-Seed/Multi-SWE-bench_trajs` Flash OpenHands
-  archive at dataset revision `9180bb0c633e4580fc8f74629ac6a47b8582543f`.
-- Adapter: `multi_swe_bench_flash_openhands_v1`; it accepts only the observed
-  event-list shape and treats array position as `source_position`, never as an
-  authoritative runtime sequence.
-- Detector: `exact_duplicate_complete_read_v1`; paths, content identity,
-  occurrence identity, completeness, UTF-8 file identity, request membership,
-  intervening changes, and current state all fail closed when unsupported.
-- Outputs: a deterministic JSON coverage artifact and a concise report under
-  `docs/coverage/`, with traceable exact/rejected/unknown examples.
+The active authority is
+[`agent-forensics-mvp-plan.md`](../agent-forensics-mvp-plan.md). The old
+[`agent-context-runtime-mvp-plan.md`](../agent-context-runtime-mvp-plan.md)
+remains authoritative only for interpreting the frozen Context Optimization
+implementation and results.
 
-## Result
+## Work authorized by this milestone
 
-`OFFLINE_DUPLICATE_READ_COVERAGE_AUDIT_PASS`
+- audit and align active documentation;
+- preserve historical M0–M4 status, receipts, and coverage evidence;
+- define tentative F0 evidence objects and a synthetic incident fixture scope;
+- prepare explicit F0.5 questions and falsifiable checks;
+- keep every Forensics schema, hook assumption, checkpoint rule, verifier
+  binding, restore mechanism, and UI interface provisional.
 
-The archive contains 258 JSON trajectories and all were readable. Exact
-recorded read-output duplicates occur, but the archive does not prove exact
-source-file bytes/encoding, actual outbound-request co-membership, or a
-pre-send current-file state check. It therefore establishes zero strict legal
-candidates under the frozen predicate.
+## Not authorized
 
-Decision: `NO_GO` for implementing or running `omit_one_duplicate_read_v1`
-from this historical archive alone. The prevalence result is not evidence of
-quality preservation, API cost savings, or behavioral rebound.
+- Context Optimization M4, request deletion, provider request rewriting, or any
+  duplicate-read intervention;
+- F1 or later implementation;
+- Claude Hooks, checkpoints, verifiers, restore, Workspace Fork, Git refs, file
+  locks, or frontend code during this documentation pivot;
+- claims of complete workspace/environment restoration, deterministic replay,
+  causal RCA, validated architecture, product validation, or research novelty.
 
-Next gate: decide whether to collect a bounded native/request-level candidate
-coverage sample with the already trusted runtime. Intervention and M4 remain
-unstarted unless that evidence supports a separate explicit authorization.
+## Next engineering gate
+
+> **F0 provisional contracts / fixture → F0.5 Reality Spike**
+
+F0 defines only tentative evidence contracts and a synthetic incident fixture.
+F0.5 tests those assumptions against current official Claude Code documentation
+and real behavior, captured-scope repository round trips, verifier pre-state
+binding, journal concurrency, Git durability, privacy gaps, and measured
+checkpoint overhead. Only F0.5 PASS may freeze v0.1 contracts/policy and
+authorize F1.
+
+## Legacy gate disposition
+
+The offline Multi-SWE-bench duplicate-read coverage audit passed with `NO_GO`
+for the formal `omit_one_duplicate_read_v1` intervention. M4 never started, no
+real request deletion treatment was implemented, and M4 is frozen rather than
+being the current next gate.

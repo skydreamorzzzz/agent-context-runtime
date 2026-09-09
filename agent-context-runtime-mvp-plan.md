@@ -1,5 +1,14 @@
 # agent-context-runtime：MVP Architecture / Implementation Plan
 
+> **STATUS: LEGACY RESEARCH BASELINE**
+>
+> This document records the frozen Context Optimization MVP and remains
+> authoritative only for interpreting that historical research implementation.
+> It is superseded for active MVP validation by
+> [`agent-forensics-mvp-plan.md`](agent-forensics-mvp-plan.md).
+> Do not continue M4 or duplicate-read intervention work unless separately
+> reauthorized.
+
 Python package：`acr`。唯一架构基线：《编码智能体成本感知上下文管理：研究工程架构 v0.1》。本文仅裁剪和冻结实施范围，不替换其研究纪律。
 
 状态：待实施计划；未创建代码仓库、未执行实验、未验证收益。所有效果阈值均为 tentative。建议以 10 个工作日为时间盒；前提是能使用一个模型 API、容器执行环境及至少一个已可运行的任务环境。环境或凭据不可用时按 milestone 降级，不承诺用模拟实验代替真实闭环。

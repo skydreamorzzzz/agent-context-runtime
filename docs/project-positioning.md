@@ -1,417 +1,171 @@
-# Agent Context Runtime：Project Positioning and Engineering Success Criteria
+# Project positioning
 
-## 1. 项目定位
+## Active positioning — Agent Forensics
 
-Agent Context Runtime 的目标不是做一个单纯的 Token Monitor，也不是预设某一种上下文压缩算法一定有效。
+The selected MVP hypothesis is **coding-agent incident forensics through
+verification-bound project-state reconstruction**.
 
-项目希望构建一个面向 Coding Agent 的、可运行且可验证的上下文运行时，使系统能够：
+Provisional technical definition:
 
-```text
-Observe
-→ Diagnose
-→ Intervene
-→ Rerun
-→ Evaluate
-→ Account
-```
+> **Verification-bound project-state incident reconstruction for coding agents.**
 
-即：
+External demo narrative:
 
-1. 观察 Coding Agent 实际使用了什么上下文；
-2. 定位重复、低效或潜在可优化的上下文；
-3. 对真实请求实施受控干预；
-4. 从相同初始条件重新执行；
-5. 独立评估任务质量；
-6. 统计完整的运行时成本和后续行为变化。
+> **A Black Box for Coding Agents**
 
-核心研究问题不是：
-
-> 某一段文本能否少发送一些 Token？
-
-而是：
-
-> 对 Coding Agent 上下文进行干预后，是否能够在保持任务质量的同时降低真实端到端运行成本，以及什么条件决定这种干预是否有效。
-
-因此必须同时考虑：
-
-* immediate token saving；
-* downstream tool / model behavior；
-* re-read / retry / recovery；
-* task quality；
-* latency；
-* total execution cost。
-
-局部 Token 减少不自动等价于系统级成本降低。
-
----
-
-## 2. 双出口项目目标
-
-本项目采用 **research-first engineering, outcome-dependent packaging** 的路线。
-
-工程底座必须独立成立，最终研究结果决定项目的进一步出口。
-
-### Research Track
-
-如果实验得到稳定且可复现的现象，例如：
-
-* 某类上下文能够稳定安全省略；
-* 总成本显著下降而质量损失可控；
-* 存在可解释的 rebound effect；
-* 不同任务、上下文类别或模型之间存在稳定规律；
-* 能进一步形成 cost-quality aware policy；
-
-则围绕真实 Coding Agent 上下文干预形成 empirical / systems research contribution，并考虑 workshop、CCF-C 或后续更完整研究。
-
-### Engineering Track
-
-如果单一干预的科学收益较弱、不稳定或高度依赖任务，仍保留完整的运行时基础设施，并进一步增强：
-
-* Agent execution visualization；
-* context composition analysis；
-* token / cost timeline；
-* request inspector；
-* tool-call trace；
-* redundancy diagnostics；
-* intervention before/after diff；
-* provenance / audit visualization；
-* experiment comparison；
-* cost-quality report。
-
-最终形成一个可实际运行、可演示、可用于进一步研究和工程项目的 Coding Agent observability and context optimization platform。
-
-因此：
-
-> 负面或弱实验结果不等于工程失败。
-
-只有当系统既无法形成可信实验，也无法形成有价值的 Agent runtime observability / optimization capability 时，才视为整体项目失败。
-
----
-
-## 3. 工程复杂度来自哪里
-
-项目复杂度不以代码量或组件数量衡量，而来自跨层一致性和真实运行闭环。
-
-### 3.1 多层数据一致性
-
-系统需要保持：
+The intended product story is:
 
 ```text
-upstream source
-→ immutable raw evidence
-→ normalized representation
-→ field provenance
-→ runtime state
-→ actual request
-→ execution result
-→ evaluation
-→ cost report
+Observe agent/tool execution
+        ↓
+Capture explicitly scoped repository-state evidence
+        ↓
+Bind explicit verifier results to tested pre-execution state
+        ↓
+Reconstruct Last Observed Passing State
+        ↓
+Failure Window
+        ↓
+First Observed Failing State
+        ↓
+Show recorded changes
+        ↓
+Restore / fork captured historical repository scope
 ```
 
-任意一层失去绑定都会使实验结论失去可信性。
+This direction is **SELECTED FOR MVP VALIDATION**. Product validation is not
+established. Research novelty is not established. The architecture is not
+validated, and implementation has not started. The immediate objective is a
+reality-grounded MVP and compelling controlled demo—not a market, novelty,
+causal, or complete-reconstruction claim.
 
-### 3.2 实际请求观测
+## User value hypothesis
 
-不能只保存“程序准备发送的 prompt”。
+Coding-agent failures are often difficult to inspect because tool activity,
+repository mutations, verifier outcomes, and recovery attempts are scattered
+across transient interfaces and logs. The product hypothesis is that a developer
+benefits from a trustworthy incident boundary:
 
-系统需要区分并尽可能验证：
+- the last checkpoint at which a configured verifier was observed passing;
+- the first checkpoint at which it was observed failing;
+- the recorded mutation window between them;
+- explicit capture gaps and unknowns;
+- a verified fork of the captured last-observed-passing repository scope.
+
+The terms deliberately remain **Last Observed Passing State**, **First Observed
+Failing State**, and **Failure Window**. A passing configured verifier is not
+global project goodness; temporal adjacency is not root cause.
+
+## Product surface hypothesis
+
+The planned **Incident Theater** is a first-class frontend organized around:
 
 ```text
-request draft
-→ prepared request
-→ actual outbound request
-→ provider attempt
+PASS → FAILURE WINDOW → FAIL → RECOVERY ATTEMPTS
 ```
 
-从而证明一次 context intervention 实际进入了模型请求。
+It may eventually show a timeline, checkpoints, tool events, verifier receipts,
+state/file diffs, compaction observations, capture coverage, a replay slider,
+and Workspace Fork action. It is not an analytics dashboard and is never
+evidence authority. The backend establishes evidence; the frontend makes it
+legible. The frontend consumes a stable derived `IncidentReport`/ViewModel and
+must not convert heuristics into facts.
 
-### 3.3 Agent 状态与上下文状态绑定
+No frontend has been implemented. React, TypeScript, Vite, Tailwind, Framer
+Motion, and a mature diff viewer are provisional technology choices, not current
+repository capabilities.
 
-Coding Agent 的上下文与 repository 状态相互影响。
+## Trust and scope positioning
 
-例如同样一次 `read_file`：
-
-* 文件未变化时可能构成重复；
-* 文件发生变化后不能继续视为相同信息。
-
-因此 context analysis 必须和实际文件字节、hash、workspace state 绑定。
-
-### 3.4 真实成本不是局部 Token 数
-
-一次上下文干预可能导致：
+The differentiator being tested is not exhaustive telemetry. It is conservative
+binding among:
 
 ```text
-prompt token ↓
-but
-re-read ↑
-retry ↑
-tool calls ↑
-additional model attempts ↑
+agent/tool occurrence
+↕
+captured repository-state evidence
+↕
+explicit verifier execution and result
+↕
+versioned derived incident view
 ```
 
-因此必须记录 physical attempts 和后续行为，而不能只计算单次请求差值。
+The planned `captured_workspace_manifest_hash` covers only explicitly captured
+repository scope. Privacy exclusions take precedence over reconstruction
+completeness; exclusions and unsupported state become visible capture gaps.
+Workspace Fork, if validated, may claim only captured-scope restoration and
+manifest verification.
 
-### 3.5 配对实验隔离
+The MVP does not target complete environment or machine restore, process/network
+reconstruction, deterministic LLM replay, exact model-state restoration, causal
+root-cause attribution, LLM-generated RCA, or automatic remediation.
 
-Baseline 与 treatment 必须从可比的初始状态重新运行，并分别保留完整证据。
+## Validation-first architecture
 
-不能通过编辑历史 trajectory 后缀来模拟真实反事实。
+The detailed design remains provisional until the F0.5 Reality Spike. Current
+Claude Code official documentation is useful external evidence for documented
+hook names and fields, but it does not by itself prove the repository's needed
+ordering, batching, correlation, process, concurrency, pre-state binding,
+overhead, or restore properties.
 
-### 3.6 Evaluation isolation
-
-评测数据和 runtime 必须隔离，避免 Coding Agent 在运行期间获得私有 evaluator 信息。
-
-这同时是研究可信性和工程安全边界的一部分。
-
----
-
-## 4. 核心技术能力
-
-MVP 优先采用简单、可审计的技术实现，而不是为了增加技术栈复杂度引入额外基础设施。
-
-核心技术包括：
-
-* Python；
-* Pydantic versioned contracts；
-* SHA256 content-addressed evidence storage；
-* JSON / JSONL persistence；
-* field-level provenance；
-* fail-closed audit；
-* adapter-based external format integration；
-* synchronous Agent runtime；
-* provider request interception / capture；
-* tool execution tracing；
-* repository / file-state hashing；
-* isolated workspace execution；
-* from-scratch paired rerun；
-* evaluator isolation；
-* usage and cost accounting；
-* reproducible reporting；
-* CLI orchestration。
-
-后续 Engineering Track 可以增加 Web visualization / interactive experiment inspection，但 UI 不属于首个可信实验闭环的前置条件。
-
-原则：
-
-> 不为了展示“技术复杂度”增加无必要的数据库、分布式服务、消息队列、DAG 引擎或微服务。
-
-项目复杂度应来自真实问题，而不是架构装饰。
-
----
-
-## 5. 项目成果分层
-
-### L1 — Trusted Evidence Infrastructure
-
-能够证明：
+The validation order is intentionally:
 
 ```text
-raw evidence
-→ normalized representation
-→ provenance
-→ audit
+F0 tentative contracts and fixture
+        ↓
+F0.5 official-interface review + real behavior + repository round trip
+        ↓
+revise and freeze v0.1 contracts/policy
+        ↓
+F1+ product implementation
 ```
 
-可信、可复查、可阻断篡改。
-
-### L2 — Trusted Agent Runtime
-
-能够运行真实 Coding Agent，并捕获：
-
-* initial state；
-* actual requests；
-* model attempts；
-* tool calls；
-* exact file reads；
-* execution events；
-* provider usage。
-
-### L3 — Controlled Experiment Runtime
-
-能够执行：
-
-```text
-baseline
-vs
-treatment
-```
-
-的独立配对运行，并验证：
-
-* 初始环境一致；
-* intervention 确实生效；
-* 两次运行证据彼此独立；
-* evaluator 不泄漏；
-* 成本完整统计。
-
-### L4 — Context Optimization Evidence
-
-至少一种 context intervention 能够在真实任务上被系统性测量，包括：
-
-* candidate coverage；
-* intervention acceptance / rejection；
-* immediate saving；
-* downstream rebound；
-* task-quality difference；
-* total-cost difference。
-
-是否出现正收益属于实验结果，而不是系统验收前提。
-
-### L5 — Demonstrable Engineering System
-
-若进入 Engineering Track，系统应能够交互式展示：
-
-* Agent execution timeline；
-* context composition；
-* token and cost breakdown；
-* tool / file usage；
-* detected redundancy；
-* intervention evidence；
-* before / after request；
-* baseline / treatment comparison；
-* evaluation result；
-* provenance / audit state。
-
----
-
-## 6. 验收指标体系
-
-项目不使用单一的 “Token saving percentage” 作为成功标准。
-
-### 6.1 Runtime / Engineering
-
-关注系统是否真的工作：
-
-* real task execution coverage；
-* completed-run rate；
-* request capture coverage；
-* provider-attempt accounting coverage；
-* tool-event capture coverage；
-* reproducible report generation。
-
-### 6.2 Evidence / Trust
-
-关注实验是否可信：
-
-* raw artifact integrity；
-* provenance coverage；
-* actual-sent-request verification；
-* initial-state alignment；
-* mutation / tamper detection；
-* unresolved BLOCK count。
-
-对于进入正式分析的 run，关键 evidence 不允许通过默认值、推测或静默修复补齐。
-
-### 6.3 Optimization
-
-关注优化是否真的减少系统资源：
-
-* input token difference；
-* total token difference；
-* API monetary-cost difference；
-* wall-clock difference；
-* model-attempt difference；
-* tool-call difference。
-
-### 6.4 Rebound
-
-必须单独报告：
-
-* re-read rate；
-* retry rate；
-* additional model attempts；
-* additional tool calls；
-* recovered token consumption；
-* recovered monetary cost。
-
-### 6.5 Task Quality
-
-至少包括：
-
-* task completion；
-* patch validity；
-* test execution；
-* passed / failed tests；
-* benchmark/evaluator result；
-* infrastructure error rate。
-
----
-
-## 7. 指标解释原则
-
-所有指标必须区分：
-
-```text
-target
-measurement
-observation
-conclusion
-```
-
-工程目标可以提前定义。
-
-实验结果不能提前定义。
-
-例如：
-
-```text
-request capture coverage = 100%
-```
-
-可以作为工程验收要求，因为这是系统自己能够控制的能力。
-
-但：
-
-```text
-token saving >= 20%
-```
-
-不能作为证明系统成功的工程硬门槛，因为它属于尚未得到的科学结果。
-
-同理：
-
-> “没有质量下降”
-
-必须来自 paired evaluation，而不能从 Token 减少推断。
-
----
-
-## 8. 每个 Milestone 的双重验收
-
-从 M2 开始，每个 milestone 完成时同时回答两组问题。
-
-### Research readiness
-
-1. 新增能力使我们能够回答什么科学问题？
-2. 新增了什么可观测事实？
-3. 哪些变量现在能够被控制？
-4. 哪些 claim 仍然不能做？
-
-### Engineering readiness
-
-1. 解决了什么真实工程问题？
-2. 主要技术难点是什么？
-3. 使用了哪些关键技术？
-4. 哪些 failure modes 已处理？
-5. 用什么指标证明该模块完成？
-6. 当前有哪些可演示的实际能力？
-
-这两组回答应随 milestone status 一起维护，但不得用展示价值替代研究证据。
-
----
-
-## 9. 项目成功的最终定义
-
-项目成功不要求预先证明某一种 context optimization policy 一定有效。
-
-最低成功条件是：
-
-> 构建一个能够真实运行 Coding Agent、准确观察上下文与成本、实施可验证干预，并可信评估其结果的 Agent Context Runtime。
-
-在此基础上：
-
-* 有稳定 optimization finding → 形成 Research Track；
-* optimization finding 较弱 → 强化 Engineering Track；
-* 两者同时成立 → 形成完整的 research prototype / engineering platform。
-
-系统必须先真实、可复现、可验收，再追求复杂策略或展示效果。
+This prevents a provisional architecture from being mistaken for observed
+reality.
+
+## Legacy positioning — Context Optimization Research
+
+This repository did not begin as an Agent Forensics project. It contains an
+implemented **Legacy Context Optimization Research Track** built to measure
+whether controlled context intervention could reduce end-to-end coding-agent
+cost without silently sacrificing task quality.
+
+That track established real evidence infrastructure, provenance and fail-closed
+audit, captured runtime/provider behavior, workspace checks, evaluator
+isolation, noop A/A feasibility, accounting, and offline duplicate-read coverage
+analysis. Its actual status is:
+
+- M0 DONE;
+- M1 DONE;
+- M2 runtime/provider/evaluator gates PASS;
+- one M3 noop A/A feasibility PASS, while M3 overall remains incomplete;
+- Pre-M4 trust closure PASS;
+- execution/evaluator isolation PASS;
+- Multi-SWE-bench offline duplicate-read coverage audit PASS;
+- formal `omit_one_duplicate_read_v1` decision from that historical data: `NO_GO`;
+- M4 NOT STARTED;
+- no real request-deletion treatment implemented.
+
+These results remain historical facts, including the negative coverage outcome.
+The track is frozen, not erased or reframed as early Forensics work. Its plan,
+receipts, coverage reports, and status retain historical authority. Candidate,
+intervention, duplicate-read, DeepSeek experiment, provider-rewriting, and
+Context Optimization policy modules are not the active product path.
+
+## Success criteria for the current phase
+
+The current phase succeeds when the project can first falsify or validate the
+operational assumptions behind the MVP without overstating them. F0.5 must
+establish, within declared captured scope:
+
+- the usable Claude hook surface and actual payload/process behavior;
+- reliable or explicitly degraded event/tool correlation and ordering;
+- verifier pre-state binding feasibility;
+- capture → mutate → restore → identical captured-manifest round trip;
+- safe journal concurrency and sequence allocation;
+- Git base durability feasibility;
+- privacy exclusions and their fidelity cost;
+- acceptable measured checkpoint overhead.
+
+Only after those observations may concrete v0.1 contracts and policy freeze.
+The current positioning makes no claim that they will pass.

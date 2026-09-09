@@ -1,5 +1,9 @@
 # Audit checklist
 
+> **LEGACY STATUS:** This checklist governs the implemented Context Optimization
+> pair/intervention evidence path. It is preserved and frozen; it is not the
+> active Agent Forensics validation checklist.
+
 Before a pair is included in a report, verify:
 
 - Raw request, response, tool, and usage evidence is addressable by content hash.
