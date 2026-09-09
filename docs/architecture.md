@@ -15,21 +15,44 @@ its F0 record shape appears in this diagram.
 ## Provisional active flow
 
 ```text
-Claude Hooks
-    ↓
+Claude Hooks (external interface; unvalidated)
+     │
+     ▼
 Claude-specific adapter
-    ↓
-AgentEvent
-    ↓
+     │
+     ▼
+AgentEvent Journal
+     │
+     ├── mutation-capable boundary ─────────────► WorkspaceCheckpoint
+     │
+     └── provisional verifier PreToolUse ───────► Pre-Verifier WorkspaceCheckpoint
+     │                                                  │
+     └── matched verifier execution/result ────────────┤
+                                                        ▼
+                                              VerificationReceipt
+
+AgentEvent Journal
+        +
 WorkspaceCheckpoint
-    ↓
+        +
 VerificationReceipt
-    ↓
-Incident Analyzer
-    ↓
-IncidentReport
-    ├──→ Incident Theater
-    └──→ Workspace Fork → ForkReceipt
+        │
+        ▼
+ Incident Analyzer
+        │
+        ▼
+ IncidentReport
+        │
+        ▼
+ Incident Theater
+
+Selected WorkspaceCheckpoint
+        │
+        ▼
+ Workspace Fork
+        │
+        ▼
+ ForkReceipt
 ```
 
 Primary append-only evidence is tentatively `AgentEvent`,
@@ -37,6 +60,22 @@ Primary append-only evidence is tentatively `AgentEvent`,
 recomputable, analyzer-version-dependent derived view. `ForkReceipt` is an
 action receipt. Their F0 shapes round-trip a synthetic incident; every object
 and interface remains provisional until F0.5.
+
+Event occurrence is not checkpoint materialization. A journal event may create
+a checkpoint opportunity without causing repository-state evidence to be
+materialized. Concrete mutation boundaries and the named Claude hook boundary
+in the diagram remain external-interface assumptions for F0.5.
+
+A `VerificationReceipt` requires both captured pre-verifier state and matched
+verifier execution/result evidence. The standalone F0 receipt cannot prove that
+its checkpoint reference resolves in the same session, that the tested hash
+matches that checkpoint, or that ordering/execution correlation is valid; those
+cross-record checks belong at a future evidence-set or journal integrity
+boundary.
+
+`WorkspaceCheckpoint` is the restoration authority for a future Workspace
+Fork. An `IncidentReport` may select or reference a checkpoint, but as a derived
+view it is not restoration authority.
 
 The analyzer and frontend must not depend directly on raw Claude payloads. The
 frontend is a read-only legibility layer, not evidence authority. It cannot
@@ -49,6 +88,14 @@ repository scope. Capture policy must record included paths, excluded or
 unsupported areas, truncation, and completeness gaps. It does not capture or
 represent complete environment, process, network, database, machine, or model
 state.
+
+The provisional F0 manifest hashes deterministic canonical bytes containing Git
+base identity plus a path-ordered captured overlay: repository-relative path,
+tracked or selected-untracked classification, present or deleted state, and
+content hash when present. It excludes checkpoint ID, session ID, ordering,
+timestamp, trigger, event ID, evidence locator, and incident metadata. Thus,
+identical captured state can share one manifest hash across distinct checkpoint
+occurrences; occurrence identity remains in each checkpoint record.
 
 Verifier evidence is intended to bind to a forced pre-execution checkpoint:
 

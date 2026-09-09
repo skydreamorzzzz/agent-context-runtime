@@ -21,6 +21,7 @@
 - **Product validation:** NOT ESTABLISHED
 - **Research novelty:** NOT ESTABLISHED
 - **F0:** PASS
+- **Pre-F0.5 integrity correction:** PASS
 - **F0.5:** NOT STARTED
 
 Provisional technical definition:
@@ -168,8 +169,9 @@ This MVP does not require a complex redaction engine.
 ## 4. Provisional evidence model
 
 All objects and fields in this section are **PROVISIONAL until F0.5 PASS**. They
-must not be described as frozen repository contracts or added to the current
-Python contracts during this documentation pivot.
+must not be described as frozen repository contracts. The existing F0 Python
+shapes and synthetic fixture make them testable; they do not make them
+reality-validated product contracts.
 
 Primary append-only evidence:
 
@@ -219,6 +221,31 @@ Use `captured_workspace_manifest_hash`, not `workspace_hash`. If an abbreviated
 
 > This hashes only the explicitly captured repository scope. It does not
 > represent complete repository, environment, process, or machine state.
+
+The F0 canonical captured-state manifest separates state identity from
+checkpoint occurrence identity. Its deterministic bytes contain only:
+
+```text
+provisional manifest format
+Git base identity
+canonical path-ordered captured overlay:
+  repository-relative path
+  tracked / selected-untracked classification
+  present / deleted state
+  content hash when present
+```
+
+Checkpoint ID, session ID, ordering, timestamp, trigger, event ID, evidence
+locator, and incident metadata are excluded. Consequently, two checkpoint
+records may be distinct occurrences while sharing one
+`captured_workspace_manifest_hash` when their Git base and captured overlay are
+identical. Different Git bases or captured overlays produce different state
+identities. This deterministic F0 representation remains provisional and does
+not establish capture or restore feasibility.
+
+`WorkspaceCheckpoint.manifest_ref.blob_hash` must equal
+`captured_workspace_manifest_hash`: both identify the same canonical manifest
+bytes.
 
 Tentative fields:
 
@@ -330,6 +357,13 @@ such as `sed -i ... && pytest -q` must not be promoted to equally reliable
 verification through speculative shell-semantic parsing. If strict binding
 cannot be established, verification is UNKNOWN. F0.5 must determine whether
 actual hook boundaries can support this model.
+
+The standalone F0 `VerificationReceipt` cannot establish cross-record
+integrity. At a future evidence-set or journal integrity boundary,
+`pre_checkpoint_id` must resolve to a checkpoint in the same session, the
+receipt's tested manifest hash must equal that checkpoint's manifest hash, and
+ordering/execution correlation must be valid. The runtime evidence structure
+needed to enforce those relations is an F0.5/later validation concern.
 
 ### 4.5 IncidentReport
 
@@ -531,6 +565,22 @@ restore, fork, or product feasibility.
 
 This is the controlling gate before formal backend or UI development.
 
+When separately authorized, F0.5 permits only the minimum experimental probe
+code required to test real Claude interface behavior, captured-scope repository
+round trips, verifier binding, journal concurrency, checkpoint overhead, and
+Git durability. Probe code:
+
+- does not define a public or product API;
+- must not silently become production implementation;
+- must not trigger F1 or later scope;
+- may produce observations and measurements that inform later production design;
+- does not make its experimental architecture the production architecture.
+
+Where practical, probe code should remain isolated from the active production
+module surface until the Reality Spike exits PASS. This permission defines the
+future F0.5 boundary; it does not authorize probe code in the current
+Pre-F0.5 correction.
+
 #### Claude interface reality
 
 Verify official documentation against real execution for hook availability,
@@ -631,10 +681,14 @@ fork captured last-observed-passing repository state
 
 ## 10. Current authorization
 
-F0 provisional contracts and the synthetic fixture are complete. F0.5 has NOT
-started and requires a separate explicit instruction. The F0 completion does not
-authorize hooks, real checkpoints, verifier execution, restore, forks, Git refs,
-file locks, a production analyzer, frontend work, or dependencies.
+F0 provisional contracts and the synthetic fixture are complete. The
+Pre-F0.5 integrity correction is PASS: it separates canonical captured-state
+identity from checkpoint occurrence metadata, enforces internal manifest and
+capture-gap invariants, and changes no operational feasibility status. F0.5 has
+NOT started and requires a separate explicit instruction. F0 completion and
+this correction do not authorize hooks, real checkpoints, verifier execution,
+restore, forks, Git refs, file locks, a production analyzer, frontend work, or
+dependencies.
 
 The only next engineering gate after F0 is:
 

@@ -8,6 +8,9 @@ or a production incident analyzer.
 
 from __future__ import annotations
 
+import hashlib
+import json
+from collections.abc import Sequence
 from datetime import datetime
 from pathlib import PurePosixPath
 from typing import Annotated, Literal
@@ -17,6 +20,7 @@ from pydantic import Field, field_validator, model_validator
 from acr.contracts import ContractModel, Envelope, EvidenceRef, Fact
 
 FORENSICS_CONTRACT_STATUS = "PROVISIONAL UNTIL F0.5 PASS"
+CAPTURED_STATE_MANIFEST_FORMAT = "acr.captured-state-manifest/0.1-provisional"
 ProvisionalStatus = Literal["provisional_until_f0_5_pass"]
 Sha256 = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 Identifier = Annotated[str, Field(min_length=1)]
@@ -80,6 +84,62 @@ class CapturedPathState(ContractModel):
         return self
 
 
+def canonical_captured_state_manifest_bytes(
+    git_base: str,
+    captured_paths: Sequence[CapturedPathState],
+) -> bytes:
+    """Serialize provisional captured-state identity, excluding occurrence data.
+
+    The result identifies only the declared Git base plus captured repository
+    overlay. Checkpoint IDs, session IDs, ordering, timestamps, triggers, and
+    evidence locators deliberately do not participate.
+    """
+
+    if not git_base:
+        raise ValueError("canonical captured-state manifests require a Git base identity")
+
+    path_names = [item.repo_relative_path for item in captured_paths]
+    if len(path_names) != len(set(path_names)):
+        raise ValueError("canonical captured-state manifest paths must be unique")
+
+    canonical_paths = sorted(
+        (
+            {
+                "content_hash": (
+                    item.content_ref.blob_hash if item.content_ref is not None else None
+                ),
+                "path": item.repo_relative_path,
+                "path_kind": item.path_kind,
+                "state": item.state,
+            }
+            for item in captured_paths
+        ),
+        key=lambda item: item["path"],
+    )
+    manifest = {
+        "format": CAPTURED_STATE_MANIFEST_FORMAT,
+        "git_base": git_base,
+        "paths": canonical_paths,
+    }
+    canonical_json = json.dumps(
+        manifest,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    return f"{canonical_json}\n".encode()
+
+
+def captured_state_manifest_hash(
+    git_base: str,
+    captured_paths: Sequence[CapturedPathState],
+) -> str:
+    """Hash the F0 canonical representation of captured repository state."""
+
+    manifest_bytes = canonical_captured_state_manifest_bytes(git_base, captured_paths)
+    return hashlib.sha256(manifest_bytes).hexdigest()
+
+
 class CaptureScopeEntry(ContractModel):
     """One explicit included, excluded, unsupported, or unknown capture area."""
 
@@ -141,6 +201,8 @@ class WorkspaceCheckpoint(ProvisionalForensicsRecord):
 
     @model_validator(mode="after")
     def enforce_captured_scope_semantics(self) -> WorkspaceCheckpoint:
+        if self.manifest_ref.blob_hash != self.captured_workspace_manifest_hash:
+            raise ValueError("manifest reference must match captured-state manifest hash")
         paths = [item.repo_relative_path for item in self.captured_paths]
         if len(paths) != len(set(paths)):
             raise ValueError("captured checkpoint paths must be unique")
@@ -212,6 +274,11 @@ class IncidentReport(ProvisionalForensicsRecord):
             raise ValueError("failure window must end at the first observed failing checkpoint")
         if any(fact.status != "unknown" for fact in self.unknowns):
             raise ValueError("incident unknowns must use explicit unknown Fact semantics")
+        if any(
+            entry.captured.status != "unknown" and entry.captured.value is not False
+            for entry in self.capture_gaps
+        ):
+            raise ValueError("incident capture_gaps must contain only uncaptured or unknown areas")
         return self
 
 

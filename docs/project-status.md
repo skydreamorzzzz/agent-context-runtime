@@ -8,6 +8,7 @@
 - Product validation: NOT ESTABLISHED
 - Research novelty: NOT ESTABLISHED
 - F0: PASS
+- Pre-F0.5 integrity correction: PASS
 - F0.5: NOT STARTED
 
 F0 added five provisional Forensics record types in
@@ -17,12 +18,20 @@ model can express and round-trip the synthetic incident. It does not validate
 Claude interfaces, real checkpoint capture, verifier execution or binding,
 restore/fork fidelity, analyzer behavior, or product claims.
 
+The Pre-F0.5 integrity correction separates canonical captured-state identity
+from checkpoint occurrence metadata, makes the manifest deterministic over Git
+base plus captured overlay, enforces manifest reference/hash equality, restricts
+report capture gaps to false/unknown entries, and corrects the active
+architecture/control-plane guidance. The full local repository result is 139
+tests PASS with Ruff PASS. This is internal F0 consistency evidence only, not
+Reality Spike or operational feasibility evidence.
+
 Every Forensics contract and operational policy remains **PROVISIONAL UNTIL
 F0.5 PASS**. The only next engineering gate after this round is:
 
 > **F0.5 Reality Spike**
 
-F0.5 implementation has NOT started and was not authorized by the F0
+F0.5 implementation has NOT started and requires a separate explicit
 instruction. This status does not establish product demand, architectural
 feasibility, restoration fidelity, causal analysis, or research novelty.
 

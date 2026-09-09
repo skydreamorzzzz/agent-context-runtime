@@ -1,10 +1,11 @@
-# Current milestone: F0 complete / F0.5 Reality Spike preparation
+# Current milestone: F0 and integrity correction complete / F0.5 preparation
 
 ## Current state
 
 ```text
 Documentation control-plane baseline: PASS
 F0 provisional contracts / synthetic fixture: PASS
+Pre-F0.5 integrity correction: PASS
 F0.5 implementation: NOT STARTED
 F1+: NOT STARTED
 ```
@@ -30,6 +31,25 @@ These are synthetic contract checks. No evidence was captured from Claude Code,
 no verifier command was executed by the Forensics implementation, and no
 workspace was checkpointed, restored, or forked.
 
+## Pre-F0.5 integrity correction
+
+- The canonical captured-state manifest now contains Git base identity plus a
+  deterministic path-ordered captured overlay, without checkpoint occurrence
+  metadata.
+- `manifest_ref.blob_hash` must equal
+  `captured_workspace_manifest_hash`.
+- Distinct checkpoint occurrences may share captured-state identity; changing
+  the Git base changes that identity.
+- `IncidentReport.capture_gaps` accepts only uncaptured or explicitly unknown
+  scope entries.
+- The active architecture now separates the event journal, checkpoints,
+  verification receipts, derived report, and checkpoint-authorized fork path.
+- Full local repository result after the correction: 139 tests PASS; Ruff PASS.
+
+This correction strengthens only F0 internal semantic consistency. It adds no
+Claude interface, checkpoint capture, verifier correlation, restore, journal,
+Git durability, performance, or product feasibility evidence.
+
 ## Gate boundary
 
 Every Forensics field and nested helper remains:
@@ -38,8 +58,8 @@ Every Forensics field and nested helper remains:
 
 F0.5 must test the provisional model against official interface documentation
 and real behavior, then revise or reject assumptions before any contract or
-policy freezes. F0.5 is **NOT authorized for implementation by the F0
-instruction**.
+policy freezes. F0.5 is **NOT STARTED** and requires a separate explicit
+instruction.
 
 The Legacy Context Optimization M4 remains frozen. No duplicate-read candidate,
 intervention, request deletion, or provider-rewriting work is authorized.

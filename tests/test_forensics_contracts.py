@@ -14,10 +14,13 @@ from pydantic import ValidationError
 from acr.forensics_contracts import (
     FORENSICS_CONTRACT_STATUS,
     AgentEvent,
+    CapturedPathState,
     ForkReceipt,
     IncidentReport,
     VerificationReceipt,
     WorkspaceCheckpoint,
+    canonical_captured_state_manifest_bytes,
+    captured_state_manifest_hash,
 )
 
 FIXTURE = Path("tests/fixtures/forensics/f0_synthetic_incident.json")
@@ -156,6 +159,89 @@ def test_captured_manifest_is_limited_to_explicit_repository_scope() -> None:
     assert unknown_checkpoint.capture_scope[1].captured.status == "unknown"
 
 
+def test_manifest_reference_hash_mismatch_is_rejected() -> None:
+    data = copy.deepcopy(load_fixture()["records"]["workspace_checkpoints"][0])
+    data["manifest_ref"]["blob_hash"] = "0" * 64
+
+    with pytest.raises(ValidationError, match="manifest reference must match"):
+        WorkspaceCheckpoint.model_validate(data)
+
+
+def test_identical_captured_state_has_same_identity_across_checkpoint_occurrences() -> None:
+    checkpoint_data = load_fixture()["records"]["workspace_checkpoints"][0]
+    checkpoint_a = WorkspaceCheckpoint.model_validate(checkpoint_data)
+    different_occurrence = copy.deepcopy(checkpoint_data)
+    different_occurrence["id"] = "cp-same-state-later"
+    different_occurrence["timestamp"] = "2026-01-01T00:01:00Z"
+    different_occurrence["trigger"] = {
+        "value": None,
+        "status": "unknown",
+        "reason": "different_occurrence_trigger_not_observed",
+        "refs": [],
+    }
+    checkpoint_b = WorkspaceCheckpoint.model_validate(different_occurrence)
+
+    assert checkpoint_a.id != checkpoint_b.id
+    assert checkpoint_a.timestamp != checkpoint_b.timestamp
+    assert checkpoint_a.trigger.value != checkpoint_b.trigger.value
+    assert checkpoint_a.captured_workspace_manifest_hash == (
+        checkpoint_b.captured_workspace_manifest_hash
+    )
+    assert canonical_captured_state_manifest_bytes(
+        checkpoint_a.git_base.value,
+        checkpoint_a.captured_paths,
+    ) == canonical_captured_state_manifest_bytes(
+        checkpoint_b.git_base.value,
+        checkpoint_b.captured_paths,
+    )
+
+
+def test_git_base_participates_in_captured_state_identity() -> None:
+    checkpoint = WorkspaceCheckpoint.model_validate(
+        load_fixture()["records"]["workspace_checkpoints"][0]
+    )
+    original_hash = captured_state_manifest_hash(
+        checkpoint.git_base.value,
+        checkpoint.captured_paths,
+    )
+    different_base_hash = captured_state_manifest_hash(
+        "different-synthetic-git-base",
+        checkpoint.captured_paths,
+    )
+
+    assert original_hash == checkpoint.captured_workspace_manifest_hash
+    assert different_base_hash != original_hash
+
+
+def test_canonical_manifest_path_order_does_not_change_identity() -> None:
+    checkpoint = WorkspaceCheckpoint.model_validate(
+        load_fixture()["records"]["workspace_checkpoints"][0]
+    )
+    second_path = CapturedPathState.model_validate(
+        {
+            **checkpoint.captured_paths[0].model_dump(mode="json"),
+            "repo_relative_path": "README.md",
+        }
+    )
+    first_order = [checkpoint.captured_paths[0], second_path]
+    reverse_order = list(reversed(first_order))
+
+    assert canonical_captured_state_manifest_bytes(
+        checkpoint.git_base.value,
+        first_order,
+    ) == canonical_captured_state_manifest_bytes(
+        checkpoint.git_base.value,
+        reverse_order,
+    )
+    assert captured_state_manifest_hash(
+        checkpoint.git_base.value,
+        first_order,
+    ) == captured_state_manifest_hash(
+        checkpoint.git_base.value,
+        reverse_order,
+    )
+
+
 def test_verification_receipts_bind_the_captured_pre_state() -> None:
     _, checkpoints, receipts, _, _ = parse_records(load_fixture())
     checkpoints_by_id = {checkpoint.id: checkpoint for checkpoint in checkpoints}
@@ -209,6 +295,34 @@ def test_incident_report_is_a_non_causal_derived_view() -> None:
         IncidentReport.model_validate(primary_claim)
 
 
+def test_incident_report_capture_gaps_accepts_only_real_gaps() -> None:
+    fixture = load_fixture()["records"]
+    report = IncidentReport.model_validate(fixture["incident_report"])
+    assert all(
+        entry.captured.status == "unknown" or entry.captured.value is False
+        for entry in report.capture_gaps
+    )
+
+    unknown_gap = copy.deepcopy(fixture["incident_report"])
+    unknown_gap["capture_gaps"][0]["captured"] = {
+        "value": None,
+        "status": "unknown",
+        "reason": "capture_outcome_not_observed",
+        "refs": [],
+    }
+    unknown_gap["capture_gaps"][0]["disposition"] = None
+    unknown_gap["capture_gaps"][0]["reason"] = "capture_outcome_not_observed"
+    assert IncidentReport.model_validate(unknown_gap).capture_gaps[0].captured.status == (
+        "unknown"
+    )
+
+    successful_capture = copy.deepcopy(fixture["workspace_checkpoints"][0]["capture_scope"][0])
+    invalid = copy.deepcopy(fixture["incident_report"])
+    invalid["capture_gaps"] = [successful_capture]
+    with pytest.raises(ValidationError, match="capture_gaps must contain only"):
+        IncidentReport.model_validate(invalid)
+
+
 def test_synthetic_fixture_has_content_addressed_references_and_distinct_occurrences() -> None:
     data = load_fixture()
     raw_evidence = data["raw_evidence"]
@@ -224,6 +338,16 @@ def test_synthetic_fixture_has_content_addressed_references_and_distinct_occurre
     assert all(ref is not None for ref in raw_refs)
     assert len({ref.blob_hash for ref in raw_refs if ref is not None}) == 1
     assert len({ref.occurrence_identity for ref in raw_refs if ref is not None}) == len(events)
+
+    _, checkpoints, _, _, _ = parse_records(data)
+    for checkpoint in checkpoints:
+        canonical_bytes = canonical_captured_state_manifest_bytes(
+            checkpoint.git_base.value,
+            checkpoint.captured_paths,
+        )
+        assert raw_evidence[checkpoint.captured_workspace_manifest_hash].encode() == (
+            canonical_bytes
+        )
 
 
 def test_synthetic_incident_references_one_complete_expected_story() -> None:

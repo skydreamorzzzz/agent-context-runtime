@@ -24,12 +24,29 @@ repository scope. `manifest_scope` cannot claim a full repository, workspace,
 environment, process, machine, or model state. Capture gaps make completeness
 false or unknown; privacy exclusions are not bypassed.
 
+The provisional canonical manifest is deterministic JSON over only its format,
+Git base identity, and a path-sorted captured overlay. Each overlay entry names
+the repository-relative path, tracked or selected-untracked classification,
+present or deleted state, and content hash when present. Checkpoint occurrence
+metadata—ID, session, ordering, timestamp, trigger, event ID, evidence locator,
+and incident metadata—is excluded. Identical captured state can therefore share
+one manifest hash across distinct checkpoint occurrences, while a Git-base or
+overlay change changes the state identity. `manifest_ref.blob_hash` must equal
+`captured_workspace_manifest_hash` because both identify the canonical manifest
+bytes. This format is still provisional and has no restore-fidelity claim.
+
 `VerificationReceipt` names its `pre_checkpoint_id` and the tested captured
 manifest hash. An optional post-checkpoint must be a different checkpoint and is
 never the tested state. `IncidentReport` is explicitly `derived_view`, requires
-provenance, and rejects causal fields through strict extra-field validation.
+provenance, admits only false/unknown entries in `capture_gaps`, and rejects
+causal fields through strict extra-field validation.
 `ForkReceipt` is schema-only in F0 and limits its claim scope to captured
 repository state; the fixture records it as `not_executed`.
+
+Cross-record receipt integrity is a future evidence-set/journal requirement:
+the pre-checkpoint must resolve in the same session, its manifest hash must equal
+the receipt's tested hash, and ordering/execution correlation must be valid. A
+standalone F0 `VerificationReceipt` does not prove those relationships.
 
 No F0 contract establishes Claude Hook fields, event ordering, checkpoint
 capture, verifier execution, restoration, fork fidelity, or analyzer behavior.

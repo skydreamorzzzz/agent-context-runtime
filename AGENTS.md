@@ -7,15 +7,19 @@ The repository has two deliberately separate authority domains.
 - **Active validation authority:** [`agent-forensics-mvp-plan.md`](agent-forensics-mvp-plan.md) governs current development. When another active document conflicts with it, report the conflict before expanding scope and follow the Forensics plan.
 - **Historical authority:** [`agent-context-runtime-mvp-plan.md`](agent-context-runtime-mvp-plan.md), historical status documents, receipts, and coverage artifacts remain authoritative for interpreting the Legacy Context Optimization Research Track. Do not rewrite that track as Forensics work.
 
-Agent Forensics is **SELECTED FOR MVP VALIDATION**. Its architecture, contracts,
-checkpoint policy, verifier binding, restoration, and UI are not implemented or
-validated. Product validation and research novelty are not established.
+Agent Forensics is **SELECTED FOR MVP VALIDATION**. F0 provisional contract
+shapes and a synthetic fixture are implemented, but the architecture,
+checkpoint policy, verifier binding, restoration, and UI are not operationally
+implemented or reality-validated. Product validation and research novelty are
+not established.
 
 ## Current gate and scope control
 
 - F0 provisional contracts and the synthetic incident fixture are PASS. This establishes testable schema semantics only; it does not validate operational feasibility.
+- The Pre-F0.5 integrity correction is PASS. It strengthens internal F0 state-identity and validation semantics without adding real-world feasibility evidence.
 - The only next engineering gate is **F0.5 Reality Spike**, which requires a separate explicit instruction and has NOT started.
 - F0.5 must verify current Claude Code interfaces and real runtime behavior, captured-scope repository round trips, verifier pre-state binding, operational safety, privacy gaps, and overhead before contracts or policies freeze.
+- When separately authorized, F0.5 permits only the minimum experimental probe code needed to test real Claude interface behavior, captured-scope repository round trips, verifier binding, journal concurrency, checkpoint overhead, and Git durability. Probe code is not a public/product API, must not silently become production implementation or trigger F1+, and should remain isolated from the active production module surface where practical until the Reality Spike exits PASS. Observations may inform later production design; probe architecture does not automatically become production architecture.
 - Do not implement F0.5 without separate authorization or begin F1 or later work before F0.5 PASS. In particular, do not build the Incident Theater, real hook capture, checkpointing, verifier integration, replay, or Workspace Fork early.
 - The Legacy Context Optimization M4 and all duplicate-read intervention work are frozen. Do not implement request deletion or revive candidate/intervention experiments without separate reauthorization.
 - Do not extend the active product path through `audit.py`, `candidates.py`, duplicate-read detection, interventions, DeepSeek experiments, provider request rewriting, or context-optimization policies. Preserve those files as legacy assets.
@@ -31,8 +35,9 @@ validated. Product validation and research novelty are not established.
 6. Distinguish Observed, Derived, Estimated, and Unknown. `IncidentReport` is an analyzer-version-dependent derived view; it is not primary evidence.
 7. Use **Last Observed Passing State**, **First Observed Failing State**, and **Failure Window**. Do not claim “last good,” “first bad,” causal root cause, or global project correctness.
 8. `captured_workspace_manifest_hash` covers only explicitly captured repository scope. Never describe it as complete repository, environment, process, machine, or model state.
-9. A Workspace Fork, if later validated, may claim only captured repository scope restoration and manifest verification—not deterministic replay, trajectory continuation, or complete workspace restoration.
-10. Claude hook availability, payloads, ordering, batching, process lifecycle, correlation, background behavior, journal concurrency, verifier binding, Git base pinning, restore fidelity, and checkpoint overhead are external or operational assumptions until F0.5 validates them.
+9. Captured-state identity is separate from checkpoint occurrence identity. The canonical manifest includes Git base identity plus a deterministically ordered captured overlay; it excludes checkpoint ID, session ID, ordering, timestamp, trigger, event ID, and incident metadata. Identical captured state may therefore have one manifest hash across distinct checkpoint occurrences.
+10. A Workspace Fork, if later validated, may claim only captured repository scope restoration and manifest verification—not deterministic replay, trajectory continuation, or complete workspace restoration.
+11. Claude hook availability, payloads, ordering, batching, process lifecycle, correlation, background behavior, journal concurrency, verifier binding, Git base pinning, restore fidelity, and checkpoint overhead are external or operational assumptions until F0.5 validates them.
 
 ## Privacy and capture boundaries
 
@@ -48,7 +53,9 @@ Privacy constraints take precedence over reconstruction completeness.
 - The F0 provisional evidence models live in `acr.forensics_contracts`: primary append-only `AgentEvent`, `WorkspaceCheckpoint`, and `VerificationReceipt`; derived `IncidentReport`; and action receipt `ForkReceipt`. They are synthetic-fixture-tested but not reality-validated; do not freeze or operationalize their fields before F0.5 PASS.
 - Keep Claude-specific payload translation at an adapter boundary. Analyzer and frontend must consume stable evidence/view models, not raw Claude payloads.
 - A verifier receipt must bind the captured pre-execution repository state. A verifier may mutate the tree; an optional post-state is separate and cannot retroactively define the tested state.
+- Cross-record verifier integrity belongs at a future evidence-set/journal boundary: `pre_checkpoint_id` must resolve in the same session, its manifest hash must equal the receipt's tested hash, and ordering/execution correlation must be valid. The standalone F0 receipt cannot prove those relations.
 - Event occurrence is not checkpoint materialization. Read/search events need not scan the repository. The concrete checkpoint policy remains provisional.
+- `WorkspaceCheckpoint` is restoration authority for a future Workspace Fork. `IncidentReport` may select or reference a checkpoint but is not restoration authority.
 - The v0 execution contract is one instrumented Claude session per isolated worktree. Background execution may be observed while exact mutation attribution remains degraded.
 - The frontend is a legibility layer, never evidence authority. It must not generate evidence, alter evidence truth, or present heuristics as facts.
 - Reuse concepts from `contracts.py`, immutable content-addressed storage from `store.py`, and workspace/manifest safety ideas from `state.py` only after the relevant gate. Do not treat the existing initial-tree scan or unlocked append journal as a validated dynamic checkpoint design.
@@ -76,6 +83,5 @@ controlled-research assets, not the active v0 product path.
 - Never put PATs, tokens, passwords, or private-key material in commands, URLs, logs, documents, or commits. Never print, copy, or inspect credential values or key material.
 - If authenticated transport is unavailable, stop and report: `push unavailable: authenticated Git transport not available`.
 - Before committing, inspect the staged diff for `.env`, credentials, tokens, private keys, and key configuration. Do not force-push or rewrite history without explicit approval.
-- Before completion: run relevant tests and lint, inspect the worktree, stage only reviewed paths, inspect the staged diff, commit only verified changes, and push only when requested or required.
-- Every completed work round must be committed and pushed to GitHub for user review unless the user explicitly says not to commit or not to push. Verify that the remote branch SHA matches the local commit before reporting completion.
+- Before completion: run relevant tests and lint, inspect the worktree, stage only reviewed paths, and inspect the staged diff. Every completed work round is committed and pushed to GitHub for user review unless the user explicitly says not to commit or not to push; verify that the remote branch SHA matches the local commit before reporting completion.
 - Changes to milestone state, implementation checkpoints, or handoff context must update `docs/project-status.md` in the same work session. Pure context commits may define their baseline as repository HEAD.
