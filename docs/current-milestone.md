@@ -36,15 +36,16 @@ workspace was checkpointed, restored, or forked.
 - The canonical captured-state manifest now contains Git base identity plus a
   deterministic path-ordered captured overlay, without checkpoint occurrence
   metadata.
-- `manifest_ref.blob_hash` must equal
-  `captured_workspace_manifest_hash`.
+- `WorkspaceCheckpoint` recomputes the canonical state hash from Git base and
+  captured paths; both stored manifest hash fields must equal it.
 - Distinct checkpoint occurrences may share captured-state identity; changing
   the Git base changes that identity.
 - `IncidentReport.capture_gaps` accepts only uncaptured or explicitly unknown
   scope entries.
 - The active architecture now separates the event journal, checkpoints,
   verification receipts, derived report, and checkpoint-authorized fork path.
-- Full local repository result after the correction: 139 tests PASS; Ruff PASS.
+- Recorded full local repository result after the correction: 141 tests PASS;
+  Ruff PASS.
 
 This correction strengthens only F0 internal semantic consistency. It adds no
 Claude interface, checkpoint capture, verifier correlation, restore, journal,

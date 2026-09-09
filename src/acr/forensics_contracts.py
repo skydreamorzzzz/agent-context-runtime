@@ -201,8 +201,13 @@ class WorkspaceCheckpoint(ProvisionalForensicsRecord):
 
     @model_validator(mode="after")
     def enforce_captured_scope_semantics(self) -> WorkspaceCheckpoint:
-        if self.manifest_ref.blob_hash != self.captured_workspace_manifest_hash:
-            raise ValueError("manifest reference must match captured-state manifest hash")
+        if self.git_base.value is None:
+            raise ValueError("canonical captured-state manifests require a Git base identity")
+        expected_hash = captured_state_manifest_hash(self.git_base.value, self.captured_paths)
+        if self.captured_workspace_manifest_hash != expected_hash:
+            raise ValueError("workspace manifest hash must match canonical captured-state hash")
+        if self.manifest_ref.blob_hash != expected_hash:
+            raise ValueError("manifest reference must match canonical captured-state hash")
         paths = [item.repo_relative_path for item in self.captured_paths]
         if len(paths) != len(set(paths)):
             raise ValueError("captured checkpoint paths must be unique")

@@ -163,7 +163,28 @@ def test_manifest_reference_hash_mismatch_is_rejected() -> None:
     data = copy.deepcopy(load_fixture()["records"]["workspace_checkpoints"][0])
     data["manifest_ref"]["blob_hash"] = "0" * 64
 
-    with pytest.raises(ValidationError, match="manifest reference must match"):
+    with pytest.raises(ValidationError, match="manifest reference must match canonical"):
+        WorkspaceCheckpoint.model_validate(data)
+
+
+def test_matching_forged_manifest_hashes_are_rejected() -> None:
+    data = copy.deepcopy(load_fixture()["records"]["workspace_checkpoints"][0])
+    wrong_hash = "0" * 64
+    assert wrong_hash != data["captured_workspace_manifest_hash"]
+    data["captured_workspace_manifest_hash"] = wrong_hash
+    data["manifest_ref"]["blob_hash"] = wrong_hash
+
+    with pytest.raises(ValidationError, match="must match canonical captured-state hash"):
+        WorkspaceCheckpoint.model_validate(data)
+
+
+def test_captured_state_change_without_manifest_hash_update_is_rejected() -> None:
+    data = copy.deepcopy(load_fixture()["records"]["workspace_checkpoints"][0])
+    replacement_content_hash = "1" * 64
+    assert replacement_content_hash != data["captured_paths"][0]["content_ref"]["blob_hash"]
+    data["captured_paths"][0]["content_ref"]["blob_hash"] = replacement_content_hash
+
+    with pytest.raises(ValidationError, match="must match canonical captured-state hash"):
         WorkspaceCheckpoint.model_validate(data)
 
 

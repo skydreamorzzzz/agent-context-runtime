@@ -31,9 +31,11 @@ present or deleted state, and content hash when present. Checkpoint occurrence
 metadata—ID, session, ordering, timestamp, trigger, event ID, evidence locator,
 and incident metadata—is excluded. Identical captured state can therefore share
 one manifest hash across distinct checkpoint occurrences, while a Git-base or
-overlay change changes the state identity. `manifest_ref.blob_hash` must equal
-`captured_workspace_manifest_hash` because both identify the canonical manifest
-bytes. This format is still provisional and has no restore-fidelity claim.
+overlay change changes the state identity. `WorkspaceCheckpoint` recomputes the
+canonical hash from `git_base` and `captured_paths`; both
+`captured_workspace_manifest_hash` and `manifest_ref.blob_hash` must equal that
+expected value. Agreement between the two stored fields alone is insufficient.
+This format is still provisional and has no restore-fidelity claim.
 
 `VerificationReceipt` names its `pre_checkpoint_id` and the tested captured
 manifest hash. An optional post-checkpoint must be a different checkpoint and is

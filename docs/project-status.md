@@ -22,9 +22,11 @@ The Pre-F0.5 integrity correction separates canonical captured-state identity
 from checkpoint occurrence metadata, makes the manifest deterministic over Git
 base plus captured overlay, enforces manifest reference/hash equality, restricts
 report capture gaps to false/unknown entries, and corrects the active
-architecture/control-plane guidance. The full local repository result is 139
-tests PASS with Ruff PASS. This is internal F0 consistency evidence only, not
-Reality Spike or operational feasibility evidence.
+architecture/control-plane guidance. `WorkspaceCheckpoint` now recomputes the
+canonical state hash and binds both stored manifest hash fields to it. The
+recorded full local repository result is 141 tests PASS with Ruff PASS. This is
+internal F0 consistency evidence only, not Reality Spike or operational
+feasibility evidence.
 
 Every Forensics contract and operational policy remains **PROVISIONAL UNTIL
 F0.5 PASS**. The only next engineering gate after this round is:

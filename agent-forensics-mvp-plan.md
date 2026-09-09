@@ -243,9 +243,11 @@ identical. Different Git bases or captured overlays produce different state
 identities. This deterministic F0 representation remains provisional and does
 not establish capture or restore feasibility.
 
-`WorkspaceCheckpoint.manifest_ref.blob_hash` must equal
-`captured_workspace_manifest_hash`: both identify the same canonical manifest
-bytes.
+`WorkspaceCheckpoint` validation recomputes the canonical captured-state hash
+from `git_base` and `captured_paths`. Both
+`captured_workspace_manifest_hash` and `manifest_ref.blob_hash` must equal that
+recomputed value; agreement between the two stored fields alone is
+insufficient.
 
 Tentative fields:
 
