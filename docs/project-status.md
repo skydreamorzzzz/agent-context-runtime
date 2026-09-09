@@ -10,16 +10,27 @@ M3 semantic/execution binding and current-revision revalidation: PASS
 M3 overall: IN PROGRESS
 Pre-M4 trust closure: PASS
 Execution/evaluator isolation closure: PASS
+Offline duplicate-read candidate coverage audit: PASS (`NO_GO` for formal intervention)
 M4: NOT STARTED
 
-Latest implementation checkpoint: `58ca364` — read-only submission workspace,
-closed-pipe-resistant hard timeout, and authoritative `run_stop` pair ordering.
+Latest implementation checkpoint: `290be9fdae521c6e7f48b528ba93997767232490` —
+pinned Multi-SWE-bench Flash offline duplicate-read coverage scan and fail-closed
+candidate predicate.
 
 Current context/document baseline: repository HEAD.
 
 The accepted M1 source fixture remains the official MSWE-agent demonstration
-`marshmallow-code__marshmallow-1867.traj`; Flash raw bytes remain unavailable
-and its schema is not verified.
+`marshmallow-code__marshmallow-1867.traj`.
+
+The official Multi-SWE-bench Flash OpenHands archive is now available and was
+scanned at pinned dataset revision `9180bb0c633e4580fc8f74629ac6a47b8582543f`.
+Its 20,571,531 raw bytes match SHA256
+`7f0b0c5b65bd019ee3971a1dca2fd087294396ebf347e5321fcc85ccbea024bf`;
+258/258 contained JSON trajectories were readable. The scan found 58
+trajectories with exact duplicate recorded read output, but zero strict legal
+candidates because the historical format lacks exact source-file
+bytes/encoding, actual request co-membership, and pre-send current-state
+evidence. See `docs/coverage/multi-swe-bench-flash-duplicate-read-v1.md`.
 
 M2 has a preserved local-only DeepSeek real smoke and an independently audited
 private evaluator result. The raw runtime/evaluation evidence and private spec
@@ -41,8 +52,10 @@ corrections; no repeat provider call was made. Offline regressions now prove
 that submission workspaces are read-only, closed output pipes cannot bypass the
 hard timeout, and pair ordering derives from persisted `run_stop.end` evidence.
 
-Next gate: M4a deterministic duplicate-read candidate/intervention fixture.
-No candidate/deletion/intervention is implemented yet.
+Next gate: decide whether to collect a bounded native/request-level duplicate
+read coverage sample. Historical Flash evidence alone is `NO_GO` for formal
+`omit_one_duplicate_read_v1` intervention. No request deletion or treatment
+intervention is implemented; M4 remains NOT STARTED.
 
 Infrastructure P0 closure is frozen. It must not be reopened without a concrete
 experiment-blocking regression.
