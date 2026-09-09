@@ -1,7 +1,9 @@
 # Agent Forensics v0.1 validation scope
 
-> **Status:** selected for validation; not implemented or validated. The active
-> authority is [`agent-forensics-mvp-plan.md`](../agent-forensics-mvp-plan.md).
+> **Status:** F0 provisional contracts / synthetic fixture PASS; F0.5 NOT
+> STARTED. Operational capabilities are not implemented or validated. The
+> active authority is
+> [`agent-forensics-mvp-plan.md`](../agent-forensics-mvp-plan.md).
 
 ## Target boundary
 
@@ -22,7 +24,9 @@ content-addressed evidence; historical forensic replay; captured-scope,
 Git-worktree-based Workspace Fork; and a local Incident Theater.
 
 All checkpoint, verifier, restore, fork, hook, analyzer, and frontend details are
-provisional. Their presence in scope does not mean they exist or are feasible.
+provisional. F0 defines record shapes and synthetic evidence only; their
+presence in scope does not mean the operational capabilities exist or are
+feasible.
 
 ## State claim boundary
 

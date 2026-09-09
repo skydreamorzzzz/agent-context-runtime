@@ -13,10 +13,10 @@ validated. Product validation and research novelty are not established.
 
 ## Current gate and scope control
 
-- The only next engineering gate is **F0 provisional contracts / fixture → F0.5 Reality Spike**.
-- F0 defines tentative evidence contracts and a synthetic incident fixture. Every new Forensics contract remains provisional until F0.5 passes.
+- F0 provisional contracts and the synthetic incident fixture are PASS. This establishes testable schema semantics only; it does not validate operational feasibility.
+- The only next engineering gate is **F0.5 Reality Spike**, which requires a separate explicit instruction and has NOT started.
 - F0.5 must verify current Claude Code interfaces and real runtime behavior, captured-scope repository round trips, verifier pre-state binding, operational safety, privacy gaps, and overhead before contracts or policies freeze.
-- Do not begin F1 or later work before F0.5 PASS. In particular, do not build the Incident Theater, real hook capture, checkpointing, verifier integration, replay, or Workspace Fork early.
+- Do not implement F0.5 without separate authorization or begin F1 or later work before F0.5 PASS. In particular, do not build the Incident Theater, real hook capture, checkpointing, verifier integration, replay, or Workspace Fork early.
 - The Legacy Context Optimization M4 and all duplicate-read intervention work are frozen. Do not implement request deletion or revive candidate/intervention experiments without separate reauthorization.
 - Do not extend the active product path through `audit.py`, `candidates.py`, duplicate-read detection, interventions, DeepSeek experiments, provider request rewriting, or context-optimization policies. Preserve those files as legacy assets.
 - Target v0.1 is one user, one Claude Code session, one isolated Git worktree, one local repository, explicitly configured verifiers, a local evidence store, and a local frontend. Do not broaden to concurrent writers, multiple providers/users, cloud services, or generic observability infrastructure.
@@ -45,7 +45,7 @@ Privacy constraints take precedence over reconstruction completeness.
 
 ## Architectural constraints
 
-- The active provisional evidence model has primary append-only `AgentEvent`, `WorkspaceCheckpoint`, and `VerificationReceipt`; derived `IncidentReport`; and action receipt `ForkReceipt`. Do not add these to Python contracts before the authorized F0 work, and do not freeze fields before F0.5 PASS.
+- The F0 provisional evidence models live in `acr.forensics_contracts`: primary append-only `AgentEvent`, `WorkspaceCheckpoint`, and `VerificationReceipt`; derived `IncidentReport`; and action receipt `ForkReceipt`. They are synthetic-fixture-tested but not reality-validated; do not freeze or operationalize their fields before F0.5 PASS.
 - Keep Claude-specific payload translation at an adapter boundary. Analyzer and frontend must consume stable evidence/view models, not raw Claude payloads.
 - A verifier receipt must bind the captured pre-execution repository state. A verifier may mutate the tree; an optional post-state is separate and cannot retroactively define the tested state.
 - Event occurrence is not checkpoint materialization. Read/search events need not scan the repository. The concrete checkpoint policy remains provisional.
@@ -77,4 +77,5 @@ controlled-research assets, not the active v0 product path.
 - If authenticated transport is unavailable, stop and report: `push unavailable: authenticated Git transport not available`.
 - Before committing, inspect the staged diff for `.env`, credentials, tokens, private keys, and key configuration. Do not force-push or rewrite history without explicit approval.
 - Before completion: run relevant tests and lint, inspect the worktree, stage only reviewed paths, inspect the staged diff, commit only verified changes, and push only when requested or required.
+- Every completed work round must be committed and pushed to GitHub for user review unless the user explicitly says not to commit or not to push. Verify that the remote branch SHA matches the local commit before reporting completion.
 - Changes to milestone state, implementation checkpoints, or handoff context must update `docs/project-status.md` in the same work session. Pure context commits may define their baseline as repository HEAD.

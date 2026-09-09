@@ -4,22 +4,27 @@
 
 - Active MVP hypothesis: Agent Forensics
 - Status: SELECTED FOR VALIDATION
-- Implementation: NOT STARTED
+- Implementation: F0 PROVISIONAL CONTRACTS / SYNTHETIC FIXTURE ONLY
 - Product validation: NOT ESTABLISHED
 - Research novelty: NOT ESTABLISHED
-- F0: NOT STARTED
+- F0: PASS
 - F0.5: NOT STARTED
 
-Current work is the documentation control-plane baseline and F0 preparation.
-Every detailed Forensics contract, Claude interface dependency, checkpoint
-policy, verifier binding, restore/fork mechanism, and Incident Theater interface
-remains provisional until F0.5. The only next engineering gate is:
+F0 added five provisional Forensics record types in
+`src/acr/forensics_contracts.py`, a content-addressed synthetic incident fixture,
+and contract/claim-boundary tests. This proves only that a concrete provisional
+model can express and round-trip the synthetic incident. It does not validate
+Claude interfaces, real checkpoint capture, verifier execution or binding,
+restore/fork fidelity, analyzer behavior, or product claims.
 
-> **F0 provisional contracts / fixture → F0.5 Reality Spike**
+Every Forensics contract and operational policy remains **PROVISIONAL UNTIL
+F0.5 PASS**. The only next engineering gate after this round is:
 
-No Agent Forensics implementation exists yet. This status does not establish
-product demand, architectural feasibility, restoration fidelity, causal
-analysis, or research novelty.
+> **F0.5 Reality Spike**
+
+F0.5 implementation has NOT started and was not authorized by the F0
+instruction. This status does not establish product demand, architectural
+feasibility, restoration fidelity, causal analysis, or research novelty.
 
 ## Legacy Track — Context Optimization Research
 

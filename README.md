@@ -8,9 +8,11 @@ infrastructure.
 
 - **Active MVP hypothesis:** Agent Forensics
 - **Status:** SELECTED FOR VALIDATION
-- **Implementation:** NOT STARTED
+- **Implementation:** F0 PROVISIONAL CONTRACTS / SYNTHETIC FIXTURE ONLY
 - **Product validation:** NOT ESTABLISHED
 - **Research novelty:** NOT ESTABLISHED
+- **F0:** PASS
+- **F0.5:** NOT STARTED
 
 The provisional technical definition is **verification-bound project-state
 incident reconstruction for coding agents**. The external demo narrative may be
@@ -20,19 +22,21 @@ The selected hypothesis is to observe one Claude Code session in one isolated
 Git worktree, capture explicitly scoped repository-state evidence, bind explicit
 verifier outcomes to tested pre-execution state, reconstruct an observed
 pass-to-fail window, and eventually restore or fork the captured repository
-scope. `AgentEvent`, `WorkspaceCheckpoint`, `VerificationReceipt`,
-`IncidentReport`, `ForkReceipt`, the Incident Theater frontend, and Workspace
-Fork are plans—not implemented capabilities or validated architecture.
+scope. Provisional F0 schemas now exist for `AgentEvent`,
+`WorkspaceCheckpoint`, `VerificationReceipt`, `IncidentReport`, and
+`ForkReceipt`, together with a synthetic fixture. Real evidence capture,
+checkpointing, verifier execution, analysis, the Incident Theater frontend, and
+Workspace Fork remain unimplemented and unvalidated.
 
-The next engineering gate is strictly:
+The next engineering gate after F0 is strictly:
 
-> **F0 provisional contracts / fixture → F0.5 Reality Spike**
+> **F0.5 Reality Spike**
 
-F0 prepares tentative evidence schemas and a synthetic incident fixture. F0.5
-then validates current Claude Code hook reality, event correlation and process
-behavior, captured-scope restore fidelity, verifier pre-state binding, Git base
-durability, journal concurrency, privacy gaps, and checkpoint overhead. No F1+
-implementation is authorized before F0.5 PASS.
+F0.5 must validate current Claude Code hook reality, event correlation and
+process behavior, captured-scope restore fidelity, verifier pre-state binding,
+Git base durability, journal concurrency, privacy gaps, and checkpoint overhead.
+It has not started and requires separate authorization. No F1+ implementation
+is authorized before F0.5 PASS.
 
 See the active [`Agent Forensics MVP plan`](agent-forensics-mvp-plan.md),
 [`current milestone`](docs/current-milestone.md),

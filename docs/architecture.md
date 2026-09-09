@@ -3,13 +3,14 @@
 ## Status and authority
 
 This page summarizes the **provisional Agent Forensics architecture** selected
-for validation. Detailed interfaces, contracts, checkpoint policy, verifier
+for validation. F0 schema models and a synthetic fixture now exist. Detailed
+interfaces, contract correctness, checkpoint policy, verifier
 binding, restoration, and concurrency behavior remain provisional until F0.5
 PASS. The active authority is
 [`agent-forensics-mvp-plan.md`](../agent-forensics-mvp-plan.md).
 
-No component in the active flow below is implemented merely because it appears
-in this diagram.
+No operational component in the active flow below is implemented merely because
+its F0 record shape appears in this diagram.
 
 ## Provisional active flow
 
@@ -34,7 +35,8 @@ IncidentReport
 Primary append-only evidence is tentatively `AgentEvent`,
 `WorkspaceCheckpoint`, and `VerificationReceipt`. `IncidentReport` is a
 recomputable, analyzer-version-dependent derived view. `ForkReceipt` is an
-action receipt. Every object and interface is provisional until F0.5.
+action receipt. Their F0 shapes round-trip a synthetic incident; every object
+and interface remains provisional until F0.5.
 
 The analyzer and frontend must not depend directly on raw Claude payloads. The
 frontend is a read-only legibility layer, not evidence authority. It cannot
@@ -79,7 +81,7 @@ Legacy concepts may be reused only after the active gate authorizes code work:
 
 | Legacy asset | Reusable idea | Not yet established |
 |---|---|---|
-| `contracts.py` | strict/versioned models, `Fact`, evidence references, identity separation | Forensics schemas or frozen fields |
+| `contracts.py` | strict/versioned models, `Fact`, evidence references, identity separation | frozen or reality-validated Forensics fields |
 | `store.py` | immutable SHA256 blobs and references | multi-process journal safety |
 | `state.py` | path safety and deterministic manifest/hash | dynamic checkpoints or restore fidelity |
 | `experiment.py`, `evaluation.py` | controlled research/lab assets | active v0 product path |

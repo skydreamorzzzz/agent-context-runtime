@@ -4,7 +4,8 @@
 >
 > This document is the active implementation authority for current development.
 > It records a selected hypothesis, provisional architecture, bounded scope, and
-> validation gates. It does not describe implemented capabilities, validated
+> validation gates. Except for the explicitly recorded F0 schema/fixture status,
+> it does not describe implemented operational capabilities, validated
 > architecture, established product demand, research novelty, or causal truth.
 >
 > The historical Context Optimization implementation remains governed by
@@ -16,9 +17,11 @@
 
 - **Active MVP hypothesis:** Agent Forensics
 - **Status:** SELECTED FOR MVP VALIDATION
-- **Implementation:** NOT STARTED
+- **Implementation:** F0 PROVISIONAL CONTRACTS / SYNTHETIC FIXTURE ONLY
 - **Product validation:** NOT ESTABLISHED
 - **Research novelty:** NOT ESTABLISHED
+- **F0:** PASS
+- **F0.5:** NOT STARTED
 
 Provisional technical definition:
 
@@ -510,6 +513,10 @@ must not be reused.
 
 ### F0 — Provisional Forensics contracts / fixture
 
+**Status: PASS.** The five provisional records and a synthetic incident fixture
+are implemented and contract-tested. This status does not freeze the schemas or
+validate any external or operational assumption.
+
 Goals:
 
 - define the smallest tentative evidence schema;
@@ -624,14 +631,14 @@ fork captured last-observed-passing repository state
 
 ## 10. Current authorization
 
-The documentation control-plane pivot is the only work authorized in the
-current round. Do not modify implementation code or tests, create a frontend,
-install dependencies, or implement hooks, checkpoints, verifiers, restore,
-forks, Git refs, or file locks.
+F0 provisional contracts and the synthetic fixture are complete. F0.5 has NOT
+started and requires a separate explicit instruction. The F0 completion does not
+authorize hooks, real checkpoints, verifier execution, restore, forks, Git refs,
+file locks, a production analyzer, frontend work, or dependencies.
 
-After this documentation baseline is accepted, the only next engineering gate
-is:
+The only next engineering gate after F0 is:
 
-> **F0 provisional contracts / fixture → F0.5 Reality Spike**
+> **F0.5 Reality Spike**
 
-Nothing in this plan authorizes M4 or duplicate-read intervention work.
+Nothing in F0 authorizes F0.5 implementation, F1+, M4, or duplicate-read
+intervention work.

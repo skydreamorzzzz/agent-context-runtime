@@ -1,59 +1,52 @@
-# Current milestone: Forensics documentation baseline / F0 preparation
+# Current milestone: F0 complete / F0.5 Reality Spike preparation
 
 ## Current state
 
 ```text
-Strategy pivot: SELECTED
-Documentation baseline: IN PROGRESS
-Forensics implementation: NOT STARTED
-F0: NOT STARTED
-F0.5: NOT STARTED
+Documentation control-plane baseline: PASS
+F0 provisional contracts / synthetic fixture: PASS
+F0.5 implementation: NOT STARTED
+F1+: NOT STARTED
 ```
 
-Agent Forensics is selected for MVP validation, not approved as validated
-architecture, product-market fit, or research novelty. This documentation pivot
-changes active authority while preserving the Legacy Context Optimization
-Research Track as historical fact.
+F0 makes the Agent Forensics hypothesis concrete enough to test. It does not
+freeze or validate the design.
 
-The active authority is
-[`agent-forensics-mvp-plan.md`](../agent-forensics-mvp-plan.md). The old
-[`agent-context-runtime-mvp-plan.md`](../agent-context-runtime-mvp-plan.md)
-remains authoritative only for interpreting the frozen Context Optimization
-implementation and results.
+## F0 evidence of completion
 
-## Work authorized by this milestone
+- `src/acr/forensics_contracts.py` defines provisional `AgentEvent`,
+  `WorkspaceCheckpoint`, `VerificationReceipt`, `IncidentReport`, and
+  `ForkReceipt` models, isolated from legacy Context Optimization contracts.
+- `tests/fixtures/forensics/f0_synthetic_incident.json` records a synthetic-only
+  pass-to-fail incident, two recovery observations, an explicit privacy capture
+  gap, an expected derived report, and an unexecuted schema-only fork receipt.
+- `tests/test_forensics_contracts.py` verifies round trips, explicit unknown
+  semantics, captured-scope limits, pre-checkpoint verifier binding, derived-view
+  identity, non-causal fields, content-addressed fixture integrity, and fork
+  claim limits.
+- Full repository result at F0 completion: 134 tests PASS; Ruff PASS.
 
-- audit and align active documentation;
-- preserve historical M0–M4 status, receipts, and coverage evidence;
-- define tentative F0 evidence objects and a synthetic incident fixture scope;
-- prepare explicit F0.5 questions and falsifiable checks;
-- keep every Forensics schema, hook assumption, checkpoint rule, verifier
-  binding, restore mechanism, and UI interface provisional.
+These are synthetic contract checks. No evidence was captured from Claude Code,
+no verifier command was executed by the Forensics implementation, and no
+workspace was checkpointed, restored, or forked.
 
-## Not authorized
+## Gate boundary
 
-- Context Optimization M4, request deletion, provider request rewriting, or any
-  duplicate-read intervention;
-- F1 or later implementation;
-- Claude Hooks, checkpoints, verifiers, restore, Workspace Fork, Git refs, file
-  locks, or frontend code during this documentation pivot;
-- claims of complete workspace/environment restoration, deterministic replay,
-  causal RCA, validated architecture, product validation, or research novelty.
+Every Forensics field and nested helper remains:
 
-## Next engineering gate
+> **PROVISIONAL UNTIL F0.5 PASS**
 
-> **F0 provisional contracts / fixture → F0.5 Reality Spike**
+F0.5 must test the provisional model against official interface documentation
+and real behavior, then revise or reject assumptions before any contract or
+policy freezes. F0.5 is **NOT authorized for implementation by the F0
+instruction**.
 
-F0 defines only tentative evidence contracts and a synthetic incident fixture.
-F0.5 tests those assumptions against current official Claude Code documentation
-and real behavior, captured-scope repository round trips, verifier pre-state
-binding, journal concurrency, Git durability, privacy gaps, and measured
-checkpoint overhead. Only F0.5 PASS may freeze v0.1 contracts/policy and
-authorize F1.
+The Legacy Context Optimization M4 remains frozen. No duplicate-read candidate,
+intervention, request deletion, or provider-rewriting work is authorized.
 
-## Legacy gate disposition
+## Next engineering gate after this round
 
-The offline Multi-SWE-bench duplicate-read coverage audit passed with `NO_GO`
-for the formal `omit_one_duplicate_read_v1` intervention. M4 never started, no
-real request deletion treatment was implemented, and M4 is frozen rather than
-being the current next gate.
+> **F0.5 Reality Spike**
+
+Starting that gate requires a separate explicit instruction. F1 and later work
+remain blocked until F0.5 PASS.
