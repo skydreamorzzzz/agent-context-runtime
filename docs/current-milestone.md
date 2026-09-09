@@ -1,41 +1,40 @@
-# Current milestone: Execution/evaluator isolation closure
+# Current milestone: offline duplicate-read candidate coverage audit
 
 M0–M2 are DONE. M3 noop A/A feasibility has passed while M3 overall remains
-IN PROGRESS. Pre-M4 evidence and visibility trust closure remains PASS. M4 is
+IN PROGRESS. Infrastructure P0 and Pre-M4 trust closure remain frozen. M4 is
 NOT STARTED.
 
-This gate closes the execution boundary required before any real intervention:
+This gate measures only the prevalence of the frozen exact duplicate complete
+`read_file` research object in historical Multi-SWE-bench data. It does not
+perform request rewriting, an intervention, or a paired treatment run.
 
-- Runtime public tests execute in Linux user/mount/PID/network namespaces with
-  bubblewrap. The current workspace and minimum Python runtime are read-only;
-  only sandbox-private `/tmp` is writable. The inherited host environment is
-  cleared and network access is disabled.
-- Runtime and evaluator submission execution have a hard wall-clock timeout and
-  bounded stdout/stderr evidence. Process liveness remains authoritative even
-  after output pipes close, and every post-timeout wait is bounded. Submission
-  timeout is a task failure, not an evaluator infrastructure failure.
-- The trusted evaluator reads private expected values only after seal. Each
-  untrusted submission process receives public arguments only; it cannot see the
-  private spec, runtime data root, host secrets, or trusted evaluator process.
-- A noop pair seals both runtime arms before either private evaluation starts.
-  Evaluator producer evidence records `evaluation_started_at`, and persisted
-  pair audit requires both starts to follow the unique final completed
-  `run_stop.end` occurrence in each persisted event stream. `Run.end` is not
-  used to establish this phase boundary.
-- The current-revision real noop A/A pair has passed both runtime audits, both
-  evaluation audits, and pair audit. Provider-cache isolation remains
-  unsupported and no causal claim is made. That previous real validation is
-  retained; the read-only mount, hard-timeout, and authoritative-ordering
-  corrections are closed by offline regressions without another paid run.
-- All earlier M0–M3 and Pre-M4 integrity regressions remain cumulative.
+## Frozen scan
 
-## Completion
+- Input: the official `ByteDance-Seed/Multi-SWE-bench_trajs` Flash OpenHands
+  archive at dataset revision `9180bb0c633e4580fc8f74629ac6a47b8582543f`.
+- Adapter: `multi_swe_bench_flash_openhands_v1`; it accepts only the observed
+  event-list shape and treats array position as `source_position`, never as an
+  authoritative runtime sequence.
+- Detector: `exact_duplicate_complete_read_v1`; paths, content identity,
+  occurrence identity, completeness, UTF-8 file identity, request membership,
+  intervening changes, and current state all fail closed when unsupported.
+- Outputs: a deterministic JSON coverage artifact and a concise report under
+  `docs/coverage/`, with traceable exact/rejected/unknown examples.
 
-`EXECUTION_EVALUATOR_ISOLATION_CLOSURE_PASS`
+## Result
 
-Infrastructure P0 closure is frozen. Do not reopen P0 without a concrete
-experiment-blocking regression.
+`OFFLINE_DUPLICATE_READ_COVERAGE_AUDIT_PASS`
 
-Next gate: M4a deterministic duplicate-read candidate/intervention fixture.
-Candidate detection, intervention, request deletion, treatment pairs, and
-rebound measurement remain prohibited until explicitly authorized.
+The archive contains 258 JSON trajectories and all were readable. Exact
+recorded read-output duplicates occur, but the archive does not prove exact
+source-file bytes/encoding, actual outbound-request co-membership, or a
+pre-send current-file state check. It therefore establishes zero strict legal
+candidates under the frozen predicate.
+
+Decision: `NO_GO` for implementing or running `omit_one_duplicate_read_v1`
+from this historical archive alone. The prevalence result is not evidence of
+quality preservation, API cost savings, or behavioral rebound.
+
+Next gate: decide whether to collect a bounded native/request-level candidate
+coverage sample with the already trusted runtime. Intervention and M4 remain
+unstarted unless that evidence supports a separate explicit authorization.

@@ -1,0 +1,14 @@
+{
+  "dataset_name": "ByteDance-Seed/Multi-SWE-bench_trajs",
+  "upstream_url": "https://huggingface.co/datasets/ByteDance-Seed/Multi-SWE-bench_trajs",
+  "dataset_revision": "9180bb0c633e4580fc8f74629ac6a47b8582543f",
+  "archive_path": "flash/20250725_MopenHands_Qwen3-Coder-480B-A35B.zip",
+  "archive_size": 20571531,
+  "archive_sha256": "7f0b0c5b65bd019ee3971a1dca2fd087294396ebf347e5321fcc85ccbea024bf",
+  "archive_commit": "95a1d8d80eb57e2ef40c357fee85744e10a3fb57",
+  "expected_trajectory_members": 258,
+  "adapter_version": "multi_swe_bench_flash_openhands_v1",
+  "retrieved_on": "2026-09-09",
+  "license_note": "The Hugging Face dataset card labels the dataset license as other; no artifact-specific license was inferred. The upstream experiments repository is Apache-2.0.",
+  "usage_note": "Offline candidate-prevalence audit only. This source cannot establish intervention quality, cost savings, or behavioral rebound."
+}

@@ -15,6 +15,7 @@ from acr.adapters.provider import CapturedProvider, DeepSeekHTTPTransport
 from acr.audit import audit, audit_evaluation, audit_run
 from acr.config import validate_run_config
 from acr.contracts import Run
+from acr.coverage import audit_coverage_report, render_coverage_markdown, scan_archive
 from acr.evaluation import LocalAddEvaluator
 from acr.experiment import PairPreflightBlocked, prepare_noop_pair, run_noop_pair
 from acr.runtime.runner import CapturedRuntime, RuntimeTask, run_deepseek_add_smoke
@@ -62,7 +63,12 @@ def main() -> None:
     pair.add_argument("--replicate-id", default="aa-1")
     pair.add_argument("--execution-order", choices=("AB", "BA"), required=True)
     pair.add_argument("--config", default="configs/pilot.json")
-    args = parser.parse_args(); root = Path(args.data_root)
+    coverage = commands.add_parser("scan-duplicate-reads")
+    coverage.add_argument("--archive", required=True)
+    coverage.add_argument("--source-manifest", required=True)
+    coverage.add_argument("--output", required=True)
+    coverage.add_argument("--report", required=True)
+    args = parser.parse_args(); root = Path(getattr(args, "data_root", "."))
     if args.command == "ingest":
         manifest = json.loads(Path(args.manifest).read_text()); ref = ingest_bytes(Path(args.raw).read_bytes(), root, "mswe_agent_demo", manifest["instance_id"]); persist_import(root, args.import_id, manifest, ref); print(args.import_id); return
     if args.command == "audit-run":
@@ -80,6 +86,34 @@ def main() -> None:
         raise SystemExit(audit_result.status != "PASS")
     if args.command == "pair-noop-deepseek":
         _run_noop_deepseek_pair(root, Path(args.workspace_root), Path(args.private_spec), args.pair_id, args.replicate_id, args.execution_order, Path(args.config))
+        return
+    if args.command == "scan-duplicate-reads":
+        source = json.loads(Path(args.source_manifest).read_text())
+        result = scan_archive(Path(args.archive), source)
+        result_audit = audit_coverage_report(result, Path(args.archive), source)
+        if result_audit.status != "PASS":
+            print(json.dumps({"audit": result_audit.status, "blocks": result_audit.blocks}))
+            raise SystemExit(1)
+        output_path = Path(args.output)
+        report_path = Path(args.report)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(result.model_dump_json(indent=2) + "\n")
+        report_path.write_text(render_coverage_markdown(result, result_audit))
+        print(
+            json.dumps(
+                {
+                    "audit": result_audit.status,
+                    "exact_content_duplicate_count": result.metrics[
+                        "exact_content_duplicate_count"
+                    ],
+                    "strict_candidate_count": result.metrics["strict_candidate_count"],
+                    "total_trajectories": result.metrics["total_trajectories"],
+                    "verdict": result.verdict,
+                },
+                sort_keys=True,
+            )
+        )
         return
     _, raw_ref = load_import(root, args.import_id)
     if args.command == "normalize":
