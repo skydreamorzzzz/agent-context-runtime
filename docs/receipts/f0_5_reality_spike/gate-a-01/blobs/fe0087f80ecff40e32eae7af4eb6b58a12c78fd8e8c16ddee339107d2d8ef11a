@@ -1,0 +1,28 @@
+from __future__ import annotations
+
+import json
+import os
+import time
+import uuid
+from pathlib import Path
+
+
+def pytest_sessionstart() -> None:
+    marker_root = os.environ.get("ACR_F05_VERIFIER_MARKER_DIR")
+    if marker_root is None:
+        return
+    root = Path(marker_root)
+    root.mkdir(parents=True, exist_ok=True)
+    marker = root / f"{time.time_ns()}-{os.getpid()}-{uuid.uuid4().hex}.json"
+    marker.write_text(
+        json.dumps(
+            {
+                "pid": os.getpid(),
+                "verifier": "pytest -q",
+                "wall_time_ns": time.time_ns(),
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    marker.chmod(0o444)

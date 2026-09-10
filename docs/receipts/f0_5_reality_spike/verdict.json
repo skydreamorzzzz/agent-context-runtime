@@ -1,0 +1,139 @@
+{
+  "evidence_role": "manually_reviewed_derived_summary",
+  "f0_5_verdict": "conditional_pass",
+  "gate_a": {
+    "result": "pass",
+    "real_claude_session": {
+      "observed_session_duration_ns": 6780890598,
+      "session_id": "09c1a10b-ffa1-459e-849d-4bea3f9e3cf4",
+      "session_start_ref": {
+        "path": "gate-a-02/invocations/1789032863987289254-217186-2dc9e546077546979ec53cd3adaeffa0.json",
+        "sha256": "78f6a57012ed318a1f40a92cd4de25da61d76b59fce115b98d74edd4f6506fb1"
+      },
+      "session_end_ref": {
+        "path": "gate-a-02/invocations/1789032870768179852-217346-831b78d1b4b449ffb45720899d22f21e.json",
+        "sha256": "b501be58b9120e716a2c686206168972eb5cb299bb727cc4f0a22ccbef84f19d"
+      }
+    },
+    "verification_bindings": [
+      {
+        "capture_finished_before_verifier_start_ns": 268507249,
+        "manifest_hash": "1f80ecf22653d717a00350e0f59c30c1b3c2521b0f8a8b89997adc09318e1238",
+        "observed_exit_status": 0,
+        "post_event_ref": {
+          "path": "gate-a-02/invocations/1789032867644181101-217295-b7bbc70ca2f94ca5990243e6ec729663.json",
+          "sha256": "800860f5e9b14caf1c3b68bc1db220c577295fa0b4d6cd7bb70782b5337a2e1c"
+        },
+        "pre_event_ref": {
+          "path": "gate-a-02/invocations/1789032867301288991-217224-38f9f1a55f7745cdb80c6022b127a2a6.json",
+          "sha256": "37af9eedf4cad5f31e3a9f03b2f31780b12e47fc521c78fcc8109493d86f4e41"
+        },
+        "start_marker_ref": {
+          "path": "gate-a-02/verifier-markers/1789032867577126211-start-fbc6953e9cf941d885f05907bcaef809.json",
+          "sha256": "259c189e081fc3555b2ce42dee2fb08585f01be83e8001eced9054b5ca7fc68f"
+        },
+        "result_marker_ref": {
+          "path": "gate-a-02/verifier-markers/1789032867584041632-finish-fbc6953e9cf941d885f05907bcaef809.json",
+          "sha256": "618f69c6a08e69ab563fd04310d81c3e0985444fd850a0a2d676562b82312cb7"
+        },
+        "tool_use_id": "call_00_LXN5q3046igoV9mHIcPG4807"
+      },
+      {
+        "capture_finished_before_verifier_start_ns": 107833706,
+        "manifest_hash": "79507d1ea0d57824c7a9a39f8a0b266317503e21293d0805a3c92fc21e6e3c3c",
+        "observed_exit_status": 1,
+        "post_event_ref": {
+          "path": "gate-a-02/invocations/1789032869717322514-217338-5c810ac473de459b9595b56c00072cf4.json",
+          "sha256": "1b59451cf50c3cecc80d3660e467c77b86cb47210a5b7389aae1bf60fff9aaca"
+        },
+        "pre_event_ref": {
+          "path": "gate-a-02/invocations/1789032869533929420-217313-9858a441f0204c18a40867100e699253.json",
+          "sha256": "d1bef1356a612a3138f10786c0fa66f131bd20aa6e3c703ef8dbde1de074dc9b"
+        },
+        "start_marker_ref": {
+          "path": "gate-a-02/verifier-markers/1789032869647057094-start-7eee05b39e8348318255ee31e9128f1b.json",
+          "sha256": "bbd09c857f7b5bf8cc6768d08e5e8cd3c540e085492a7d5c971df889b3a51378"
+        },
+        "result_marker_ref": {
+          "path": "gate-a-02/verifier-markers/1789032869661531423-finish-7eee05b39e8348318255ee31e9128f1b.json",
+          "sha256": "473589a77ee9ea62cdd32c48e0270fd6583f793f29150552a4795dff1298d690"
+        },
+        "tool_use_id": "call_00_ET_0SEu2cOZ8y5HCjRMtgWs9180"
+      }
+    ],
+    "failure_window": {
+      "causal_claim": false,
+      "first_observed_failing_manifest_hash": "79507d1ea0d57824c7a9a39f8a0b266317503e21293d0805a3c92fc21e6e3c3c",
+      "last_observed_passing_manifest_hash": "1f80ecf22653d717a00350e0f59c30c1b3c2521b0f8a8b89997adc09318e1238",
+      "mutation_event_ref": {
+        "path": "gate-a-02/invocations/1789032868790988220-217303-d7d40dc614eb4d10baf7dfca1833c7a3.json",
+        "sha256": "7567b7bf5c1abec2d8129525ef78ef59990b5c604eac8e054c7658541c869efe"
+      }
+    },
+    "repository_roundtrip_ref": {
+      "path": "git-roundtrip/roundtrip/1789032947654328127-95c41ede9bea4852a991cc7116ac3a75.json",
+      "sha256": "7e8fff72330a982f7860ee2b66fcb02850cde924f2138034ed401a41c851794a"
+    }
+  },
+  "gate_b": {
+    "background_and_concurrency": {
+      "background_execution_observed": true,
+      "exact_mutation_attribution": "degraded",
+      "parallel_batch_observed": true,
+      "shared_append_safety": "unknown",
+      "stable_background_completion_correlation": "unknown",
+      "batch_event_ref": {
+        "path": "gate-b-concurrency/invocations/1789033105188485297-218673-0825e1ce256a4c62b90c8460805b0372.json",
+        "sha256": "62f25e4caa1960137a375fc4424ff5c4f82e0204b04077bb3e36895ca4c41fac"
+      },
+      "background_pre_event_ref": {
+        "path": "gate-b-concurrency/invocations/1789033106270723438-218681-8ad3c21c1c7a42be827dfcf9610614bc.json",
+        "sha256": "32af423c2a42c20694571c975b2c1803a9ae928cd559a26d5521df35c5d24446"
+      },
+      "background_post_event_ref": {
+        "path": "gate-b-concurrency/invocations/1789033106430629764-218727-515893bad955469c99b2a60e3bd2441d.json",
+        "sha256": "282ae9a6b3bcfa21865be9c2f3ff65e8327443542ec3eef4682c6adabb56394e"
+      }
+    },
+    "file_mode": {
+      "classification": "unsupported_by_current_manifest_and_restore_probe",
+      "evidence_ref": {
+        "path": "git-file-mode/file-mode/1789033051560697498-c6199e0b6b8d4030ac9af32d9b033860.json",
+        "sha256": "237e28584404ec9061508ae8161db8c6378c7d893bb53224e7882fdd9ddd1f88"
+      }
+    },
+    "git_durability": {
+      "branch_movement_ref_retention": "supported_by_disposable_probe",
+      "garbage_collection_retention": "unknown",
+      "evidence_ref": {
+        "path": "git-durability/git-ref/1789033285914400711-0c1adbb60d6e4837963140038c282761.json",
+        "sha256": "da127c90b98bf6fe3b0547efab815e341a44c0718e0310dd2411c830545ad1ae"
+      }
+    }
+  },
+  "performance": {
+    "captured_state_duration_ms": [2.949, 7.311, 4.11, 5.28],
+    "gate_a_02_stored_bytes": 21271,
+    "hook_prepare_ms_min_median_max": [0.003, 0.029, 7.346],
+    "repository_restore_duration_ms": [0.241, 0.272, 0.229],
+    "verifier_duration_ms_by_exit": [
+      {"duration_ms": 6.912, "exit_status": 0},
+      {"duration_ms": 14.593, "exit_status": 1}
+    ]
+  },
+  "privacy": {
+    "capture_completeness": "degraded",
+    "excluded": [
+      "raw prompt",
+      "raw tool response",
+      "raw error body",
+      "transcript path",
+      ".env",
+      "environment values",
+      "ignored files",
+      "process state"
+    ],
+    "raw_payload_persisted": false
+  },
+  "schema": "acr.f0.5-reality-spike-verdict/1"
+}

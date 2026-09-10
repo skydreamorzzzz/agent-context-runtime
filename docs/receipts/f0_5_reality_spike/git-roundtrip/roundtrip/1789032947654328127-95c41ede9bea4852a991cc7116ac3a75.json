@@ -1,0 +1,66 @@
+{
+  "baseline_capture": {
+    "capture_gaps": [
+      {
+        "path": ".env",
+        "status": "excluded_by_policy"
+      },
+      {
+        "area": "ignored_files",
+        "status": "not_captured"
+      },
+      {
+        "area": "environment",
+        "status": "not_captured"
+      },
+      {
+        "area": "running_processes",
+        "status": "not_captured"
+      }
+    ],
+    "duration_ns": 3487188,
+    "finished_monotonic_ns": 62672110823161,
+    "git_base": "9eba1b992fdce5fa4d35b4653f9b4d90d7cd31ba",
+    "manifest_hash": "4e490e4b958a81faa1c66ba40c821605705e2b800fa349b8ca40600c4d1c8b3d",
+    "manifest_ref": "manifests/4e490e4b958a81faa1c66ba40c821605705e2b800fa349b8ca40600c4d1c8b3d.json",
+    "path_count": 5,
+    "started_monotonic_ns": 62672107335973,
+    "started_wall_ns": 1789032947635467688
+  },
+  "cases": [
+    {
+      "case": "tracked_modification",
+      "manifest_changed_after_mutation": true,
+      "manifest_verified_after_restore": true,
+      "path": "calculator.py",
+      "restore_duration_ns": 241064,
+      "total_case_duration_ns": 5453466
+    },
+    {
+      "case": "tracked_deletion",
+      "manifest_changed_after_mutation": true,
+      "manifest_verified_after_restore": true,
+      "path": "tracked_delete.txt",
+      "restore_duration_ns": 271708,
+      "total_case_duration_ns": 4825246
+    },
+    {
+      "case": "selected_untracked_deletion",
+      "manifest_changed_after_mutation": true,
+      "manifest_verified_after_restore": true,
+      "path": "selected_untracked.txt",
+      "restore_duration_ns": 228515,
+      "total_case_duration_ns": 5025652
+    }
+  ],
+  "claim_scope": "captured_repository_scope",
+  "excluded": [
+    {
+      "path": ".env",
+      "status": "excluded_by_policy"
+    }
+  ],
+  "file_mode_semantics": "not_represented_by_f0_manifest",
+  "result": "pass",
+  "schema": "acr.f0.5-reality-probe/1"
+}

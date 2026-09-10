@@ -1,0 +1,12 @@
+{
+  "baseline_manifest_hash": "a6dbf08508b3770bef41b32340b1dc1251699006de8793732ba2cd8e92415ca2",
+  "claim": "file_mode_not_represented_or_restored",
+  "executable_manifest_hash": "a6dbf08508b3770bef41b32340b1dc1251699006de8793732ba2cd8e92415ca2",
+  "manifest_distinguished_chmod": false,
+  "mode_after_content_restore": "0o755",
+  "mode_before": "0o644",
+  "mode_changed_to": "0o755",
+  "path": "calculator.py",
+  "restore_recovered_mode": false,
+  "schema": "acr.f0.5-reality-probe/1"
+}

@@ -8,11 +8,12 @@ infrastructure.
 
 - **Active MVP hypothesis:** Agent Forensics
 - **Status:** SELECTED FOR VALIDATION
-- **Implementation:** F0 PROVISIONAL CONTRACTS / SYNTHETIC FIXTURE ONLY
+- **Implementation:** F0 CONTRACTS + DISPOSABLE F0.5 PROBES; PRODUCT NOT STARTED
 - **Product validation:** NOT ESTABLISHED
 - **Research novelty:** NOT ESTABLISHED
 - **F0:** PASS
-- **F0.5:** NOT STARTED
+- **F0.5:** CONDITIONAL PASS
+- **F1+:** NOT STARTED
 
 The provisional technical definition is **verification-bound project-state
 incident reconstruction for coding agents**. The external demo narrative may be
@@ -24,19 +25,25 @@ verifier outcomes to tested pre-execution state, reconstruct an observed
 pass-to-fail window, and eventually restore or fork the captured repository
 scope. Provisional F0 schemas now exist for `AgentEvent`,
 `WorkspaceCheckpoint`, `VerificationReceipt`, `IncidentReport`, and
-`ForkReceipt`, together with a synthetic fixture. Real evidence capture,
-checkpointing, verifier execution, analysis, the Incident Theater frontend, and
-Workspace Fork remain unimplemented and unvalidated.
+`ForkReceipt`, together with a synthetic fixture. Disposable F0.5 probes then
+demonstrated one narrow real Claude Code 2.1.144 and Git happy path: exact
+`pytest -q` pre-state capture, observed pass-to-fail evidence, and
+captured-scope content restoration. This is probe evidence, not production
+implementation.
 
-The next engineering gate after F0 is strictly:
+F0.5 is **CONDITIONAL PASS** because the executable bit was neither represented
+by the provisional manifest nor restored by the disposable probe. Resolve that
+support-boundary contradiction before the next MVP implementation gate:
 
-> **F0.5 Reality Spike**
+> **Represent executable mode, or explicitly exclude it from supported scope.**
 
-F0.5 must validate current Claude Code hook reality, event correlation and
-process behavior, captured-scope restore fidelity, verifier pre-state binding,
-Git base durability, journal concurrency, privacy gaps, and checkpoint overhead.
-It has not started and requires separate authorization. No F1+ implementation
-is authorized before F0.5 PASS.
+The Reality Spike leaves prompt-level correlation on the installed CLI,
+background mutation attribution, shared-journal concurrency, Git GC durability,
+and broader restore fidelity unsupported, degraded, or unknown. Real evidence
+and exact boundaries are recorded in
+[`docs/f0.5-reality-spike.md`](docs/f0.5-reality-spike.md). Production hook
+capture, checkpoints, verifier integration, analysis, Incident Theater, and
+Workspace Fork remain unimplemented. F1+ is not authorized.
 
 See the active [`Agent Forensics MVP plan`](agent-forensics-mvp-plan.md),
 [`current milestone`](docs/current-milestone.md),

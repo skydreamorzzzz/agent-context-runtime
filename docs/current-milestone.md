@@ -1,4 +1,4 @@
-# Current milestone: F0 and integrity correction complete / F0.5 preparation
+# Current milestone: F0.5 conditional-pass revision decision
 
 ## Current state
 
@@ -6,7 +6,7 @@
 Documentation control-plane baseline: PASS
 F0 provisional contracts / synthetic fixture: PASS
 Pre-F0.5 integrity correction: PASS
-F0.5 implementation: NOT STARTED
+F0.5 Reality Spike: CONDITIONAL PASS
 F1+: NOT STARTED
 ```
 
@@ -53,21 +53,28 @@ Git durability, performance, or product feasibility evidence.
 
 ## Gate boundary
 
-Every Forensics field and nested helper remains:
+Every Forensics field and nested helper remains provisional. The Reality Spike
+established only a narrow tested path, not a frozen general contract.
 
-> **PROVISIONAL UNTIL F0.5 PASS**
+Gate A passed for Claude Code 2.1.144, one session/worktree, exact `pytest -q`
+matching, and tracked-content plus selected-untracked captured-scope restore.
+The executable-bit probe contradicted the current manifest/restore semantics.
+Other unsupported, degraded, and unknown boundaries are recorded in
+[`f0.5-reality-spike.md`](f0.5-reality-spike.md).
 
-F0.5 must test the provisional model against official interface documentation
-and real behavior, then revise or reject assumptions before any contract or
-policy freezes. F0.5 is **NOT STARTED** and requires a separate explicit
-instruction.
+The next decision is to revise captured-state semantics to represent executable
+mode or explicitly exclude it from supported scope. F1 and production
+implementation remain blocked and require separate authorization.
+
+Recorded final local F0.5 result: 146 tests PASS; Ruff PASS. This is local test
+evidence, not a GitHub CI result.
 
 The Legacy Context Optimization M4 remains frozen. No duplicate-read candidate,
 intervention, request deletion, or provider-rewriting work is authorized.
 
-## Next engineering gate after this round
+## Active engineering boundary
 
-> **F0.5 Reality Spike**
+> **Resolve the F0.5 executable-mode contradiction before proceeding**
 
-Starting that gate requires a separate explicit instruction. F1 and later work
-remain blocked until F0.5 PASS.
+F0.5 probe execution is complete with CONDITIONAL PASS. Do not continue probe
+expansion or begin F1 in the absence of a separate instruction.

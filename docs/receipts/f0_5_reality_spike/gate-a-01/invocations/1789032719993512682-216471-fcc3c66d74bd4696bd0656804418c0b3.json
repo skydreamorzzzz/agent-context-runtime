@@ -1,0 +1,21 @@
+{
+  "background_task_count": null,
+  "cwd_scope": ".",
+  "excluded_payload_fields": [
+    "effort",
+    "last_assistant_message",
+    "transcript_path"
+  ],
+  "hook_event_name": "Stop",
+  "last_assistant_message_persisted": false,
+  "permission_mode": "bypassPermissions",
+  "pid": 216471,
+  "prepared_monotonic_ns": 62444465387933,
+  "prompt_id": null,
+  "received_monotonic_ns": 62444465379648,
+  "received_wall_ns": 1789032719993512682,
+  "sanitized_payload_hash": "80f48565f71ce5e3b23d4d6d3ac48beabf61b408e970c16fd95fec1db756abb6",
+  "schema": "acr.f0.5-reality-probe/1",
+  "session_id": "ea0c43c6-ce26-434f-902b-6701e0da7c6d",
+  "stop_hook_active": false
+}

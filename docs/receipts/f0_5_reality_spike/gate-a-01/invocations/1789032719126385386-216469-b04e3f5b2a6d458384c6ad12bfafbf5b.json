@@ -1,0 +1,29 @@
+{
+  "cwd_scope": ".",
+  "excluded_payload_fields": [
+    "effort",
+    "transcript_path"
+  ],
+  "hook_event_name": "PostToolBatch",
+  "permission_mode": "bypassPermissions",
+  "pid": 216469,
+  "prepared_monotonic_ns": 62443598275969,
+  "prompt_id": null,
+  "received_monotonic_ns": 62443598251901,
+  "received_wall_ns": 1789032719126385386,
+  "sanitized_payload_hash": "590f69eaecc21a56b61d1d60ef0d7c66c2ce05d64533ff470ecdbb40280e3c19",
+  "schema": "acr.f0.5-reality-probe/1",
+  "session_id": "ea0c43c6-ce26-434f-902b-6701e0da7c6d",
+  "tool_calls": [
+    {
+      "tool_input": {
+        "command": "pytest -q",
+        "command_class": "exact_configured_verifier",
+        "command_hash": "c3b206874e8a7a233c1954889847b7d584a619e7ae1a29c44cfa2f1b06214867"
+      },
+      "tool_name": "Bash",
+      "tool_response_persisted": false,
+      "tool_use_id": "call_00_ET_z4gcCBHvfDuAcfgSewD59172"
+    }
+  ]
+}

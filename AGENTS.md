@@ -8,19 +8,20 @@ The repository has two deliberately separate authority domains.
 - **Historical authority:** [`agent-context-runtime-mvp-plan.md`](agent-context-runtime-mvp-plan.md), historical status documents, receipts, and coverage artifacts remain authoritative for interpreting the Legacy Context Optimization Research Track. Do not rewrite that track as Forensics work.
 
 Agent Forensics is **SELECTED FOR MVP VALIDATION**. F0 provisional contract
-shapes and a synthetic fixture are implemented, but the architecture,
-checkpoint policy, verifier binding, restoration, and UI are not operationally
-implemented or reality-validated. Product validation and research novelty are
-not established.
+shapes and a synthetic fixture are implemented. F0.5 produced a CONDITIONAL
+PASS for one narrow real Claude Code and Git happy path; the contracts remain
+provisional and no production checkpoint, verifier, restore, analyzer, fork, or
+UI capability is implemented. Product validation and research novelty are not
+established.
 
 ## Current gate and scope control
 
 - F0 provisional contracts and the synthetic incident fixture are PASS. This establishes testable schema semantics only; it does not validate operational feasibility.
 - The Pre-F0.5 integrity correction is PASS. It strengthens internal F0 state-identity and validation semantics without adding real-world feasibility evidence.
-- The only next engineering gate is **F0.5 Reality Spike**, which requires a separate explicit instruction and has NOT started.
-- F0.5 must verify current Claude Code interfaces and real runtime behavior, captured-scope repository round trips, verifier pre-state binding, operational safety, privacy gaps, and overhead before contracts or policies freeze.
-- When separately authorized, F0.5 permits only the minimum experimental probe code needed to test real Claude interface behavior, captured-scope repository round trips, verifier binding, journal concurrency, checkpoint overhead, and Git durability. Probe code is not a public/product API, must not silently become production implementation or trigger F1+, and should remain isolated from the active production module surface where practical until the Reality Spike exits PASS. Observations may inform later production design; probe architecture does not automatically become production architecture.
-- Do not implement F0.5 without separate authorization or begin F1 or later work before F0.5 PASS. In particular, do not build the Incident Theater, real hook capture, checkpointing, verifier integration, replay, or Workspace Fork early.
+- F0.5 Reality Spike is **CONDITIONAL PASS**. Gate A passed against Claude Code 2.1.144 and real Git in the narrow one-session, one-worktree, exact-verifier command path. Recorded observations and remaining boundaries are in `docs/f0.5-reality-spike.md`.
+- The executable bit is not represented by the F0 manifest and was not restored by the disposable probe. Revise that captured-scope assumption or explicitly exclude it before the next MVP implementation gate. Contracts and policies remain provisional.
+- F0.5 permits only the minimum experimental probe code needed to test real Claude interface behavior, captured-scope repository round trips, verifier binding, journal concurrency, checkpoint overhead, and Git durability. Probe code is not a public/product API, must not silently become production implementation or trigger F1+, and should remain isolated from the active production module surface where practical until the Reality Spike exits. Observations may inform later production design; probe architecture does not automatically become production architecture.
+- F1 and later work remain NOT STARTED and require separate authorization after the conditional-pass revision is resolved. Do not build the Incident Theater, production hook capture/checkpointing/verifier integration, replay, or Workspace Fork early.
 - The Legacy Context Optimization M4 and all duplicate-read intervention work are frozen. Do not implement request deletion or revive candidate/intervention experiments without separate reauthorization.
 - Do not extend the active product path through `audit.py`, `candidates.py`, duplicate-read detection, interventions, DeepSeek experiments, provider request rewriting, or context-optimization policies. Preserve those files as legacy assets.
 - Target v0.1 is one user, one Claude Code session, one isolated Git worktree, one local repository, explicitly configured verifiers, a local evidence store, and a local frontend. Do not broaden to concurrent writers, multiple providers/users, cloud services, or generic observability infrastructure.
@@ -37,7 +38,7 @@ not established.
 8. `captured_workspace_manifest_hash` covers only explicitly captured repository scope. Never describe it as complete repository, environment, process, machine, or model state.
 9. Captured-state identity is separate from checkpoint occurrence identity. The canonical manifest includes Git base identity plus a deterministically ordered captured overlay; it excludes checkpoint ID, session ID, ordering, timestamp, trigger, event ID, and incident metadata. Identical captured state may therefore have one manifest hash across distinct checkpoint occurrences. `WorkspaceCheckpoint` validation recomputes this hash and requires both manifest hash fields to equal it.
 10. A Workspace Fork, if later validated, may claim only captured repository scope restoration and manifest verification—not deterministic replay, trajectory continuation, or complete workspace restoration.
-11. Claude hook availability, payloads, ordering, batching, process lifecycle, correlation, background behavior, journal concurrency, verifier binding, Git base pinning, restore fidelity, and checkpoint overhead are external or operational assumptions until F0.5 validates them.
+11. Treat F0.5 claims at their observed scope. The tested CLI exposed relevant hook boundaries, exact-command pre-state binding, a PASS-to-FAIL window, and captured-scope content restore. Other versions, prompt-level correlation, background mutation attribution, concurrent/shared-journal safety, executable mode, Git GC durability, and broader restore fidelity remain unsupported, degraded, or unknown as recorded in the Reality Spike log.
 
 ## Privacy and capture boundaries
 
@@ -50,7 +51,7 @@ Privacy constraints take precedence over reconstruction completeness.
 
 ## Architectural constraints
 
-- The F0 provisional evidence models live in `acr.forensics_contracts`: primary append-only `AgentEvent`, `WorkspaceCheckpoint`, and `VerificationReceipt`; derived `IncidentReport`; and action receipt `ForkReceipt`. They are synthetic-fixture-tested but not reality-validated; do not freeze or operationalize their fields before F0.5 PASS.
+- The F0 provisional evidence models live in `acr.forensics_contracts`: primary append-only `AgentEvent`, `WorkspaceCheckpoint`, and `VerificationReceipt`; derived `IncidentReport`; and action receipt `ForkReceipt`. They are synthetic-fixture-tested and selectively reality-challenged, but not frozen. Do not operationalize them until the conditional-pass revision is resolved and separately authorized.
 - Keep Claude-specific payload translation at an adapter boundary. Analyzer and frontend must consume stable evidence/view models, not raw Claude payloads.
 - A verifier receipt must bind the captured pre-execution repository state. A verifier may mutate the tree; an optional post-state is separate and cannot retroactively define the tested state.
 - Cross-record verifier integrity belongs at a future evidence-set/journal boundary: `pre_checkpoint_id` must resolve in the same session, its manifest hash must equal the receipt's tested hash, and ordering/execution correlation must be valid. The standalone F0 receipt cannot prove those relations.

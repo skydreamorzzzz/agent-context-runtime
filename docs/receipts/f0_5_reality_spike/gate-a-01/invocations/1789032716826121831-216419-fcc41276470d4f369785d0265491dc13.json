@@ -1,0 +1,55 @@
+{
+  "cwd_scope": ".",
+  "duration_ms": 317,
+  "excluded_payload_fields": [
+    "effort",
+    "tool_response",
+    "transcript_path"
+  ],
+  "hook_event_name": "PostToolUse",
+  "is_interrupt": null,
+  "permission_mode": "bypassPermissions",
+  "pid": 216419,
+  "post_state_capture": {
+    "capture_gaps": [
+      {
+        "path": ".env",
+        "status": "excluded_by_policy"
+      },
+      {
+        "area": "ignored_files",
+        "status": "not_captured"
+      },
+      {
+        "area": "environment",
+        "status": "not_captured"
+      },
+      {
+        "area": "running_processes",
+        "status": "not_captured"
+      }
+    ],
+    "duration_ns": 6555278,
+    "finished_monotonic_ns": 62441304560594,
+    "git_base": "d42f7c226b26ceb718fa7736b7dd66a0a43c9365",
+    "manifest_hash": "5154af232baad5f57c624858f0c63ed9cbc90c86db02d34fc42d42a6fe501205",
+    "manifest_ref": "manifests/5154af232baad5f57c624858f0c63ed9cbc90c86db02d34fc42d42a6fe501205.json",
+    "path_count": 5,
+    "started_monotonic_ns": 62441298005316,
+    "started_wall_ns": 1789032716826137825
+  },
+  "prepared_monotonic_ns": 62441304569520,
+  "prompt_id": null,
+  "received_monotonic_ns": 62441297988802,
+  "received_wall_ns": 1789032716826121831,
+  "sanitized_payload_hash": "20ec0d74a2e360dd14db713a826a7d6cc067c879353454eb88f589de6450144d",
+  "schema": "acr.f0.5-reality-probe/1",
+  "session_id": "ea0c43c6-ce26-434f-902b-6701e0da7c6d",
+  "tool_input": {
+    "command": "pytest -q",
+    "command_class": "exact_configured_verifier",
+    "command_hash": "c3b206874e8a7a233c1954889847b7d584a619e7ae1a29c44cfa2f1b06214867"
+  },
+  "tool_name": "Bash",
+  "tool_use_id": "call_00_ET_uTXn02UdUd9ywoO127O03471"
+}

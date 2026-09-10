@@ -33,11 +33,13 @@ Show recorded changes
 Restore / fork captured historical repository scope
 ```
 
-This direction is **SELECTED FOR MVP VALIDATION**. Product validation is not
-established. Research novelty is not established. The architecture is not
-validated, and implementation has not started. The immediate objective is a
-reality-grounded MVP and compelling controlled demo—not a market, novelty,
-causal, or complete-reconstruction claim.
+This direction is **SELECTED FOR MVP VALIDATION**. F0.5 conditionally validated
+one narrow Claude Code 2.1.144 and Git happy path with disposable probes; it did
+not validate the general architecture or implement a product. Product
+validation and research novelty are not established. The next decision is to
+represent executable mode in captured scope or explicitly exclude it before a
+reality-grounded MVP implementation—not to make a market, novelty, causal, or
+complete-reconstruction claim.
 
 ## User value hypothesis
 

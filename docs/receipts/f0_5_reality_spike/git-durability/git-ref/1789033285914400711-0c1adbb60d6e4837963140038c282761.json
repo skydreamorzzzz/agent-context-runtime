@@ -1,0 +1,11 @@
+{
+  "base_before_branch_move": "9eba1b992fdce5fa4d35b4653f9b4d90d7cd31ba",
+  "candidate_ref": "refs/acr-probe/30fff16b04684392bfa82f79987e0d9f",
+  "candidate_ref_naming_frozen": false,
+  "candidate_ref_resolved_after_branch_move": "9eba1b992fdce5fa4d35b4653f9b4d90d7cd31ba",
+  "garbage_collection_retention_tested": false,
+  "head_after_branch_move": "b7d30a17daed0a5bd1d980cd4bc7a8a93d78c189",
+  "ref_preserved_base": true,
+  "result": "candidate_ref_feasible_after_branch_move",
+  "schema": "acr.f0.5-reality-probe/1"
+}

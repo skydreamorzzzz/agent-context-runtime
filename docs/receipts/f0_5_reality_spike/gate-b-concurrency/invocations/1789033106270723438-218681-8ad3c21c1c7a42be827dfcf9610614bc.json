@@ -1,0 +1,26 @@
+{
+  "cwd_scope": ".",
+  "duration_ms": null,
+  "excluded_payload_fields": [
+    "effort",
+    "transcript_path"
+  ],
+  "hook_event_name": "PreToolUse",
+  "is_interrupt": null,
+  "permission_mode": "bypassPermissions",
+  "pid": 218681,
+  "prepared_monotonic_ns": 62830743059910,
+  "prompt_id": null,
+  "received_monotonic_ns": 62830742590360,
+  "received_wall_ns": 1789033106270723438,
+  "sanitized_payload_hash": "dd0cdcaa692e38acafa717c6e57f9a16919b5bb9661d43604aab2ce1ac9c65a8",
+  "schema": "acr.f0.5-reality-probe/1",
+  "session_id": "9c512179-b7d9-4056-9dc1-a27b5e7eccc5",
+  "tool_input": {
+    "command_class": "other_not_persisted",
+    "command_hash": "babc01b771ee9a41ff55ac62e8246e9b96e399ab7aca33a068f022b2d56da3b8",
+    "run_in_background": true
+  },
+  "tool_name": "Bash",
+  "tool_use_id": "call_00_DbmvHPnj89GZ397apwSs5851"
+}

@@ -13,7 +13,8 @@ record types:
 Every record serializes `contract_status=provisional_until_f0_5_pass`; the module
 also declares **PROVISIONAL UNTIL F0.5 PASS**. F0 proves only construction,
 strict validation, serialization round trips, and the ability to represent the
-synthetic fixture. Fields may be revised or rejected during F0.5.
+synthetic fixture. F0.5 ended CONDITIONAL PASS, so these fields remain
+provisional pending the executable-mode support-boundary revision.
 
 The contracts reuse legacy `ContractModel`, `Envelope`, `EvidenceRef`, and
 `Fact/status/reason` semantics without importing `Candidate`, `DecisionView`,
@@ -35,7 +36,9 @@ overlay change changes the state identity. `WorkspaceCheckpoint` recomputes the
 canonical hash from `git_base` and `captured_paths`; both
 `captured_workspace_manifest_hash` and `manifest_ref.blob_hash` must equal that
 expected value. Agreement between the two stored fields alone is insufficient.
-This format is still provisional and has no restore-fidelity claim.
+This format is still provisional. A disposable probe restored captured content
+in a narrow real Git fixture, but the same probe showed that executable mode is
+not represented or restored; there is no broader restore-fidelity claim.
 
 `VerificationReceipt` names its `pre_checkpoint_id` and the tested captured
 manifest hash. An optional post-checkpoint must be a different checkpoint and is

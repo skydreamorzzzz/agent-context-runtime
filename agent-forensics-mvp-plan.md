@@ -17,12 +17,12 @@
 
 - **Active MVP hypothesis:** Agent Forensics
 - **Status:** SELECTED FOR MVP VALIDATION
-- **Implementation:** F0 PROVISIONAL CONTRACTS / SYNTHETIC FIXTURE ONLY
+- **Implementation:** F0 CONTRACTS + DISPOSABLE F0.5 PROBES; PRODUCT NOT STARTED
 - **Product validation:** NOT ESTABLISHED
 - **Research novelty:** NOT ESTABLISHED
 - **F0:** PASS
 - **Pre-F0.5 integrity correction:** PASS
-- **F0.5:** NOT STARTED
+- **F0.5:** CONDITIONAL PASS
 
 Provisional technical definition:
 
@@ -437,18 +437,18 @@ Verifier
 
 Current official Claude Code documentation lists `PreToolUse`, `PostToolUse`,
 and `PostToolBatch`, and describes `PostToolBatch` as firing after a parallel
-tool-call batch resolves and before the next model call. This is an external
-documentation observation, not a repository guarantee or proof that it is a
-safe checkpoint boundary. The concrete policy, including whether
-`PostToolBatch` is a useful checkpoint opportunity or synchronization boundary,
-must be decided from F0.5 observations.
+tool-call batch resolves and before the next model call. F0.5 observed these
+events on installed Claude Code 2.1.144, including a batch containing two Read
+calls, but did not establish `PostToolBatch` as a safe checkpoint boundary.
+The concrete production policy remains provisional.
 
-Every-event repository scanning is not required. F0.5 must measure checkpoint
-overhead before a policy freezes.
+Every-event repository scanning is not required. F0.5 measured 2.949–7.311 ms
+for four captures in the small fixture; this is characterization, not a frozen
+policy or a general performance guarantee.
 
 ## 6. External-interface baseline and Reality Spike assumptions
 
-Official Claude Code documentation reviewed on 2026-09-09:
+Official Claude Code documentation reviewed on 2026-09-10:
 
 - [Hooks reference](https://code.claude.com/docs/en/hooks)
 - [Hooks guide](https://code.claude.com/docs/en/hooks-guide)
@@ -460,38 +460,47 @@ name; tool inputs/outputs and `tool_use_id` on applicable events; and background
 or async-related fields/behavior. These are version-sensitive external
 documentation facts only.
 
-The repository has not established the semantics it needs. F0.5 must validate:
+F0.5 established only the following narrow observations on Claude Code 2.1.144:
 
-- actual hook availability in the selected installed Claude Code version;
-- real payloads and optional/missing fields;
+- relevant session, tool pre/post/failure, batch, and stop events were emitted;
+- `tool_use_id` correlated the tested pre/post outcomes;
+- exact `pytest -q` matching allowed synchronous pre-state capture before two
+  independently marked verifier starts;
+- one parallel-read batch was grouped, but general hook concurrency was not
+  established;
+- background Bash completion/mutation attribution was degraded.
+
+The following remain unverified, version-sensitive, degraded, or unknown:
+
 - session identity across start, resume, compact, and any fork-like lifecycle;
-- tool-call correlation across pre, success, failure, and batch events;
-- event ordering and batch composition under sequential and parallel calls;
-- hook process lifecycle and working-directory behavior;
-- background Bash/subagent observations and attribution limits;
-- whether verifier matching can be strict and pre-state-bound;
+- prompt-level correlation (`prompt_id` was absent on installed 2.1.144);
+- general event ordering and hook scheduling across parallel calls;
+- subagent, compaction, resume, and fork-like lifecycle behavior;
+- stable background completion and exact mutation attribution;
 - how command hooks overlap and whether concurrent journal writes occur;
-- sequence allocation under the observed process model.
+- production sequence allocation and shared-journal safety.
 
 Documentation is not substituted for a real spike where runtime behavior,
 performance, durability, or cross-event correlation is the question. Any
 unverified or contradictory detail remains an **F0.5 external-interface
-assumption**.
+assumption**. See [`docs/f0.5-reality-spike.md`](docs/f0.5-reality-spike.md).
 
 ### Journal concurrency
 
 The legacy `append_run_jsonl()` came from a controlled synchronous runtime. It
 is not evidence that multiple hook processes can safely share unlocked append
 and sequence allocation. A Linux/WSL per-session file lock is only a candidate
-design. F0.5 must observe process behavior, concurrent writes, session identity,
-correlation, ordering, and sequence allocation before selecting a mechanism.
+design. The probe avoided shared append by writing one immutable file per hook
+invocation. Multiple PIDs were observed, but shared-write safety, lock need, and
+sequence allocation remain unknown.
 
 ### Git historical-state durability
 
 Persisting only `git_head` may be insufficient after reset, rebase, ref movement,
 or garbage collection. An internal Git ref such as a future `refs/acr/...` is a
-candidate base-pinning mechanism, not a frozen name or validated design. F0.5
-must test base resolution, retention, cleanup, and worktree compatibility.
+candidate base-pinning mechanism, not a frozen name or validated design. A
+disposable ref retained its base across branch movement, but garbage-collection
+retention, cleanup, and worktree compatibility remain unknown.
 
 ## 7. Incident Theater
 
@@ -579,9 +588,8 @@ Git durability. Probe code:
 - does not make its experimental architecture the production architecture.
 
 Where practical, probe code should remain isolated from the active production
-module surface until the Reality Spike exits PASS. This permission defines the
-future F0.5 boundary; it does not authorize probe code in the current
-Pre-F0.5 correction.
+module surface. The completed probe remains experimental and does not define
+the production module surface.
 
 #### Claude interface reality
 
@@ -622,7 +630,8 @@ of privacy exclusions and size caps on completeness.
 
 #### F0.5 exit
 
-Only after F0.5 PASS may the project:
+Only after F0.5 PASS, or after an explicit resolution and authorization based on
+the recorded CONDITIONAL PASS, may the project:
 
 1. revise provisional contracts according to observed reality;
 2. freeze v0.1 evidence contracts;
@@ -684,17 +693,18 @@ fork captured last-observed-passing repository state
 ## 10. Current authorization
 
 F0 provisional contracts and the synthetic fixture are complete. The
-Pre-F0.5 integrity correction is PASS: it separates canonical captured-state
-identity from checkpoint occurrence metadata, enforces internal manifest and
-capture-gap invariants, and changes no operational feasibility status. F0.5 has
-NOT started and requires a separate explicit instruction. F0 completion and
-this correction do not authorize hooks, real checkpoints, verifier execution,
-restore, forks, Git refs, file locks, a production analyzer, frontend work, or
-dependencies.
+Pre-F0.5 integrity correction is PASS. F0.5 is CONDITIONAL PASS: its narrow real
+Claude Code and Git happy path survived, while executable mode was neither
+represented by the F0 manifest nor restored by the disposable probe. The
+captured-scope assumption must be revised or explicitly narrowed before the
+next MVP implementation gate. This does not authorize production hooks,
+production checkpoints, verifier integration, Workspace Fork, a production
+analyzer, frontend work, or F1+.
 
-The only next engineering gate after F0 is:
+The completed reality gate is:
 
-> **F0.5 Reality Spike**
+> **F0.5 Reality Spike — CONDITIONAL PASS**
 
-Nothing in F0 authorizes F0.5 implementation, F1+, M4, or duplicate-read
-intervention work.
+F0.5 probe observations and verdict are recorded in
+[`docs/f0.5-reality-spike.md`](docs/f0.5-reality-spike.md). Nothing in the F0.5
+authorization permits F1+, M4, or duplicate-read intervention work.

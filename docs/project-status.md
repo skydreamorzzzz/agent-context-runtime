@@ -4,12 +4,13 @@
 
 - Active MVP hypothesis: Agent Forensics
 - Status: SELECTED FOR VALIDATION
-- Implementation: F0 PROVISIONAL CONTRACTS / SYNTHETIC FIXTURE ONLY
+- Implementation: F0 CONTRACTS + DISPOSABLE F0.5 PROBES; PRODUCT NOT STARTED
 - Product validation: NOT ESTABLISHED
 - Research novelty: NOT ESTABLISHED
 - F0: PASS
 - Pre-F0.5 integrity correction: PASS
-- F0.5: NOT STARTED
+- F0.5: CONDITIONAL PASS
+- F1+: NOT STARTED
 
 F0 added five provisional Forensics record types in
 `src/acr/forensics_contracts.py`, a content-addressed synthetic incident fixture,
@@ -28,14 +29,22 @@ recorded full local repository result is 141 tests PASS with Ruff PASS. This is
 internal F0 consistency evidence only, not Reality Spike or operational
 feasibility evidence.
 
-Every Forensics contract and operational policy remains **PROVISIONAL UNTIL
-F0.5 PASS**. The only next engineering gate after this round is:
+Every Forensics contract and operational policy remains provisional. F0.5 Gate
+A passed for the narrow tested Claude Code 2.1.144 and Git happy path, but the
+file-mode characterization showed that executable mode is not represented or
+restored. The recorded verdict is:
 
-> **F0.5 Reality Spike**
+> **F0.5 Reality Spike: CONDITIONAL PASS**
 
-F0.5 implementation has NOT started and requires a separate explicit
-instruction. This status does not establish product demand, architectural
-feasibility, restoration fidelity, causal analysis, or research novelty.
+F0.5 used minimum disposable probes under
+[`docs/f0.5-reality-spike.md`](f0.5-reality-spike.md). It is not product
+implementation and does not establish product demand, general architectural
+feasibility, complete restoration fidelity, causal analysis, or research
+novelty. F1+ remains NOT STARTED. A separate instruction must resolve or narrow
+the executable-mode assumption before the next MVP implementation gate.
+
+Recorded final local F0.5 result: 146 tests PASS; Ruff PASS. No repository
+workflow files were present, so this is not described as GitHub CI evidence.
 
 ## Legacy Track — Context Optimization Research
 

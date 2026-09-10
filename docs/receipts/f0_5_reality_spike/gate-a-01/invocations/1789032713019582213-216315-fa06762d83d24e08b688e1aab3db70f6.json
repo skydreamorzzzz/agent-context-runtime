@@ -1,0 +1,17 @@
+{
+  "cwd_scope": ".",
+  "excluded_payload_fields": [
+    "transcript_path"
+  ],
+  "hook_event_name": "SessionStart",
+  "permission_mode": null,
+  "pid": 216315,
+  "prepared_monotonic_ns": 62437491452274,
+  "prompt_id": null,
+  "received_monotonic_ns": 62437491449124,
+  "received_wall_ns": 1789032713019582213,
+  "sanitized_payload_hash": "74526262a5f374ae770f3ea8a0ca4653768814a3d7b9295a25fea1dc234c33bc",
+  "schema": "acr.f0.5-reality-probe/1",
+  "session_id": "ea0c43c6-ce26-434f-902b-6701e0da7c6d",
+  "source": "startup"
+}

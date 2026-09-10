@@ -1,0 +1,54 @@
+{
+  "cwd_scope": ".",
+  "duration_ms": null,
+  "excluded_payload_fields": [
+    "effort",
+    "transcript_path"
+  ],
+  "hook_event_name": "PreToolUse",
+  "is_interrupt": null,
+  "permission_mode": "bypassPermissions",
+  "pid": 217224,
+  "pre_state_capture": {
+    "capture_gaps": [
+      {
+        "path": ".env",
+        "status": "excluded_by_policy"
+      },
+      {
+        "area": "ignored_files",
+        "status": "not_captured"
+      },
+      {
+        "area": "environment",
+        "status": "not_captured"
+      },
+      {
+        "area": "running_processes",
+        "status": "not_captured"
+      }
+    ],
+    "duration_ns": 7310719,
+    "finished_monotonic_ns": 62591780493718,
+    "git_base": "8c7ab246c1e824f822ce538edbac38f843fb4b2a",
+    "manifest_hash": "1f80ecf22653d717a00350e0f59c30c1b3c2521b0f8a8b89997adc09318e1238",
+    "manifest_ref": "manifests/1f80ecf22653d717a00350e0f59c30c1b3c2521b0f8a8b89997adc09318e1238.json",
+    "path_count": 5,
+    "started_monotonic_ns": 62591773182999,
+    "started_wall_ns": 1789032867301315529
+  },
+  "prepared_monotonic_ns": 62591780502042,
+  "prompt_id": null,
+  "received_monotonic_ns": 62591773155843,
+  "received_wall_ns": 1789032867301288991,
+  "sanitized_payload_hash": "6e2bdd82103370b0595acb3b4da341368a677a05f25419116eb89e1831d157e1",
+  "schema": "acr.f0.5-reality-probe/1",
+  "session_id": "09c1a10b-ffa1-459e-849d-4bea3f9e3cf4",
+  "tool_input": {
+    "command": "pytest -q",
+    "command_class": "exact_configured_verifier",
+    "command_hash": "c3b206874e8a7a233c1954889847b7d584a619e7ae1a29c44cfa2f1b06214867"
+  },
+  "tool_name": "Bash",
+  "tool_use_id": "call_00_LXN5q3046igoV9mHIcPG4807"
+}

@@ -1,0 +1,1 @@
+{"exit_status": 1, "monotonic_ns": 62594133522409, "phase": "finish", "pid": 217336, "run_id": "7eee05b39e8348318255ee31e9128f1b", "verifier": "pytest -q", "wall_time_ns": 1789032869661531423}
