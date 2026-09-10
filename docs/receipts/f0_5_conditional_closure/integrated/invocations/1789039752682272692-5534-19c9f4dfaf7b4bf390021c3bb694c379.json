@@ -1,0 +1,29 @@
+{
+  "cwd_scope": ".",
+  "duration_ms": 13,
+  "excluded_payload_fields": [
+    "effort",
+    "tool_response",
+    "transcript_path"
+  ],
+  "hook_event_name": "PostToolUse",
+  "is_interrupt": null,
+  "permission_mode": "bypassPermissions",
+  "pid": 5534,
+  "prepared_monotonic_ns": 1954275225858,
+  "prompt_id": null,
+  "received_monotonic_ns": 1954275199001,
+  "received_wall_ns": 1789039752682272692,
+  "sanitized_payload_hash": "5e3bf27083e98b095bce5a1e9f7f998f3c361db081591a60f91f4a0ef0690a41",
+  "schema": "acr.f0.5-reality-probe/1",
+  "session_id": "9a7807b5-ddd0-41f7-ae6d-bbbed32fe5f6",
+  "tool_input": {
+    "content_fields_excluded": [
+      "new_string",
+      "old_string"
+    ],
+    "file_path": "calculator.py"
+  },
+  "tool_name": "Edit",
+  "tool_use_id": "call_00_flNcEgf772O347nkoNlY4820"
+}

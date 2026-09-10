@@ -1,0 +1,38 @@
+{
+  "baseline_manifest_hash": "77cd2dd93f01a0158711bae3eea3ed62c15084829f96edb7dd885dfbce80f47c",
+  "cases": [
+    {
+      "baseline_executable": false,
+      "case": "tracked_false_to_true",
+      "manifest_changed_after_executable_mutation": true,
+      "manifest_verified_after_restore": true,
+      "path": "calculator.py",
+      "restored_executable": false
+    },
+    {
+      "baseline_executable": true,
+      "case": "tracked_true_to_false",
+      "manifest_changed_after_executable_mutation": true,
+      "manifest_verified_after_restore": true,
+      "path": "test_calculator.py",
+      "restored_executable": true
+    },
+    {
+      "baseline_executable": true,
+      "case": "selected_untracked_true_to_false",
+      "manifest_changed_after_executable_mutation": true,
+      "manifest_verified_after_restore": true,
+      "path": "selected_untracked.txt",
+      "restored_executable": true
+    }
+  ],
+  "claim_scope": "captured_present_regular_file_executable_boolean",
+  "excluded": [
+    {
+      "path": ".env",
+      "status": "excluded_by_policy"
+    }
+  ],
+  "result": "pass",
+  "schema": "acr.f0.5-reality-probe/1"
+}

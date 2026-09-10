@@ -33,13 +33,13 @@ Show recorded changes
 Restore / fork captured historical repository scope
 ```
 
-This direction is **SELECTED FOR MVP VALIDATION**. F0.5 conditionally validated
-one narrow Claude Code 2.1.144 and Git happy path with disposable probes; it did
-not validate the general architecture or implement a product. Product
-validation and research novelty are not established. The next decision is to
-represent executable mode in captured scope or explicitly exclude it before a
-reality-grounded MVP implementation—not to make a market, novelty, causal, or
-complete-reconstruction claim.
+This direction is **SELECTED FOR MVP VALIDATION**. F0.5 demonstrated one narrow
+integrated Claude Code 2.1.144 and Git happy path with disposable probes,
+including restoration of the incident's own passing captured state and
+regular-file executable state. It did not validate the general architecture or
+implement a product. Product validation and research novelty are not
+established. Any later MVP implementation remains a separate decision—not a
+market, novelty, causal, or complete-reconstruction claim.
 
 ## User value hypothesis
 
@@ -104,18 +104,18 @@ root-cause attribution, LLM-generated RCA, or automatic remediation.
 
 ## Validation-first architecture
 
-The detailed design remains provisional until the F0.5 Reality Spike. Current
+The detailed production design remains provisional after F0.5 PASS. Current
 Claude Code official documentation is useful external evidence for documented
-hook names and fields, but it does not by itself prove the repository's needed
-ordering, batching, correlation, process, concurrency, pre-state binding,
-overhead, or restore properties.
+hook names and fields, while F0.5 supplies only the runtime observations
+recorded for its tested version/environment. It does not generalize ordering,
+batching, process, concurrency, overhead, or restore properties.
 
 The validation order is intentionally:
 
 ```text
 F0 tentative contracts and fixture
         ↓
-F0.5 official-interface review + real behavior + repository round trip
+F0.5 integrated real behavior + captured-scope round trip: PASS
         ↓
 revise and freeze v0.1 contracts/policy
         ↓
@@ -154,20 +154,19 @@ receipts, coverage reports, and status retain historical authority. Candidate,
 intervention, duplicate-read, DeepSeek experiment, provider-rewriting, and
 Context Optimization policy modules are not the active product path.
 
-## Success criteria for the current phase
+## Completed F0.5 criteria
 
-The current phase succeeds when the project can first falsify or validate the
-operational assumptions behind the MVP without overstating them. F0.5 must
-establish, within declared captured scope:
+F0.5 established, within its declared and tested captured scope:
 
 - the usable Claude hook surface and actual payload/process behavior;
 - reliable or explicitly degraded event/tool correlation and ordering;
 - verifier pre-state binding feasibility;
 - capture → mutate → restore → identical captured-manifest round trip;
-- safe journal concurrency and sequence allocation;
-- Git base durability feasibility;
+- explicit degradation/unknown boundaries for journal concurrency and sequence
+  allocation;
+- partial Git base durability feasibility with GC retention still unknown;
 - privacy exclusions and their fidelity cost;
 - acceptable measured checkpoint overhead.
 
-Only after those observations may concrete v0.1 contracts and policy freeze.
-The current positioning makes no claim that they will pass.
+F0.5 PASS permits a separately authorized next gate to revise and freeze
+concrete v0.1 contracts and policy. It does not perform or authorize that work.

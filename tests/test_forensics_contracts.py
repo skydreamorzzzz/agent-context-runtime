@@ -90,7 +90,7 @@ def test_all_f0_contracts_round_trip_with_provisional_status() -> None:
         ForkReceipt,
     }
     for record in records:
-        assert record.contract_status == "provisional_until_f0_5_pass"
+        assert record.contract_status == "provisional_pending_separate_freeze"
         assert type(record).model_validate_json(record.model_dump_json()) == record
 
 
@@ -232,6 +232,39 @@ def test_git_base_participates_in_captured_state_identity() -> None:
 
     assert original_hash == checkpoint.captured_workspace_manifest_hash
     assert different_base_hash != original_hash
+
+
+def test_executable_state_participates_in_captured_state_identity() -> None:
+    checkpoint = WorkspaceCheckpoint.model_validate(
+        load_fixture()["records"]["workspace_checkpoints"][0]
+    )
+    non_executable = checkpoint.captured_paths[0]
+    executable = non_executable.model_copy(update={"executable": True})
+
+    assert non_executable.content_ref == executable.content_ref
+    assert captured_state_manifest_hash(
+        checkpoint.git_base.value,
+        [non_executable],
+    ) != captured_state_manifest_hash(
+        checkpoint.git_base.value,
+        [executable],
+    )
+
+
+def test_present_and_deleted_paths_enforce_executable_semantics() -> None:
+    path = load_fixture()["records"]["workspace_checkpoints"][0]["captured_paths"][0]
+
+    present_without_executable = copy.deepcopy(path)
+    present_without_executable["executable"] = None
+    with pytest.raises(ValidationError, match="require executable state"):
+        CapturedPathState.model_validate(present_without_executable)
+
+    deleted_with_executable = copy.deepcopy(path)
+    deleted_with_executable["state"] = "deleted"
+    deleted_with_executable["content_ref"] = None
+    deleted_with_executable["executable"] = False
+    with pytest.raises(ValidationError, match="cannot claim executable state"):
+        CapturedPathState.model_validate(deleted_with_executable)
 
 
 def test_canonical_manifest_path_order_does_not_change_identity() -> None:

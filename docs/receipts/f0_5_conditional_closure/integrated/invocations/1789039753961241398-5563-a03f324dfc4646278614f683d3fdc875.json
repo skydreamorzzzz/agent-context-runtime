@@ -1,0 +1,59 @@
+{
+  "cwd_scope": ".",
+  "duration_ms": 157,
+  "error_body_persisted": false,
+  "excluded_payload_fields": [
+    "effort",
+    "error",
+    "transcript_path"
+  ],
+  "hook_event_name": "PostToolUseFailure",
+  "is_interrupt": false,
+  "observed_exit_code": 1,
+  "permission_mode": "bypassPermissions",
+  "pid": 5563,
+  "post_state_capture": {
+    "capture_gaps": [
+      {
+        "path": ".env",
+        "status": "excluded_by_policy"
+      },
+      {
+        "area": "ignored_files",
+        "status": "not_captured"
+      },
+      {
+        "area": "environment",
+        "status": "not_captured"
+      },
+      {
+        "area": "running_processes",
+        "status": "not_captured"
+      }
+    ],
+    "duration_ns": 3500391,
+    "finished_monotonic_ns": 1955557732704,
+    "git_base": "0b8cb3037886667078684b781c79d16a083bbed9",
+    "manifest_hash": "0e64893e3e967f2e17d9c396f4247e8901f91ed55f327a1a889332d28e6b0a8f",
+    "manifest_ref": "manifests/0e64893e3e967f2e17d9c396f4247e8901f91ed55f327a1a889332d28e6b0a8f.json",
+    "path_count": 5,
+    "started_monotonic_ns": 1955554232313,
+    "started_wall_ns": 1789039753961305166
+  },
+  "prepared_monotonic_ns": 1955557735232,
+  "prompt_id": null,
+  "received_monotonic_ns": 1955554167882,
+  "received_wall_ns": 1789039753961241398,
+  "sanitized_payload_hash": "1a03b070dd5f1df5a91b11d8933a848c337f395ad10a8b7cb44d533d857e1dcb",
+  "schema": "acr.f0.5-reality-probe/1",
+  "session_id": "9a7807b5-ddd0-41f7-ae6d-bbbed32fe5f6",
+  "tool_input": {
+    "command": "pytest -q",
+    "command_class": "exact_configured_verifier",
+    "command_hash": "c3b206874e8a7a233c1954889847b7d584a619e7ae1a29c44cfa2f1b06214867",
+    "run_in_background": null
+  },
+  "tool_name": "Bash",
+  "tool_use_id": "call_00_ET_2Pny6pfQwzZSQX507kah2057",
+  "verifier_tool_outcome": "failure_event"
+}

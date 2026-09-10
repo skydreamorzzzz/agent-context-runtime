@@ -15,7 +15,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-MANIFEST_FORMAT = "acr.captured-state-manifest/0.1-provisional"
+MANIFEST_FORMAT = "acr.captured-state-manifest/0.2-provisional"
 PROBE_SCHEMA = "acr.f0.5-reality-probe/1"
 DEFAULT_VERIFIER = "pytest -q"
 EXCLUDED_PATHS = {".env"}
@@ -104,13 +104,16 @@ def capture_state(
             content = candidate.read_bytes()
             content_hash = sha256_bytes(content)
             write_once(evidence_dir / "blobs" / content_hash, content)
+            executable = bool(candidate.stat().st_mode & 0o111)
             state = "present"
         else:
             content_hash = None
+            executable = None
             state = "deleted"
         entries.append(
             {
                 "content_hash": content_hash,
+                "executable": executable,
                 "path": relative_path,
                 "path_kind": path_kinds[relative_path],
                 "state": state,
@@ -341,6 +344,40 @@ def restore_manifest(repo: Path, evidence_dir: Path, manifest_hash: str) -> None
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes((evidence_dir / "blobs" / entry["content_hash"]).read_bytes())
+        current_mode = target.stat().st_mode
+        restored_mode = (
+            current_mode | 0o111
+            if entry["executable"]
+            else current_mode & ~0o111
+        )
+        target.chmod(restored_mode)
+
+
+def executable_state(path: Path) -> bool:
+    return bool(path.stat().st_mode & 0o111)
+
+
+def set_executable_state(path: Path, executable: bool) -> None:
+    current_mode = path.stat().st_mode
+    path.chmod(current_mode | 0o111 if executable else current_mode & ~0o111)
+
+
+def evidence_reference(evidence_dir: Path, relative_path: str) -> dict[str, str]:
+    artifact = (evidence_dir / relative_path).resolve()
+    artifact.relative_to(evidence_dir.resolve())
+    return {
+        "path": artifact.relative_to(evidence_dir.resolve()).as_posix(),
+        "sha256": sha256_bytes(artifact.read_bytes()),
+    }
+
+
+def load_evidence_json(evidence_dir: Path, relative_path: str) -> dict[str, Any]:
+    artifact = (evidence_dir / relative_path).resolve()
+    artifact.relative_to(evidence_dir.resolve())
+    value = json.loads(artifact.read_text())
+    if not isinstance(value, dict):
+        raise TypeError(f"expected JSON object evidence: {relative_path}")
+    return value
 
 
 def mutate_case(repo: Path, case: str, relative_path: str) -> None:
@@ -403,37 +440,167 @@ def roundtrip_command(args: argparse.Namespace) -> int:
     return 0 if report["result"] == "pass" else 1
 
 
-def file_mode_command(args: argparse.Namespace) -> int:
+def executable_mode_command(args: argparse.Namespace) -> int:
     repo = args.repo.resolve()
     evidence_dir = args.evidence_dir.resolve()
-    target = repo / args.path
-    original_mode = target.stat().st_mode & 0o777
-    baseline = capture_state(repo, evidence_dir, [])
-    executable_mode = original_mode | 0o111
-    target.chmod(executable_mode)
-    changed = capture_state(repo, evidence_dir, [])
-    restore_manifest(repo, evidence_dir, baseline["manifest_hash"])
-    mode_after_content_restore = target.stat().st_mode & 0o777
-    target.chmod(original_mode)
+    selected = [args.selected_untracked]
+    baseline = capture_state(repo, evidence_dir, selected)
+    case_specs = [
+        ("tracked_false_to_true", args.non_executable_tracked, False),
+        ("tracked_true_to_false", args.executable_tracked, True),
+        ("selected_untracked_true_to_false", args.selected_untracked, True),
+    ]
+    cases: list[dict[str, Any]] = []
+    for case, relative_path, expected_baseline in case_specs:
+        target = repo / relative_path
+        baseline_executable = executable_state(target)
+        if baseline_executable is not expected_baseline:
+            raise ValueError(f"unexpected baseline executable state for {relative_path}")
+        set_executable_state(target, not baseline_executable)
+        mutated = capture_state(repo, evidence_dir, selected)
+        restore_manifest(repo, evidence_dir, baseline["manifest_hash"])
+        restored = capture_state(repo, evidence_dir, selected)
+        cases.append(
+            {
+                "baseline_executable": baseline_executable,
+                "case": case,
+                "manifest_changed_after_executable_mutation": (
+                    mutated["manifest_hash"] != baseline["manifest_hash"]
+                ),
+                "manifest_verified_after_restore": (
+                    restored["manifest_hash"] == baseline["manifest_hash"]
+                ),
+                "path": relative_path,
+                "restored_executable": executable_state(target),
+            }
+        )
+
+    passed = all(
+        item["manifest_changed_after_executable_mutation"]
+        and item["manifest_verified_after_restore"]
+        and item["restored_executable"] == item["baseline_executable"]
+        for item in cases
+    )
     report = {
         "baseline_manifest_hash": baseline["manifest_hash"],
-        "claim": "file_mode_not_represented_or_restored",
-        "executable_manifest_hash": changed["manifest_hash"],
-        "manifest_distinguished_chmod": (
-            baseline["manifest_hash"] != changed["manifest_hash"]
-        ),
-        "mode_after_content_restore": oct(mode_after_content_restore),
-        "mode_before": oct(original_mode),
-        "mode_changed_to": oct(executable_mode),
-        "path": args.path,
-        "restore_recovered_mode": mode_after_content_restore == original_mode,
+        "cases": cases,
+        "claim_scope": "captured_present_regular_file_executable_boolean",
+        "excluded": [{"path": ".env", "status": "excluded_by_policy"}],
+        "result": "pass" if passed else "fail",
         "schema": PROBE_SCHEMA,
     }
     report_bytes = json.dumps(report, indent=2, sort_keys=True).encode() + b"\n"
-    output = evidence_dir / "file-mode" / f"{time.time_ns()}-{uuid.uuid4().hex}.json"
+    output = evidence_dir / "executable-mode" / f"{time.time_ns()}-{uuid.uuid4().hex}.json"
     write_once(output, report_bytes)
-    print(json.dumps({"evidence": output.name, "result": report["claim"]}, sort_keys=True))
-    return 0
+    print(json.dumps({"evidence": output.name, "result": report["result"]}, sort_keys=True))
+    return 0 if passed else 1
+
+
+def integrated_restore_command(args: argparse.Namespace) -> int:
+    repo = args.repo.resolve()
+    evidence_dir = args.evidence_dir.resolve()
+    selected = [args.selected_untracked]
+    pass_pre = load_evidence_json(evidence_dir, args.pass_pre_event)
+    pass_post = load_evidence_json(evidence_dir, args.pass_post_event)
+    fail_pre = load_evidence_json(evidence_dir, args.fail_pre_event)
+    fail_post = load_evidence_json(evidence_dir, args.fail_post_event)
+    mutation = load_evidence_json(evidence_dir, args.mutation_event)
+    pass_result = load_evidence_json(evidence_dir, args.pass_result_marker)
+    fail_result = load_evidence_json(evidence_dir, args.fail_result_marker)
+
+    pass_hash = pass_pre["pre_state_capture"]["manifest_hash"]
+    fail_hash = fail_pre["pre_state_capture"]["manifest_hash"]
+    pass_manifest = load_evidence_json(evidence_dir, f"manifests/{pass_hash}.json")
+    fail_manifest = load_evidence_json(evidence_dir, f"manifests/{fail_hash}.json")
+    session_ids = {
+        pass_pre.get("session_id"),
+        pass_post.get("session_id"),
+        fail_pre.get("session_id"),
+        fail_post.get("session_id"),
+        mutation.get("session_id"),
+    }
+    same_session = len(session_ids) == 1 and None not in session_ids
+    verifier_events_match = (
+        pass_pre.get("tool_use_id") == pass_post.get("tool_use_id")
+        and fail_pre.get("tool_use_id") == fail_post.get("tool_use_id")
+        and pass_pre.get("tool_input", {}).get("command_class")
+        == "exact_configured_verifier"
+        and fail_pre.get("tool_input", {}).get("command_class")
+        == "exact_configured_verifier"
+    )
+    results_match = (
+        pass_post.get("hook_event_name") == "PostToolUse"
+        and pass_result.get("exit_status") == 0
+        and fail_post.get("hook_event_name") == "PostToolUseFailure"
+        and fail_result.get("exit_status") not in {None, 0}
+    )
+    mutation_observed = (
+        mutation.get("hook_event_name") == "PostToolUse"
+        and mutation.get("tool_name") in {"Edit", "Write"}
+        and pass_post["received_wall_ns"]
+        < mutation["received_wall_ns"]
+        < fail_pre["received_wall_ns"]
+    )
+    same_git_base = pass_manifest["git_base"] == fail_manifest["git_base"]
+    same_captured_paths = [
+        (item["path"], item["path_kind"]) for item in pass_manifest["paths"]
+    ] == [(item["path"], item["path_kind"]) for item in fail_manifest["paths"]]
+
+    before_restore = capture_state(repo, evidence_dir, selected)
+    restore_manifest(repo, evidence_dir, pass_hash)
+    restored = capture_state(repo, evidence_dir, selected)
+    passed = all(
+        (
+            same_session,
+            verifier_events_match,
+            results_match,
+            mutation_observed,
+            same_git_base,
+            same_captured_paths,
+            before_restore["manifest_hash"] == fail_hash,
+            restored["manifest_hash"] == pass_hash,
+            restored["git_base"] == pass_manifest["git_base"],
+        )
+    )
+    report = {
+        "before_restore_manifest_hash": before_restore["manifest_hash"],
+        "captured_paths_match": same_captured_paths,
+        "claim_scope": "captured_repository_scope",
+        "evidence": {
+            "fail_post_event": evidence_reference(evidence_dir, args.fail_post_event),
+            "fail_pre_event": evidence_reference(evidence_dir, args.fail_pre_event),
+            "fail_result_marker": evidence_reference(
+                evidence_dir, args.fail_result_marker
+            ),
+            "mutation_event": evidence_reference(evidence_dir, args.mutation_event),
+            "pass_post_event": evidence_reference(evidence_dir, args.pass_post_event),
+            "pass_pre_event": evidence_reference(evidence_dir, args.pass_pre_event),
+            "pass_result_marker": evidence_reference(
+                evidence_dir, args.pass_result_marker
+            ),
+        },
+        "excluded": [{"path": ".env", "status": "excluded_by_policy"}],
+        "failing_manifest_hash": fail_hash,
+        "git_base": pass_manifest["git_base"],
+        "git_base_matches": same_git_base,
+        "mutation_observed_between_results": mutation_observed,
+        "passing_manifest_hash": pass_hash,
+        "restore_target_manifest_hash": pass_hash,
+        "restored_manifest_hash": restored["manifest_hash"],
+        "result": "pass" if passed else "fail",
+        "same_session": same_session,
+        "schema": PROBE_SCHEMA,
+        "verifier_events_match": verifier_events_match,
+        "verifier_results": {
+            "fail_exit_status": fail_result.get("exit_status"),
+            "pass_exit_status": pass_result.get("exit_status"),
+        },
+    }
+    report_bytes = json.dumps(report, indent=2, sort_keys=True).encode() + b"\n"
+    output = evidence_dir / "integrated-closure" / f"{time.time_ns()}-{uuid.uuid4().hex}.json"
+    write_once(output, report_bytes)
+    print(json.dumps({"evidence": output.name, "result": report["result"]}, sort_keys=True))
+    return 0 if passed else 1
 
 
 def git_ref_command(args: argparse.Namespace) -> int:
@@ -474,10 +641,23 @@ def build_parser() -> argparse.ArgumentParser:
     roundtrip.add_argument("--modified-tracked", required=True)
     roundtrip.add_argument("--deleted-tracked", required=True)
     roundtrip.add_argument("--selected-untracked", required=True)
-    file_mode = subcommands.add_parser("file-mode")
-    file_mode.add_argument("--repo", type=Path, required=True)
-    file_mode.add_argument("--evidence-dir", type=Path, required=True)
-    file_mode.add_argument("--path", required=True)
+    executable_mode = subcommands.add_parser("executable-mode")
+    executable_mode.add_argument("--repo", type=Path, required=True)
+    executable_mode.add_argument("--evidence-dir", type=Path, required=True)
+    executable_mode.add_argument("--non-executable-tracked", required=True)
+    executable_mode.add_argument("--executable-tracked", required=True)
+    executable_mode.add_argument("--selected-untracked", required=True)
+    integrated = subcommands.add_parser("integrated-restore")
+    integrated.add_argument("--repo", type=Path, required=True)
+    integrated.add_argument("--evidence-dir", type=Path, required=True)
+    integrated.add_argument("--selected-untracked", required=True)
+    integrated.add_argument("--pass-pre-event", required=True)
+    integrated.add_argument("--pass-post-event", required=True)
+    integrated.add_argument("--pass-result-marker", required=True)
+    integrated.add_argument("--mutation-event", required=True)
+    integrated.add_argument("--fail-pre-event", required=True)
+    integrated.add_argument("--fail-post-event", required=True)
+    integrated.add_argument("--fail-result-marker", required=True)
     git_ref = subcommands.add_parser("git-ref")
     git_ref.add_argument("--repo", type=Path, required=True)
     git_ref.add_argument("--evidence-dir", type=Path, required=True)
@@ -488,10 +668,12 @@ def main() -> int:
     args = build_parser().parse_args()
     if args.command == "hook":
         return hook_command()
-    if args.command == "file-mode":
-        return file_mode_command(args)
+    if args.command == "executable-mode":
+        return executable_mode_command(args)
     if args.command == "git-ref":
         return git_ref_command(args)
+    if args.command == "integrated-restore":
+        return integrated_restore_command(args)
     return roundtrip_command(args)
 
 

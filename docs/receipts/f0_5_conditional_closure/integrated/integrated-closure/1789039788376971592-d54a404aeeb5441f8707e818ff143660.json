@@ -1,0 +1,56 @@
+{
+  "before_restore_manifest_hash": "0e64893e3e967f2e17d9c396f4247e8901f91ed55f327a1a889332d28e6b0a8f",
+  "captured_paths_match": true,
+  "claim_scope": "captured_repository_scope",
+  "evidence": {
+    "fail_post_event": {
+      "path": "invocations/1789039753961241398-5563-a03f324dfc4646278614f683d3fdc875.json",
+      "sha256": "4cafec0672f3bf1a4c4d00aad003516ca01ca0d9a3970f7c64205e2b56f56abb"
+    },
+    "fail_pre_event": {
+      "path": "invocations/1789039753756487056-5538-492cd75250564c7782985aed81a2ea7e.json",
+      "sha256": "400a22600024018f9abb8b72e9f2c18d2c2acc8f2714438f30da127c5d95f2b6"
+    },
+    "fail_result_marker": {
+      "path": "verifier-markers/1789039753898729366-finish-a8dfa05b04344fee999734a1b3a68e08.json",
+      "sha256": "029786d1ac4d4a31962b97cef8d67d9d7ae4b7f76bcd0b8beb188c4136298a10"
+    },
+    "mutation_event": {
+      "path": "invocations/1789039752682272692-5534-19c9f4dfaf7b4bf390021c3bb694c379.json",
+      "sha256": "094168e8f14c9918927c0bd935e86efc3d16a282ac2e5883b25d5f52ff8f3d2e"
+    },
+    "pass_post_event": {
+      "path": "invocations/1789039751051469434-5508-e097c821161a4faca2df4ac8f486957e.json",
+      "sha256": "60643ab4606dc44d1efaf3242ac6dc026650d5930f2ebac8b017063efaba4125"
+    },
+    "pass_pre_event": {
+      "path": "invocations/1789039750654497790-5443-84c141ebdd814b1f99fefa7018710805.json",
+      "sha256": "c28c67ce7152d660526d10cb2eba10bd0dd95154b7cf8369defd16698e507a52"
+    },
+    "pass_result_marker": {
+      "path": "verifier-markers/1789039751004065702-finish-16f324229f6f4530838761598122fb81.json",
+      "sha256": "9928c91ebb9e49f450ee268e1031859dac3f2205762dd7874ec8135f2b61ae08"
+    }
+  },
+  "excluded": [
+    {
+      "path": ".env",
+      "status": "excluded_by_policy"
+    }
+  ],
+  "failing_manifest_hash": "0e64893e3e967f2e17d9c396f4247e8901f91ed55f327a1a889332d28e6b0a8f",
+  "git_base": "0b8cb3037886667078684b781c79d16a083bbed9",
+  "git_base_matches": true,
+  "mutation_observed_between_results": true,
+  "passing_manifest_hash": "77cd2dd93f01a0158711bae3eea3ed62c15084829f96edb7dd885dfbce80f47c",
+  "restore_target_manifest_hash": "77cd2dd93f01a0158711bae3eea3ed62c15084829f96edb7dd885dfbce80f47c",
+  "restored_manifest_hash": "77cd2dd93f01a0158711bae3eea3ed62c15084829f96edb7dd885dfbce80f47c",
+  "result": "pass",
+  "same_session": true,
+  "schema": "acr.f0.5-reality-probe/1",
+  "verifier_events_match": true,
+  "verifier_results": {
+    "fail_exit_status": 1,
+    "pass_exit_status": 0
+  }
+}

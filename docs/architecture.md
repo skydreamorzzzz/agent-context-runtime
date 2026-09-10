@@ -3,10 +3,10 @@
 ## Status and authority
 
 This page summarizes the **provisional Agent Forensics architecture** selected
-for validation. F0 schema models and a synthetic fixture now exist. Detailed
-interfaces, contract correctness, checkpoint policy, verifier
-binding, restoration, and concurrency behavior remain provisional until F0.5
-PASS. The active authority is
+for validation. F0 schema models and a synthetic fixture now exist. F0.5 PASS
+demonstrated one narrow integrated disposable-probe path. Detailed production
+interfaces, checkpoint policy, verifier binding, restoration, and concurrency
+behavior remain provisional pending a separately authorized freeze. The active authority is
 [`agent-forensics-mvp-plan.md`](../agent-forensics-mvp-plan.md).
 
 No operational component in the active flow below is implemented merely because
@@ -15,7 +15,7 @@ its F0 record shape appears in this diagram.
 ## Provisional active flow
 
 ```text
-Claude Hooks (external interface; unvalidated)
+Claude Hooks (narrow F0.5 observation; no production adapter)
      │
      ▼
 Claude-specific adapter
@@ -58,13 +58,15 @@ Selected WorkspaceCheckpoint
 Primary append-only evidence is tentatively `AgentEvent`,
 `WorkspaceCheckpoint`, and `VerificationReceipt`. `IncidentReport` is a
 recomputable, analyzer-version-dependent derived view. `ForkReceipt` is an
-action receipt. Their F0 shapes round-trip a synthetic incident; every object
-and interface remains provisional until F0.5.
+action receipt. Their F0 shapes round-trip a synthetic incident; F0.5 challenged
+the narrow happy path, but every production object and interface remains
+provisional pending a separate freeze.
 
 Event occurrence is not checkpoint materialization. A journal event may create
 a checkpoint opportunity without causing repository-state evidence to be
-materialized. Concrete mutation boundaries and the named Claude hook boundary
-in the diagram remain external-interface assumptions for F0.5.
+materialized. F0.5 observed exact-verifier `PreToolUse` capture and selected
+tool boundaries on Claude Code 2.1.144; a concrete production checkpoint policy
+remains provisional.
 
 A `VerificationReceipt` requires both captured pre-verifier state and matched
 verifier execution/result evidence. The standalone F0 receipt cannot prove that
@@ -92,9 +94,11 @@ state.
 The provisional F0 manifest hashes deterministic canonical bytes containing Git
 base identity plus a path-ordered captured overlay: repository-relative path,
 tracked or selected-untracked classification, present or deleted state, and
-content hash when present. It excludes checkpoint ID, session ID, ordering,
-timestamp, trigger, event ID, evidence locator, and incident metadata. Thus,
-identical captured state can share one manifest hash across distinct checkpoint
+content hash plus executable boolean when a regular file is present. Deleted
+paths use not-applicable executable state. This is not a generic POSIX mode
+model. The manifest excludes checkpoint ID, session ID, ordering, timestamp,
+trigger, event ID, evidence locator, and incident metadata. Thus, identical
+captured state can share one manifest hash across distinct checkpoint
 occurrences; occurrence identity remains in each checkpoint record.
 
 Verifier evidence is intended to bind to a forced pre-execution checkpoint:
@@ -104,7 +108,9 @@ captured pre-state A → verifier execution/result → optional post-state B
 ```
 
 The verifier may mutate the tree, so B cannot be substituted for the tested
-state A. This binding is a design target and must be proved in F0.5.
+state A. F0.5 demonstrated this binding for one exact configured verifier in the
+tested version/environment; production integrity enforcement remains
+provisional.
 
 Privacy exclusions override reconstruction completeness. An exclusion records a
 capture gap and degrades completeness; no component may bypass it.

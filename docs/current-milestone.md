@@ -1,4 +1,4 @@
-# Current milestone: F0.5 conditional-pass revision decision
+# Current milestone: F0.5 complete / next-gate authorization pending
 
 ## Current state
 
@@ -6,7 +6,7 @@
 Documentation control-plane baseline: PASS
 F0 provisional contracts / synthetic fixture: PASS
 Pre-F0.5 integrity correction: PASS
-F0.5 Reality Spike: CONDITIONAL PASS
+F0.5 Reality Spike: PASS
 F1+: NOT STARTED
 ```
 
@@ -54,27 +54,30 @@ Git durability, performance, or product feasibility evidence.
 ## Gate boundary
 
 Every Forensics field and nested helper remains provisional. The Reality Spike
-established only a narrow tested path, not a frozen general contract.
+established only a narrow tested path, not a frozen general contract or product
+implementation.
 
-Gate A passed for Claude Code 2.1.144, one session/worktree, exact `pytest -q`
-matching, and tracked-content plus selected-untracked captured-scope restore.
-The executable-bit probe contradicted the current manifest/restore semantics.
-Other unsupported, degraded, and unknown boundaries are recorded in
-[`f0.5-reality-spike.md`](f0.5-reality-spike.md).
+The accepted conditional closure used one Claude Code 2.1.144 session and one
+disposable repository to demonstrate exact-`pytest -q` PASS state capture,
+Claude mutation, FAIL state capture, restoration of that same passing captured
+state, and manifest verification. It also added executable state to canonical
+identity for captured present regular files and verified restore in both
+directions for tracked and selected-untracked paths.
 
-The next decision is to revise captured-state semantics to represent executable
-mode or explicitly exclude it from supported scope. F1 and production
-implementation remain blocked and require separate authorization.
+Other unsupported, degraded, and unknown boundaries remain recorded in
+[`f0.5-reality-spike.md`](f0.5-reality-spike.md). The integrated result claims
+captured repository scope only in the tested version/environment. It is not a
+production Workspace Fork, complete workspace restoration, or causal analysis.
 
-Recorded final local F0.5 result: 146 tests PASS; Ruff PASS. This is local test
-evidence, not a GitHub CI result.
+Recorded final local conditional-closure result: 151 tests PASS; Ruff PASS.
+This is local test evidence, not a GitHub CI result.
 
 The Legacy Context Optimization M4 remains frozen. No duplicate-read candidate,
 intervention, request deletion, or provider-rewriting work is authorized.
 
 ## Active engineering boundary
 
-> **Resolve the F0.5 executable-mode contradiction before proceeding**
+> **F0.5 is complete; await separate authorization for the next MVP implementation gate**
 
-F0.5 probe execution is complete with CONDITIONAL PASS. Do not continue probe
-expansion or begin F1 in the absence of a separate instruction.
+Do not continue probe expansion or begin F1 in the absence of a separate
+instruction.

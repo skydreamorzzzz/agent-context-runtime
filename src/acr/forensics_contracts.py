@@ -1,9 +1,9 @@
 """F0 Agent Forensics evidence contracts.
 
-PROVISIONAL UNTIL F0.5 PASS. These models make the selected hypothesis concrete
-enough to test against a synthetic incident. They do not establish Claude Code
-interface behavior, checkpoint feasibility, verifier binding, restore fidelity,
-or a production incident analyzer.
+These F0 models remain provisional until a separately authorized freeze. F0.5
+demonstrated one narrow integrated path, including regular-file executable
+state, but did not establish general interface behavior, production checkpoint
+or restore fidelity, or a production incident analyzer.
 """
 
 from __future__ import annotations
@@ -19,9 +19,9 @@ from pydantic import Field, field_validator, model_validator
 
 from acr.contracts import ContractModel, Envelope, EvidenceRef, Fact
 
-FORENSICS_CONTRACT_STATUS = "PROVISIONAL UNTIL F0.5 PASS"
-CAPTURED_STATE_MANIFEST_FORMAT = "acr.captured-state-manifest/0.1-provisional"
-ProvisionalStatus = Literal["provisional_until_f0_5_pass"]
+FORENSICS_CONTRACT_STATUS = "PROVISIONAL PENDING SEPARATE FREEZE AUTHORIZATION"
+CAPTURED_STATE_MANIFEST_FORMAT = "acr.captured-state-manifest/0.2-provisional"
+ProvisionalStatus = Literal["provisional_pending_separate_freeze"]
 Sha256 = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 Identifier = Annotated[str, Field(min_length=1)]
 
@@ -29,7 +29,7 @@ Identifier = Annotated[str, Field(min_length=1)]
 class ProvisionalForensicsRecord(Envelope):
     """Shared marker for F0 records; not a sixth domain object."""
 
-    contract_status: ProvisionalStatus = "provisional_until_f0_5_pass"
+    contract_status: ProvisionalStatus = "provisional_pending_separate_freeze"
 
 
 class OrderingEvidence(ContractModel):
@@ -66,6 +66,7 @@ class CapturedPathState(ContractModel):
     state: Literal["present", "deleted"]
     state_ref: EvidenceRef
     content_ref: EvidenceRef | None = None
+    executable: bool | None = None
 
     @field_validator("repo_relative_path")
     @classmethod
@@ -79,8 +80,12 @@ class CapturedPathState(ContractModel):
     def enforce_content_semantics(self) -> CapturedPathState:
         if self.state == "present" and self.content_ref is None:
             raise ValueError("present captured paths require content evidence")
+        if self.state == "present" and self.executable is None:
+            raise ValueError("present captured regular files require executable state")
         if self.state == "deleted" and self.content_ref is not None:
             raise ValueError("deleted captured paths cannot claim current content")
+        if self.state == "deleted" and self.executable is not None:
+            raise ValueError("deleted captured paths cannot claim executable state")
         return self
 
 
@@ -108,6 +113,7 @@ def canonical_captured_state_manifest_bytes(
                 "content_hash": (
                     item.content_ref.blob_hash if item.content_ref is not None else None
                 ),
+                "executable": item.executable,
                 "path": item.repo_relative_path,
                 "path_kind": item.path_kind,
                 "state": item.state,

@@ -1,5 +1,6 @@
 {
   "evidence_role": "manually_reviewed_derived_summary",
+  "claim_limit": "The Claude PASS-to-FAIL incident and Git round-trip were independently demonstrated in different disposable repositories with different Git bases; this receipt set does not establish integrated PASS-to-FAIL-to-restore composition.",
   "f0_5_verdict": "conditional_pass",
   "gate_a": {
     "result": "pass",

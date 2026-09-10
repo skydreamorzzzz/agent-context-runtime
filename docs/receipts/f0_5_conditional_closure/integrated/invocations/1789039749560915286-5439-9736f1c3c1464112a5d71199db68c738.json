@@ -1,0 +1,26 @@
+{
+  "cwd_scope": ".",
+  "duration_ms": 1,
+  "excluded_payload_fields": [
+    "effort",
+    "tool_response",
+    "transcript_path"
+  ],
+  "hook_event_name": "PostToolUse",
+  "is_interrupt": null,
+  "permission_mode": "bypassPermissions",
+  "pid": 5439,
+  "prepared_monotonic_ns": 1951153866988,
+  "prompt_id": null,
+  "received_monotonic_ns": 1951153841834,
+  "received_wall_ns": 1789039749560915286,
+  "sanitized_payload_hash": "d4aee95ba59abcc0a9d31bc29e3d86776f31c77d73d6cba82f69e4fe9bbe9713",
+  "schema": "acr.f0.5-reality-probe/1",
+  "session_id": "9a7807b5-ddd0-41f7-ae6d-bbbed32fe5f6",
+  "tool_input": {
+    "content_fields_excluded": [],
+    "file_path": "test_calculator.py"
+  },
+  "tool_name": "Read",
+  "tool_use_id": "call_01_ET_XV4sOkUfoz5SWk6A6V1M3218"
+}

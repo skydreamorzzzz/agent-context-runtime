@@ -1,0 +1,64 @@
+{
+  "claim": "A real narrow integrated happy path was demonstrated: verifier-bound PASS state, Claude mutation, verifier-bound FAIL state, restoration of that same captured passing state, and manifest verification.",
+  "claim_limits": [
+    "Claude Code 2.1.144",
+    "Ubuntu 24.04.4 LTS on WSL2",
+    "one Claude session",
+    "one isolated disposable repository",
+    "exact configured verifier: pytest -q",
+    "captured repository scope only",
+    "not a production Workspace Fork",
+    "not complete workspace restoration",
+    "not causal root-cause attribution"
+  ],
+  "component_feasibility": "pass",
+  "executable_bit_closure": {
+    "identity_distinguishes_executable_state": true,
+    "receipt_ref": {
+      "path": "executable/executable-mode/1789039696331311977-af907f4c16b844a8ace37cd40d4df330.json",
+      "sha256": "2070b2300ef2e85081cf0b82455289348208a46d5457a01a8c9b06c69c02c74f"
+    },
+    "restore_recovers_executable_state": true,
+    "selected_untracked_tested": true,
+    "tracked_tested": true
+  },
+  "f0_5_verdict": "pass",
+  "integrated_demo_happy_path": {
+    "failing_manifest_hash": "0e64893e3e967f2e17d9c396f4247e8901f91ed55f327a1a889332d28e6b0a8f",
+    "failing_manifest_ref": {
+      "path": "integrated/manifests/0e64893e3e967f2e17d9c396f4247e8901f91ed55f327a1a889332d28e6b0a8f.json",
+      "sha256": "0e64893e3e967f2e17d9c396f4247e8901f91ed55f327a1a889332d28e6b0a8f"
+    },
+    "git_base": "0b8cb3037886667078684b781c79d16a083bbed9",
+    "incident_session_id": "9a7807b5-ddd0-41f7-ae6d-bbbed32fe5f6",
+    "passing_manifest_hash": "77cd2dd93f01a0158711bae3eea3ed62c15084829f96edb7dd885dfbce80f47c",
+    "passing_manifest_ref": {
+      "path": "integrated/manifests/77cd2dd93f01a0158711bae3eea3ed62c15084829f96edb7dd885dfbce80f47c.json",
+      "sha256": "77cd2dd93f01a0158711bae3eea3ed62c15084829f96edb7dd885dfbce80f47c"
+    },
+    "receipt_ref": {
+      "path": "integrated/integrated-closure/1789039788376971592-d54a404aeeb5441f8707e818ff143660.json",
+      "sha256": "c104206e89ecf4a48acc83e8e8978abe1c85093b62d53b2e7870697f1ecff7c9"
+    },
+    "restore_target_manifest_hash": "77cd2dd93f01a0158711bae3eea3ed62c15084829f96edb7dd885dfbce80f47c",
+    "restored_manifest_hash": "77cd2dd93f01a0158711bae3eea3ed62c15084829f96edb7dd885dfbce80f47c",
+    "result": "pass"
+  },
+  "privacy": {
+    "capture_completeness": "degraded",
+    "excluded": [
+      ".env",
+      "raw prompt",
+      "raw tool response",
+      "environment values",
+      "ignored files",
+      "process state"
+    ]
+  },
+  "verification": {
+    "github_checks": "not_present_at_local_verification_time",
+    "local_pytest": "151 passed in 3.52s",
+    "local_ruff": "pass"
+  },
+  "schema": "acr.f0.5-conditional-closure-verdict/1"
+}

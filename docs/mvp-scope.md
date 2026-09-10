@@ -1,8 +1,8 @@
 # Agent Forensics v0.1 validation scope
 
-> **Status:** F0 provisional contracts / synthetic fixture PASS; F0.5 NOT
-> STARTED. Operational capabilities are not implemented or validated. The
-> active authority is
+> **Status:** F0 PASS; F0.5 PASS for one narrow integrated disposable-probe
+> path; F1+ NOT STARTED. Operational product capabilities are not implemented.
+> The active authority is
 > [`agent-forensics-mvp-plan.md`](../agent-forensics-mvp-plan.md).
 
 ## Target boundary
@@ -17,16 +17,16 @@ LOCAL evidence store
 LOCAL frontend
 ```
 
-Planned scope, contingent on F0.5 validation: Claude Code only; Linux/WSL first;
+Planned scope after the narrow F0.5 PASS: Claude Code only; Linux/WSL first;
 normal local Git repositories; tracked regular files and deletions; dirty tree
-state; selected non-ignored untracked files; explicit shell verifiers; local
+state; executable boolean for captured present regular files; selected
+non-ignored untracked files; explicit shell verifiers; local
 content-addressed evidence; historical forensic replay; captured-scope,
 Git-worktree-based Workspace Fork; and a local Incident Theater.
 
-All checkpoint, verifier, restore, fork, hook, analyzer, and frontend details are
-provisional. F0 defines record shapes and synthetic evidence only; their
-presence in scope does not mean the operational capabilities exist or are
-feasible.
+All production checkpoint, verifier, restore, fork, hook, analyzer, and frontend
+details remain provisional. F0.5 demonstrated one integrated disposable-probe
+path, not operational product capabilities.
 
 ## State claim boundary
 

@@ -10,11 +10,13 @@ record types:
 - derived view: `IncidentReport`;
 - action receipt: `ForkReceipt`.
 
-Every record serializes `contract_status=provisional_until_f0_5_pass`; the module
-also declares **PROVISIONAL UNTIL F0.5 PASS**. F0 proves only construction,
-strict validation, serialization round trips, and the ability to represent the
-synthetic fixture. F0.5 ended CONDITIONAL PASS, so these fields remain
-provisional pending the executable-mode support-boundary revision.
+Every record serializes
+`contract_status=provisional_pending_separate_freeze`; the module also declares
+**PROVISIONAL PENDING SEPARATE FREEZE AUTHORIZATION**. F0 proves only
+construction, strict validation, serialization round trips, and the ability to
+represent the synthetic fixture. F0.5 is PASS after its conditional closure,
+but freezing and production operationalization still require a separate
+implementation gate.
 
 The contracts reuse legacy `ContractModel`, `Envelope`, `EvidenceRef`, and
 `Fact/status/reason` semantics without importing `Candidate`, `DecisionView`,
@@ -28,7 +30,9 @@ false or unknown; privacy exclusions are not bypassed.
 The provisional canonical manifest is deterministic JSON over only its format,
 Git base identity, and a path-sorted captured overlay. Each overlay entry names
 the repository-relative path, tracked or selected-untracked classification,
-present or deleted state, and content hash when present. Checkpoint occurrence
+present or deleted state, content hash when present, and executable boolean for
+every captured present regular file. Deleted paths use `None` because executable
+state is not applicable. Checkpoint occurrence
 metadata—ID, session, ordering, timestamp, trigger, event ID, evidence locator,
 and incident metadata—is excluded. Identical captured state can therefore share
 one manifest hash across distinct checkpoint occurrences, while a Git-base or
@@ -36,9 +40,11 @@ overlay change changes the state identity. `WorkspaceCheckpoint` recomputes the
 canonical hash from `git_base` and `captured_paths`; both
 `captured_workspace_manifest_hash` and `manifest_ref.blob_hash` must equal that
 expected value. Agreement between the two stored fields alone is insufficient.
-This format is still provisional. A disposable probe restored captured content
-in a narrow real Git fixture, but the same probe showed that executable mode is
-not represented or restored; there is no broader restore-fidelity claim.
+This format is still provisional. The closure probe distinguished identical
+bytes with different executable state and restored both executable and
+non-executable states for tracked and selected-untracked files. One integrated
+real incident restored its own passing captured state. There is no broader or
+complete-workspace restore-fidelity claim.
 
 `VerificationReceipt` names its `pre_checkpoint_id` and the tested captured
 manifest hash. An optional post-checkpoint must be a different checkpoint and is

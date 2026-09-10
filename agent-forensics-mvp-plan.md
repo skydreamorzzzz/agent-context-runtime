@@ -22,7 +22,7 @@
 - **Research novelty:** NOT ESTABLISHED
 - **F0:** PASS
 - **Pre-F0.5 integrity correction:** PASS
-- **F0.5:** CONDITIONAL PASS
+- **F0.5:** PASS
 
 Provisional technical definition:
 
@@ -168,10 +168,11 @@ This MVP does not require a complex redaction engine.
 
 ## 4. Provisional evidence model
 
-All objects and fields in this section are **PROVISIONAL until F0.5 PASS**. They
-must not be described as frozen repository contracts. The existing F0 Python
-shapes and synthetic fixture make them testable; they do not make them
-reality-validated product contracts.
+All objects and fields in this section originated as **PROVISIONAL until F0.5
+PASS**. F0.5 is now PASS, which permits a separately authorized revision/freeze
+gate; it does not itself freeze repository contracts. The F0 Python shapes,
+synthetic fixture, and disposable closure evidence do not make them production
+contracts.
 
 Primary append-only evidence:
 
@@ -233,15 +234,21 @@ canonical path-ordered captured overlay:
   tracked / selected-untracked classification
   present / deleted state
   content hash when present
+  executable boolean when present regular file
 ```
+
+Executable is `true` or `false` for every captured present regular file,
+whether tracked or selected-untracked, and `null`/not applicable for deleted
+paths. It is not a generic POSIX permission model.
 
 Checkpoint ID, session ID, ordering, timestamp, trigger, event ID, evidence
 locator, and incident metadata are excluded. Consequently, two checkpoint
 records may be distinct occurrences while sharing one
 `captured_workspace_manifest_hash` when their Git base and captured overlay are
 identical. Different Git bases or captured overlays produce different state
-identities. This deterministic F0 representation remains provisional and does
-not establish capture or restore feasibility.
+identities. The F0.5 closure demonstrated this identity and restore behavior in
+the narrow tested environment, including executable state, but the
+representation remains provisional until separately frozen.
 
 `WorkspaceCheckpoint` validation recomputes the canonical captured-state hash
 from `git_base` and `captured_paths`. Both
@@ -357,15 +364,16 @@ Verifiers are explicitly user-configured. A standalone, strictly matched
 invocation such as `pytest -q` may become receipt-eligible. A compound command
 such as `sed -i ... && pytest -q` must not be promoted to equally reliable
 verification through speculative shell-semantic parsing. If strict binding
-cannot be established, verification is UNKNOWN. F0.5 must determine whether
-actual hook boundaries can support this model.
+cannot be established, verification is UNKNOWN. F0.5 demonstrated this model
+for one exact configured command in its tested version/environment; other
+command forms and environments do not inherit that result.
 
 The standalone F0 `VerificationReceipt` cannot establish cross-record
 integrity. At a future evidence-set or journal integrity boundary,
 `pre_checkpoint_id` must resolve to a checkpoint in the same session, the
 receipt's tested manifest hash must equal that checkpoint's manifest hash, and
 ordering/execution correlation must be valid. The runtime evidence structure
-needed to enforce those relations is an F0.5/later validation concern.
+needed to enforce those relations remains a later production-integrity concern.
 
 ### 4.5 IncidentReport
 
@@ -567,7 +575,7 @@ Goals:
 - define the smallest tentative evidence schema;
 - establish a synthetic incident fixture;
 - define the `IncidentReport` view model;
-- label every contract provisional pending F0.5.
+- label every F0 contract provisional pending reality validation.
 
 F0 does not freeze schemas and does not establish hook, checkpoint, verifier,
 restore, fork, or product feasibility.
@@ -630,8 +638,7 @@ of privacy exclusions and size caps on completeness.
 
 #### F0.5 exit
 
-Only after F0.5 PASS, or after an explicit resolution and authorization based on
-the recorded CONDITIONAL PASS, may the project:
+Only after F0.5 PASS and separate implementation authorization may the project:
 
 1. revise provisional contracts according to observed reality;
 2. freeze v0.1 evidence contracts;
@@ -693,17 +700,19 @@ fork captured last-observed-passing repository state
 ## 10. Current authorization
 
 F0 provisional contracts and the synthetic fixture are complete. The
-Pre-F0.5 integrity correction is PASS. F0.5 is CONDITIONAL PASS: its narrow real
-Claude Code and Git happy path survived, while executable mode was neither
-represented by the F0 manifest nor restored by the disposable probe. The
-captured-scope assumption must be revised or explicitly narrowed before the
-next MVP implementation gate. This does not authorize production hooks,
-production checkpoints, verifier integration, Workspace Fork, a production
-analyzer, frontend work, or F1+.
+Pre-F0.5 integrity correction is PASS. F0.5 is PASS after its accepted
+conditional closure demonstrated one narrow integrated real path: an exact
+verifier-bound PASS captured state, a Claude mutation, a verifier-bound FAIL
+captured state, and restoration/manifest verification of that same passing
+state. Canonical state identity and disposable restoration also cover the
+executable boolean for captured present regular files, tracked and
+selected-untracked. This does not authorize production hooks, production
+checkpoints, verifier integration, Workspace Fork, a production analyzer,
+frontend work, or F1+.
 
 The completed reality gate is:
 
-> **F0.5 Reality Spike — CONDITIONAL PASS**
+> **F0.5 Reality Spike — PASS**
 
 F0.5 probe observations and verdict are recorded in
 [`docs/f0.5-reality-spike.md`](docs/f0.5-reality-spike.md). Nothing in the F0.5

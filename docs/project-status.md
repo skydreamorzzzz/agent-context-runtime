@@ -9,7 +9,7 @@
 - Research novelty: NOT ESTABLISHED
 - F0: PASS
 - Pre-F0.5 integrity correction: PASS
-- F0.5: CONDITIONAL PASS
+- F0.5: PASS
 - F1+: NOT STARTED
 
 F0 added five provisional Forensics record types in
@@ -29,22 +29,28 @@ recorded full local repository result is 141 tests PASS with Ruff PASS. This is
 internal F0 consistency evidence only, not Reality Spike or operational
 feasibility evidence.
 
-Every Forensics contract and operational policy remains provisional. F0.5 Gate
-A passed for the narrow tested Claude Code 2.1.144 and Git happy path, but the
-file-mode characterization showed that executable mode is not represented or
-restored. The recorded verdict is:
+Every Forensics contract and operational policy remains provisional. The
+initial F0.5 evidence independently demonstrated the Claude PASS-to-FAIL and Git
+restore components. The accepted conditional closure then restored the passing
+captured state from the same real Claude incident and manifest-verified it.
+Executable state now participates in canonical identity for captured present
+regular files and was restored in both directions for tracked and
+selected-untracked paths. The recorded verdict is:
 
-> **F0.5 Reality Spike: CONDITIONAL PASS**
+> **F0.5 Reality Spike: PASS**
 
 F0.5 used minimum disposable probes under
 [`docs/f0.5-reality-spike.md`](f0.5-reality-spike.md). It is not product
 implementation and does not establish product demand, general architectural
 feasibility, complete restoration fidelity, causal analysis, or research
-novelty. F1+ remains NOT STARTED. A separate instruction must resolve or narrow
-the executable-mode assumption before the next MVP implementation gate.
+novelty. The closure establishes captured repository scope only in the tested
+Claude Code 2.1.144 and Ubuntu/WSL2 environment; it was not a production
+Workspace Fork or complete workspace restoration. F1+ remains NOT STARTED and
+requires separate authorization.
 
-Recorded final local F0.5 result: 146 tests PASS; Ruff PASS. No repository
-workflow files were present, so this is not described as GitHub CI evidence.
+Recorded final local conditional-closure result: 151 tests PASS; Ruff PASS. No
+repository workflow files were present, so this is not described as GitHub CI
+evidence.
 
 ## Legacy Track — Context Optimization Research
 
