@@ -1,0 +1,96 @@
+{
+  "kind": "provenance",
+  "schema_version": "1.0",
+  "id": "prov-e3eb77c0edda4bc0b72b473b62e7bd52",
+  "producer_ref": {
+    "blob_hash": "2a1cfb5cc92389ac969b164f4d1f3caf2a55fe5fb97ad8241154d5842ba1a5db",
+    "source_id": "acr_forensics_producer_manifest",
+    "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+    "locator": "/producer-manifest",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  },
+  "provenance_ref": null,
+  "output_object": "vr-ee2a8e94f1c6734fd88326eda36aed21140af78a",
+  "field": "*",
+  "input_refs": [
+    {
+      "blob_hash": "ef7059757aca927521da6d3def5740b4d52306467fb9f638c3fbb90c7aca88e1",
+      "source_id": "acr_forensics_record",
+      "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+      "locator": "/sessions/session-9570f94c478a4b3d9b6fffe4221c5013/events/event-ca0f3657a72f487d8e475299d1c88a5c.json",
+      "labels": [
+        {
+          "scope": "runtime",
+          "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+          "available_seq": null,
+          "taints": []
+        }
+      ]
+    },
+    {
+      "blob_hash": "1fd900f0f85b005fa78795aef86127b17a9633ac62fbed075187e5436132c50b",
+      "source_id": "acr_forensics_record",
+      "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+      "locator": "/sessions/session-9570f94c478a4b3d9b6fffe4221c5013/checkpoints/cp-7a22c88db2214700b014329b39eb6794.json",
+      "labels": [
+        {
+          "scope": "runtime",
+          "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+          "available_seq": null,
+          "taints": []
+        }
+      ]
+    },
+    {
+      "blob_hash": "13ad8ec8f0fa1820117f7e34c33421e1d34b804c7686db843f3da783e0216338",
+      "source_id": "acr_forensics_record",
+      "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+      "locator": "/sessions/session-9570f94c478a4b3d9b6fffe4221c5013/events/event-83348891138c46ec8bab03d718bf2731.json",
+      "labels": [
+        {
+          "scope": "runtime",
+          "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+          "available_seq": null,
+          "taints": []
+        }
+      ]
+    },
+    {
+      "blob_hash": "40578e6d26d3b96aee3d2d59aa0709081f2208bdb180d7a9d4d14cf0b1ae9815",
+      "source_id": "acr_forensics_verifier_config",
+      "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+      "locator": "/verifier-config",
+      "labels": [
+        {
+          "scope": "runtime",
+          "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+          "available_seq": null,
+          "taints": []
+        }
+      ]
+    }
+  ],
+  "transform_name": "bind_exact_verifier_result",
+  "transform_version": "0.1",
+  "config_ref": {
+    "blob_hash": "40578e6d26d3b96aee3d2d59aa0709081f2208bdb180d7a9d4d14cf0b1ae9815",
+    "source_id": "acr_forensics_verifier_config",
+    "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+    "locator": "/verifier-config",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  }
+}

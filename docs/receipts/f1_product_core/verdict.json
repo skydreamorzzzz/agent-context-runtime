@@ -1,0 +1,51 @@
+{
+  "claim_scope": "one production Claude Code 2.1.144 session in one controlled Git repository",
+  "failure_checkpoint": {
+    "manifest": {
+      "path": "manifests/83246d1d1b4ad6d61313392ed77581a08e03f964155f69ad53fabefa7795d3d7.json",
+      "sha256": "83246d1d1b4ad6d61313392ed77581a08e03f964155f69ad53fabefa7795d3d7"
+    },
+    "record": {
+      "path": "sessions/session-9570f94c478a4b3d9b6fffe4221c5013/checkpoints/cp-7a22c88db2214700b014329b39eb6794.json",
+      "sha256": "1fd900f0f85b005fa78795aef86127b17a9633ac62fbed075187e5436132c50b"
+    }
+  },
+  "failure_receipt": {
+    "path": "sessions/session-9570f94c478a4b3d9b6fffe4221c5013/receipts/vr-ee2a8e94f1c6734fd88326eda36aed21140af78a.json",
+    "sha256": "835708cb61d941bc6db6af8a1bf4d4444d49a66f68d8ebcdc0668335b674837d"
+  },
+  "limitations": {
+    "failure_window_productized": false,
+    "incident_theater_implemented": false,
+    "product_validation_established": false,
+    "workspace_fork_implemented": false
+  },
+  "observations": {
+    "checkpoint_count": 2,
+    "event_count": 10,
+    "production_session_audit": "PASS",
+    "receipt_count": 2,
+    "results_in_observed_order": [
+      "PASS",
+      "FAIL"
+    ],
+    "verifier": "pytest -q"
+  },
+  "passing_checkpoint": {
+    "manifest": {
+      "path": "manifests/3f4399b5dad35985910997affacf7695b1572c383847d887240b7ad8cf45fc76.json",
+      "sha256": "3f4399b5dad35985910997affacf7695b1572c383847d887240b7ad8cf45fc76"
+    },
+    "record": {
+      "path": "sessions/session-9570f94c478a4b3d9b6fffe4221c5013/checkpoints/cp-adf60cdbb655422ab38194f7d0543648.json",
+      "sha256": "8e9348f50c7e026094d962de48448ab5b737a0ef77c4e406b551757b655648a7"
+    }
+  },
+  "passing_receipt": {
+    "path": "sessions/session-9570f94c478a4b3d9b6fffe4221c5013/receipts/vr-a825729fd8b20a901ecfdc810669dc2d5d338daf.json",
+    "sha256": "5fa11d17bd239bdf7a3acc3807a62eec8d11e655fb8e5d265ce3d73be8034f87"
+  },
+  "result": "PASS",
+  "schema": "acr.f1-product-core-smoke-verdict/0.1",
+  "session_id": "session-9570f94c478a4b3d9b6fffe4221c5013"
+}

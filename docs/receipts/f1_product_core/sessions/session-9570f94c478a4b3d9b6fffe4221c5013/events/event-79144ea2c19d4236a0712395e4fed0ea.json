@@ -1,0 +1,80 @@
+{
+  "kind": "agent_event",
+  "schema_version": "1.0",
+  "id": "event-79144ea2c19d4236a0712395e4fed0ea",
+  "producer_ref": {
+    "blob_hash": "2a1cfb5cc92389ac969b164f4d1f3caf2a55fe5fb97ad8241154d5842ba1a5db",
+    "source_id": "acr_forensics_producer_manifest",
+    "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+    "locator": "/producer-manifest",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  },
+  "provenance_ref": {
+    "blob_hash": "1ac09c6ef3092f9906970208666fc17770467a5f648644a70688764a3c3c053d",
+    "source_id": "acr_forensics_record",
+    "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+    "locator": "/sessions/session-9570f94c478a4b3d9b6fffe4221c5013/provenance/prov-7c22da54fbca4db5abfd93a321093707.json",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  },
+  "contract_status": "v0.1_frozen",
+  "session_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+  "ordering": {
+    "sequence": {
+      "value": 2,
+      "status": "observed",
+      "reason": null,
+      "refs": [
+        {
+          "blob_hash": "9e21e453dad43defdf328b9513a913b243f203ef47fff9b39bbf1ccff6c3ffee",
+          "source_id": "claude_hook_sanitized",
+          "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+          "locator": "/hook-observations/2",
+          "labels": [
+            {
+              "scope": "runtime",
+              "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+              "available_seq": null,
+              "taints": []
+            }
+          ]
+        }
+      ]
+    },
+    "basis": "locked_session_sequence_v1"
+  },
+  "timestamp": "2026-09-11T04:46:11.224953Z",
+  "event_kind": "claude.PreToolUse",
+  "operation": {
+    "occurrence_id": "call_00_cb2ZmDon2EYGtVP8Utqd3824",
+    "name": "Bash"
+  },
+  "source_evidence_ref": {
+    "blob_hash": "9e21e453dad43defdf328b9513a913b243f203ef47fff9b39bbf1ccff6c3ffee",
+    "source_id": "claude_hook_sanitized",
+    "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+    "locator": "/hook-observations/2",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  },
+  "raw_evidence_ref": null
+}

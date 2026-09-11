@@ -1,9 +1,10 @@
-"""F0 Agent Forensics evidence contracts.
+"""Agent Forensics evidence contracts.
 
-These F0 models remain provisional until a separately authorized freeze. F0.5
-demonstrated one narrow integrated path, including regular-file executable
-state, but did not establish general interface behavior, production checkpoint
-or restore fidelity, or a production incident analyzer.
+F1 freezes only the v0.1 production semantics needed for ``AgentEvent``,
+``WorkspaceCheckpoint``, ``VerificationReceipt``, captured paths, and the
+canonical captured-state manifest. Historical F0 records remain readable with
+their explicit provisional marker. ``IncidentReport`` and ``ForkReceipt`` stay
+provisional until their later product gates.
 """
 
 from __future__ import annotations
@@ -20,8 +21,15 @@ from pydantic import Field, field_validator, model_validator
 from acr.contracts import ContractModel, Envelope, EvidenceRef, Fact
 
 FORENSICS_CONTRACT_STATUS = "PROVISIONAL PENDING SEPARATE FREEZE AUTHORIZATION"
+F1_PRODUCT_CONTRACT_STATUS = "V0.1 FROZEN FOR PRODUCT CAPTURE"
 CAPTURED_STATE_MANIFEST_FORMAT = "acr.captured-state-manifest/0.2-provisional"
+CAPTURE_POLICY_VERSION = "acr.capture-policy/0.1"
 ProvisionalStatus = Literal["provisional_pending_separate_freeze"]
+ProductionStatus = Literal["v0.1_frozen"]
+RuntimeContractStatus = Literal[
+    "provisional_pending_separate_freeze",
+    "v0.1_frozen",
+]
 Sha256 = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 Identifier = Annotated[str, Field(min_length=1)]
 
@@ -30,6 +38,12 @@ class ProvisionalForensicsRecord(Envelope):
     """Shared marker for F0 records; not a sixth domain object."""
 
     contract_status: ProvisionalStatus = "provisional_pending_separate_freeze"
+
+
+class RuntimeForensicsRecord(Envelope):
+    """Primary records readable from F0 and emitted frozen by the F1 runtime."""
+
+    contract_status: RuntimeContractStatus = "v0.1_frozen"
 
 
 class OrderingEvidence(ContractModel):
@@ -46,8 +60,8 @@ class OperationIdentity(ContractModel):
     name: Identifier
 
 
-class AgentEvent(ProvisionalForensicsRecord):
-    """One provisional agent/tool occurrence backed by optional raw evidence."""
+class AgentEvent(RuntimeForensicsRecord):
+    """One stable agent/tool occurrence produced at an adapter boundary."""
 
     kind: Literal["agent_event"] = "agent_event"
     session_id: Identifier
@@ -55,7 +69,17 @@ class AgentEvent(ProvisionalForensicsRecord):
     timestamp: datetime
     event_kind: Identifier
     operation: OperationIdentity | None = None
+    source_evidence_ref: EvidenceRef | None = None
     raw_evidence_ref: EvidenceRef | None = None
+
+    @model_validator(mode="after")
+    def enforce_production_privacy_boundary(self) -> AgentEvent:
+        if self.contract_status == "v0.1_frozen":
+            if self.source_evidence_ref is None or self.provenance_ref is None:
+                raise ValueError("frozen agent events require sanitized source and provenance")
+            if self.raw_evidence_ref is not None:
+                raise ValueError("frozen agent events cannot persist raw Claude hook payloads")
+        return self
 
 
 class CapturedPathState(ContractModel):
@@ -93,7 +117,7 @@ def canonical_captured_state_manifest_bytes(
     git_base: str,
     captured_paths: Sequence[CapturedPathState],
 ) -> bytes:
-    """Serialize provisional captured-state identity, excluding occurrence data.
+    """Serialize the v0.1-compatible captured-state identity.
 
     The result identifies only the declared Git base plus captured repository
     overlay. Checkpoint IDs, session IDs, ordering, timestamps, triggers, and
@@ -187,7 +211,7 @@ class CaptureScopeEntry(ContractModel):
         return self
 
 
-class WorkspaceCheckpoint(ProvisionalForensicsRecord):
+class WorkspaceCheckpoint(RuntimeForensicsRecord):
     """Manifest of explicitly captured repository scope, never full machine state."""
 
     kind: Literal["workspace_checkpoint"] = "workspace_checkpoint"
@@ -201,12 +225,18 @@ class WorkspaceCheckpoint(ProvisionalForensicsRecord):
     capture_scope: list[CaptureScopeEntry] = Field(min_length=1)
     capture_completeness: Fact[bool]
     trigger: Fact[str]
+    capture_policy_version: Literal[CAPTURE_POLICY_VERSION] | None = None
     manifest_scope: Literal["explicitly_captured_repository_scope"] = (
         "explicitly_captured_repository_scope"
     )
 
     @model_validator(mode="after")
     def enforce_captured_scope_semantics(self) -> WorkspaceCheckpoint:
+        if self.contract_status == "v0.1_frozen":
+            if self.capture_policy_version != CAPTURE_POLICY_VERSION:
+                raise ValueError("frozen checkpoints require the v0.1 capture policy")
+            if self.provenance_ref is None:
+                raise ValueError("frozen checkpoints require capture provenance")
         if self.git_base.value is None:
             raise ValueError("canonical captured-state manifests require a Git base identity")
         expected_hash = captured_state_manifest_hash(self.git_base.value, self.captured_paths)
@@ -226,13 +256,14 @@ class WorkspaceCheckpoint(ProvisionalForensicsRecord):
         return self
 
 
-class VerificationReceipt(ProvisionalForensicsRecord):
+class VerificationReceipt(RuntimeForensicsRecord):
     """Observed verifier result bound to a captured pre-execution state."""
 
     kind: Literal["verification_receipt"] = "verification_receipt"
     session_id: Identifier
     verifier_id: Identifier
     verifier_spec_hash: Sha256
+    verifier_config_ref: EvidenceRef | None = None
     pre_checkpoint_id: Identifier
     tested_captured_workspace_manifest_hash: Sha256
     command: Fact[str]
@@ -240,6 +271,9 @@ class VerificationReceipt(ProvisionalForensicsRecord):
     exit_code: Fact[int]
     started_at: Fact[datetime]
     finished_at: Fact[datetime]
+    ordering: OrderingEvidence | None = None
+    operation: OperationIdentity | None = None
+    output_capture: Literal["not_persisted_by_policy"] | None = None
     stdout_ref: EvidenceRef | None = None
     stderr_ref: EvidenceRef | None = None
     post_checkpoint_id: str | None = None
@@ -248,6 +282,19 @@ class VerificationReceipt(ProvisionalForensicsRecord):
     def keep_post_state_separate(self) -> VerificationReceipt:
         if self.post_checkpoint_id == self.pre_checkpoint_id:
             raise ValueError("post checkpoint must be distinct from tested pre-checkpoint")
+        if self.contract_status == "v0.1_frozen":
+            if self.provenance_ref is None:
+                raise ValueError("frozen verification receipts require provenance")
+            if self.verifier_config_ref is None:
+                raise ValueError("frozen verification receipts require verifier configuration evidence")
+            if self.ordering is None or self.operation is None:
+                raise ValueError("frozen verification receipts require occurrence correlation")
+            if self.command.status != "observed" or self.passed.status != "observed":
+                raise ValueError("frozen verification command and result must be observed")
+            if self.output_capture != "not_persisted_by_policy":
+                raise ValueError("frozen verification receipts must state output capture policy")
+            if self.stdout_ref is not None or self.stderr_ref is not None:
+                raise ValueError("v0.1 verifier output bodies are not persisted")
         return self
 
 

@@ -1,7 +1,8 @@
 # Agent Forensics v0.1 validation scope
 
 > **Status:** F0 PASS; F0.5 PASS for one narrow integrated disposable-probe
-> path; F1+ NOT STARTED. Operational product capabilities are not implemented.
+> path; F1 Product Core Foundation PASS for production real capture plus verified
+> repository state. Later product capabilities are not implemented.
 > The active authority is
 > [`agent-forensics-mvp-plan.md`](../agent-forensics-mvp-plan.md).
 
@@ -17,16 +18,17 @@ LOCAL evidence store
 LOCAL frontend
 ```
 
-Planned scope after the narrow F0.5 PASS: Claude Code only; Linux/WSL first;
+Active scope after F1 PASS: Claude Code only; Linux/WSL first;
 normal local Git repositories; tracked regular files and deletions; dirty tree
 state; executable boolean for captured present regular files; selected
 non-ignored untracked files; explicit shell verifiers; local
-content-addressed evidence; historical forensic replay; captured-scope,
-Git-worktree-based Workspace Fork; and a local Incident Theater.
+content-addressed evidence. Historical forensic replay, captured-scope
+Git-worktree-based Workspace Fork, and a local Incident Theater remain planned.
 
-All production checkpoint, verifier, restore, fork, hook, analyzer, and frontend
-details remain provisional. F0.5 demonstrated one integrated disposable-probe
-path, not operational product capabilities.
+F1 freezes the production hook adapter, exact-verifier pre-checkpoint policy,
+captured path/manifest semantics, and minimal receipt integrity boundary used by
+this slice. Restore, fork, analyzer, Failure Window, and frontend details remain
+provisional or not started.
 
 ## State claim boundary
 

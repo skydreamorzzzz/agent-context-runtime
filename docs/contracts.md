@@ -1,22 +1,20 @@
 # Contract conventions
 
-## Active F0 Agent Forensics contracts
+## Active Agent Forensics contracts
 
-`src/acr/forensics_contracts.py` defines exactly five provisional top-level
-record types:
+`src/acr/forensics_contracts.py` defines five top-level record types:
 
 - primary evidence: `AgentEvent`, `WorkspaceCheckpoint`, and
   `VerificationReceipt`;
 - derived view: `IncidentReport`;
 - action receipt: `ForkReceipt`.
 
-Every record serializes
-`contract_status=provisional_pending_separate_freeze`; the module also declares
-**PROVISIONAL PENDING SEPARATE FREEZE AUTHORIZATION**. F0 proves only
-construction, strict validation, serialization round trips, and the ability to
-represent the synthetic fixture. F0.5 is PASS after its conditional closure,
-but freezing and production operationalization still require a separate
-implementation gate.
+Historical F0 records serialize
+`contract_status=provisional_pending_separate_freeze`. F1 production
+`AgentEvent`, `WorkspaceCheckpoint`, and `VerificationReceipt` records serialize
+`contract_status=v0.1_frozen`; their runtime-required nested capture and
+canonicalization semantics are frozen with them. `IncidentReport` and
+`ForkReceipt` remain provisional.
 
 The contracts reuse legacy `ContractModel`, `Envelope`, `EvidenceRef`, and
 `Fact/status/reason` semantics without importing `Candidate`, `DecisionView`,
@@ -27,7 +25,7 @@ repository scope. `manifest_scope` cannot claim a full repository, workspace,
 environment, process, machine, or model state. Capture gaps make completeness
 false or unknown; privacy exclusions are not bypassed.
 
-The provisional canonical manifest is deterministic JSON over only its format,
+The v0.1-compatible canonical manifest is deterministic JSON over only its format,
 Git base identity, and a path-sorted captured overlay. Each overlay entry names
 the repository-relative path, tracked or selected-untracked classification,
 present or deleted state, content hash when present, and executable boolean for
@@ -40,11 +38,11 @@ overlay change changes the state identity. `WorkspaceCheckpoint` recomputes the
 canonical hash from `git_base` and `captured_paths`; both
 `captured_workspace_manifest_hash` and `manifest_ref.blob_hash` must equal that
 expected value. Agreement between the two stored fields alone is insufficient.
-This format is still provisional. The closure probe distinguished identical
-bytes with different executable state and restored both executable and
-non-executable states for tracked and selected-untracked files. One integrated
-real incident restored its own passing captured state. There is no broader or
-complete-workspace restore-fidelity claim.
+The historical format label remains `acr.captured-state-manifest/0.2-provisional`
+to preserve byte-for-byte F0.5 compatibility; F1 freezes those exact bytes for
+the production slice. A golden regression uses committed conditional-closure
+evidence to prevent drift. There is no broader or complete-workspace
+restore-fidelity claim.
 
 `VerificationReceipt` names its `pre_checkpoint_id` and the tested captured
 manifest hash. An optional post-checkpoint must be a different checkpoint and is
@@ -54,13 +52,15 @@ causal fields through strict extra-field validation.
 `ForkReceipt` is schema-only in F0 and limits its claim scope to captured
 repository state; the fixture records it as `not_executed`.
 
-Cross-record receipt integrity is a future evidence-set/journal requirement:
-the pre-checkpoint must resolve in the same session, its manifest hash must equal
-the receipt's tested hash, and ordering/execution correlation must be valid. A
-standalone F0 `VerificationReceipt` does not prove those relationships.
+The F1 production session audit resolves each receipt's pre-checkpoint in the
+same session, requires identical tested/checkpoint manifest hashes, and verifies
+the exact verifier's hashed Claude session plus tool-use occurrence correlation.
+If correlation is unsupported or missing, no trusted receipt is emitted. A
+standalone historical F0 `VerificationReceipt` still does not prove those
+relationships.
 
-No F0 contract establishes Claude Hook fields, event ordering, checkpoint
-capture, verifier execution, restoration, fork fidelity, or analyzer behavior.
+F1 establishes only the production runtime slice above. It does not establish
+restoration, fork fidelity, Failure Window derivation, or analyzer behavior.
 
 ## Legacy Context Optimization conventions
 

@@ -1,0 +1,175 @@
+{
+  "kind": "verification_receipt",
+  "schema_version": "1.0",
+  "id": "vr-ee2a8e94f1c6734fd88326eda36aed21140af78a",
+  "producer_ref": {
+    "blob_hash": "2a1cfb5cc92389ac969b164f4d1f3caf2a55fe5fb97ad8241154d5842ba1a5db",
+    "source_id": "acr_forensics_producer_manifest",
+    "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+    "locator": "/producer-manifest",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  },
+  "provenance_ref": {
+    "blob_hash": "233b569376a43e62d9f79557c5c8e6ca9cf5c54a3a28c683325e5c0eee82d72e",
+    "source_id": "acr_forensics_record",
+    "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+    "locator": "/sessions/session-9570f94c478a4b3d9b6fffe4221c5013/provenance/prov-e3eb77c0edda4bc0b72b473b62e7bd52.json",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  },
+  "contract_status": "v0.1_frozen",
+  "session_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+  "verifier_id": "exact-command-40578e6d26d3b96a",
+  "verifier_spec_hash": "40578e6d26d3b96aee3d2d59aa0709081f2208bdb180d7a9d4d14cf0b1ae9815",
+  "verifier_config_ref": {
+    "blob_hash": "40578e6d26d3b96aee3d2d59aa0709081f2208bdb180d7a9d4d14cf0b1ae9815",
+    "source_id": "acr_forensics_verifier_config",
+    "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+    "locator": "/verifier-config",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  },
+  "pre_checkpoint_id": "cp-7a22c88db2214700b014329b39eb6794",
+  "tested_captured_workspace_manifest_hash": "83246d1d1b4ad6d61313392ed77581a08e03f964155f69ad53fabefa7795d3d7",
+  "command": {
+    "value": "pytest -q",
+    "status": "observed",
+    "reason": null,
+    "refs": [
+      {
+        "blob_hash": "40578e6d26d3b96aee3d2d59aa0709081f2208bdb180d7a9d4d14cf0b1ae9815",
+        "source_id": "acr_forensics_verifier_config",
+        "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+        "locator": "/verifier-config",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      }
+    ]
+  },
+  "passed": {
+    "value": false,
+    "status": "observed",
+    "reason": null,
+    "refs": [
+      {
+        "blob_hash": "13ad8ec8f0fa1820117f7e34c33421e1d34b804c7686db843f3da783e0216338",
+        "source_id": "acr_forensics_record",
+        "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+        "locator": "/sessions/session-9570f94c478a4b3d9b6fffe4221c5013/events/event-83348891138c46ec8bab03d718bf2731.json",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      }
+    ]
+  },
+  "exit_code": {
+    "value": null,
+    "status": "unknown",
+    "reason": "Claude_failure_hook_has_no_structured_exit_code",
+    "refs": []
+  },
+  "started_at": {
+    "value": "2026-09-11T04:46:15.538543Z",
+    "status": "observed",
+    "reason": null,
+    "refs": [
+      {
+        "blob_hash": "ef7059757aca927521da6d3def5740b4d52306467fb9f638c3fbb90c7aca88e1",
+        "source_id": "acr_forensics_record",
+        "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+        "locator": "/sessions/session-9570f94c478a4b3d9b6fffe4221c5013/events/event-ca0f3657a72f487d8e475299d1c88a5c.json",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      }
+    ]
+  },
+  "finished_at": {
+    "value": "2026-09-11T04:46:15.905369Z",
+    "status": "observed",
+    "reason": null,
+    "refs": [
+      {
+        "blob_hash": "13ad8ec8f0fa1820117f7e34c33421e1d34b804c7686db843f3da783e0216338",
+        "source_id": "acr_forensics_record",
+        "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+        "locator": "/sessions/session-9570f94c478a4b3d9b6fffe4221c5013/events/event-83348891138c46ec8bab03d718bf2731.json",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      }
+    ]
+  },
+  "ordering": {
+    "sequence": {
+      "value": 13,
+      "status": "observed",
+      "reason": null,
+      "refs": [
+        {
+          "blob_hash": "13ad8ec8f0fa1820117f7e34c33421e1d34b804c7686db843f3da783e0216338",
+          "source_id": "acr_forensics_record",
+          "trajectory_key": "session-9570f94c478a4b3d9b6fffe4221c5013",
+          "locator": "/sessions/session-9570f94c478a4b3d9b6fffe4221c5013/events/event-83348891138c46ec8bab03d718bf2731.json",
+          "labels": [
+            {
+              "scope": "runtime",
+              "run_id": "session-9570f94c478a4b3d9b6fffe4221c5013",
+              "available_seq": null,
+              "taints": []
+            }
+          ]
+        }
+      ]
+    },
+    "basis": "locked_session_sequence_v1"
+  },
+  "operation": {
+    "occurrence_id": "call_00_ET_b6HErySPqXMQZtjVK9V58932",
+    "name": "Bash"
+  },
+  "output_capture": "not_persisted_by_policy",
+  "stdout_ref": null,
+  "stderr_ref": null,
+  "post_checkpoint_id": null
+}

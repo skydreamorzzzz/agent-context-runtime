@@ -1,4 +1,4 @@
-# Current milestone: F0.5 complete / next-gate authorization pending
+# Current milestone: F1 Product Core Foundation
 
 ## Current state
 
@@ -7,7 +7,10 @@ Documentation control-plane baseline: PASS
 F0 provisional contracts / synthetic fixture: PASS
 Pre-F0.5 integrity correction: PASS
 F0.5 Reality Spike: PASS
-F1+: NOT STARTED
+F1 Product Core Foundation: PASS
+Failure Window productization: NOT STARTED
+Workspace Fork: NOT STARTED
+Incident Theater: NOT STARTED
 ```
 
 F0 makes the Agent Forensics hypothesis concrete enough to test. It does not
@@ -53,9 +56,10 @@ Git durability, performance, or product feasibility evidence.
 
 ## Gate boundary
 
-Every Forensics field and nested helper remains provisional. The Reality Spike
-established only a narrow tested path, not a frozen general contract or product
-implementation.
+The production runtime now freezes only the v0.1 semantics used by `AgentEvent`,
+`WorkspaceCheckpoint`, `VerificationReceipt`, `CapturedPathState`, capture scope,
+and canonical captured-state identity. Historical F0 records remain readable as
+provisional records. `IncidentReport` and `ForkReceipt` remain provisional.
 
 The accepted conditional closure used one Claude Code 2.1.144 session and one
 disposable repository to demonstrate exact-`pytest -q` PASS state capture,
@@ -72,12 +76,32 @@ production Workspace Fork, complete workspace restoration, or causal analysis.
 Recorded final local conditional-closure result: 151 tests PASS; Ruff PASS.
 This is local test evidence, not a GitHub CI result.
 
+## F1 Product Core Foundation evidence
+
+- `acr claude` launches Claude Code with a temporary command-line `--settings`
+  file. It does not write user, project, or local Claude settings.
+- The Claude adapter persists stable events and excludes raw prompts, tool
+  response/error bodies, environment values, and transcript paths.
+- Exact configured verifier `PreToolUse` synchronously materializes a production
+  checkpoint from Git base, tracked regular files, and selected non-ignored
+  untracked regular files, including present/deleted content and executable
+  state. Privacy exclusions and unsupported paths become explicit capture gaps.
+- Exact verifier results require the same hashed Claude session and tool-use
+  occurrence, and resolve a same-session pre-checkpoint with an identical tested
+  manifest hash. Missing correlation emits no trusted receipt.
+- One real Claude Code 2.1.144 production session recorded PASS, a Claude Edit,
+  and FAIL as two checkpoints and two receipts. The evidence-set audit and both
+  independent manifest SHA256 recomputations passed. Evidence is committed at
+  `docs/receipts/f1_product_core`.
+- Full local result: 162 tests PASS; Ruff PASS. Repository GitHub checks are
+  reported separately because no repository workflow is assumed.
+
 The Legacy Context Optimization M4 remains frozen. No duplicate-read candidate,
 intervention, request deletion, or provider-rewriting work is authorized.
 
 ## Active engineering boundary
 
-> **F0.5 is complete; await separate authorization for the next MVP implementation gate**
+> **F1 Product Core Foundation is complete; the next gate is Failure Boundary**
 
-Do not continue probe expansion or begin F1 in the absence of a separate
-instruction.
+Failure Window productization, Workspace Fork, Incident Theater, and frontend
+work remain NOT STARTED and require separate authorization.

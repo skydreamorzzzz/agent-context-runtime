@@ -1,4 +1,4 @@
-"""Persisted-artifact M1 commands."""
+"""ACR command-line entry points for the active and preserved research tracks."""
 from __future__ import annotations
 
 import argparse
@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -18,6 +19,13 @@ from acr.contracts import Run
 from acr.coverage import audit_coverage_report, render_coverage_markdown, scan_archive
 from acr.evaluation import LocalAddEvaluator
 from acr.experiment import PairPreflightBlocked, prepare_noop_pair, run_noop_pair
+from acr.forensics.session import (
+    MAX_HOOK_INPUT_BYTES,
+    SessionIntegrityError,
+    audit_session,
+    handle_claude_hook,
+    run_claude_session,
+)
 from acr.runtime.runner import CapturedRuntime, RuntimeTask, run_deepseek_add_smoke
 from acr.store import (
     ingest_bytes,
@@ -43,6 +51,17 @@ def _within_attempt_budget(count: int, config: dict) -> bool:
 
 def main() -> None:
     parser = argparse.ArgumentParser(); commands = parser.add_subparsers(dest="command", required=True)
+    claude = commands.add_parser("claude", help="run Claude Code with Agent Forensics capture")
+    claude.add_argument("--config", default=".acr.json")
+    claude.add_argument("--data-root")
+    claude.add_argument("claude_args", nargs=argparse.REMAINDER)
+    hook = commands.add_parser("_forensics-hook", help="internal Claude hook endpoint")
+    hook.add_argument("--data-root", required=True)
+    hook.add_argument("--session-id", required=True)
+    hook.add_argument("--repo-root", required=True)
+    session_audit = commands.add_parser("audit-session")
+    session_audit.add_argument("--data-root", required=True)
+    session_audit.add_argument("--session-id", required=True)
     ingest = commands.add_parser("ingest")
     ingest.add_argument("--raw", required=True); ingest.add_argument("--manifest", required=True); ingest.add_argument("--data-root", required=True); ingest.add_argument("--import-id", required=True)
     for name in ("normalize", "audit"):
@@ -68,7 +87,39 @@ def main() -> None:
     coverage.add_argument("--source-manifest", required=True)
     coverage.add_argument("--output", required=True)
     coverage.add_argument("--report", required=True)
-    args = parser.parse_args(); root = Path(getattr(args, "data_root", "."))
+    args = parser.parse_args(); root = Path(getattr(args, "data_root", ".") or ".")
+    if args.command == "claude":
+        forwarded = args.claude_args[1:] if args.claude_args[:1] == ["--"] else args.claude_args
+        try:
+            return_code, session_id, latest = run_claude_session(
+                repo_root=Path.cwd(),
+                config_path=Path(args.config),
+                data_root_override=Path(args.data_root) if args.data_root else None,
+                claude_args=forwarded,
+            )
+        except (ValueError, SessionIntegrityError) as error:
+            raise SystemExit(f"BLOCKED: {error}") from None
+        summary = {"latest_verifier": latest, "session_id": session_id}
+        print(json.dumps(summary, sort_keys=True))
+        raise SystemExit(return_code)
+    if args.command == "_forensics-hook":
+        raw_input = sys.stdin.buffer.read(MAX_HOOK_INPUT_BYTES + 1)
+        status = handle_claude_hook(
+            raw_input=raw_input,
+            data_root=Path(args.data_root),
+            session_id=args.session_id,
+            repo_root=Path(args.repo_root),
+        )
+        if status:
+            print(
+                "Agent Forensics blocked exact verifier: pre-state capture failed closed",
+                file=sys.stderr,
+            )
+        raise SystemExit(status)
+    if args.command == "audit-session":
+        issues = audit_session(Path(args.data_root), args.session_id)
+        print(json.dumps({"issues": issues, "status": "BLOCK" if issues else "PASS"}))
+        raise SystemExit(bool(issues))
     if args.command == "ingest":
         manifest = json.loads(Path(args.manifest).read_text()); ref = ingest_bytes(Path(args.raw).read_bytes(), root, "mswe_agent_demo", manifest["instance_id"]); persist_import(root, args.import_id, manifest, ref); print(args.import_id); return
     if args.command == "audit-run":
@@ -218,8 +269,6 @@ def _run_deepseek_smoke(data_root: Path, workspace_root: Path, config_path: Path
         and result.status == "PASS"
     )
     raise SystemExit(0 if accepted else 1)
-
-
 def _run_noop_deepseek_pair(
     data_root: Path,
     workspace_root: Path,
@@ -292,3 +341,7 @@ def _run_noop_deepseek_pair(
         and outcome.run_a.status == "completed" and outcome.run_b.status == "completed"
     )
     raise SystemExit(0 if accepted else 1)
+
+
+if __name__ == "__main__":
+    main()

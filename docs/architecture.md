@@ -2,20 +2,20 @@
 
 ## Status and authority
 
-This page summarizes the **provisional Agent Forensics architecture** selected
-for validation. F0 schema models and a synthetic fixture now exist. F0.5 PASS
-demonstrated one narrow integrated disposable-probe path. Detailed production
-interfaces, checkpoint policy, verifier binding, restoration, and concurrency
-behavior remain provisional pending a separately authorized freeze. The active authority is
+This page summarizes the Agent Forensics architecture selected for validation.
+F1 implements and freezes the narrow production path from sanitized Claude hooks
+through exact-verifier pre-state checkpoints and verification receipts.
+Restoration, Failure Window analysis, frontend behavior, and broader concurrency
+remain provisional or not started. The active authority is
 [`agent-forensics-mvp-plan.md`](../agent-forensics-mvp-plan.md).
 
 No operational component in the active flow below is implemented merely because
 its F0 record shape appears in this diagram.
 
-## Provisional active flow
+## Active flow
 
 ```text
-Claude Hooks (narrow F0.5 observation; no production adapter)
+Claude Hooks (temporary production settings)
      │
      ▼
 Claude-specific adapter
@@ -23,9 +23,7 @@ Claude-specific adapter
      ▼
 AgentEvent Journal
      │
-     ├── mutation-capable boundary ─────────────► WorkspaceCheckpoint
-     │
-     └── provisional verifier PreToolUse ───────► Pre-Verifier WorkspaceCheckpoint
+     └── exact verifier PreToolUse ─────────────► Pre-Verifier WorkspaceCheckpoint
      │                                                  │
      └── matched verifier execution/result ────────────┤
                                                         ▼
@@ -55,25 +53,22 @@ Selected WorkspaceCheckpoint
  ForkReceipt
 ```
 
-Primary append-only evidence is tentatively `AgentEvent`,
-`WorkspaceCheckpoint`, and `VerificationReceipt`. `IncidentReport` is a
+Primary append-only evidence is `AgentEvent`, `WorkspaceCheckpoint`, and
+`VerificationReceipt` for the frozen F1 runtime slice. `IncidentReport` is a
 recomputable, analyzer-version-dependent derived view. `ForkReceipt` is an
-action receipt. Their F0 shapes round-trip a synthetic incident; F0.5 challenged
-the narrow happy path, but every production object and interface remains
-provisional pending a separate freeze.
+action receipt. Their F0 shapes round-trip a synthetic incident; F1 does not
+freeze or implement the derived report or action path.
 
 Event occurrence is not checkpoint materialization. A journal event may create
 a checkpoint opportunity without causing repository-state evidence to be
-materialized. F0.5 observed exact-verifier `PreToolUse` capture and selected
-tool boundaries on Claude Code 2.1.144; a concrete production checkpoint policy
-remains provisional.
+materialized. F1 materializes checkpoints only for root-scoped, foreground,
+byte-exact configured verifier `PreToolUse` events.
 
 A `VerificationReceipt` requires both captured pre-verifier state and matched
-verifier execution/result evidence. The standalone F0 receipt cannot prove that
-its checkpoint reference resolves in the same session, that the tested hash
-matches that checkpoint, or that ordering/execution correlation is valid; those
-cross-record checks belong at a future evidence-set or journal integrity
-boundary.
+verifier execution/result evidence. The F1 session integrity boundary resolves
+the pre-checkpoint in the same session, compares manifest hashes, and requires
+the same hashed Claude session and tool-use occurrence. It emits no trusted
+receipt when that correlation cannot be proved.
 
 `WorkspaceCheckpoint` is the restoration authority for a future Workspace
 Fork. An `IncidentReport` may select or reference a checkpoint, but as a derived
@@ -91,7 +86,7 @@ unsupported areas, truncation, and completeness gaps. It does not capture or
 represent complete environment, process, network, database, machine, or model
 state.
 
-The provisional F0 manifest hashes deterministic canonical bytes containing Git
+The F1-compatible manifest hashes deterministic canonical bytes containing Git
 base identity plus a path-ordered captured overlay: repository-relative path,
 tracked or selected-untracked classification, present or deleted state, and
 content hash plus executable boolean when a regular file is present. Deleted
@@ -108,9 +103,8 @@ captured pre-state A → verifier execution/result → optional post-state B
 ```
 
 The verifier may mutate the tree, so B cannot be substituted for the tested
-state A. F0.5 demonstrated this binding for one exact configured verifier in the
-tested version/environment; production integrity enforcement remains
-provisional.
+state A. F1 production code enforces this binding for the explicitly configured
+exact verifier in the supported one-session boundary.
 
 Privacy exclusions override reconstruction completeness. An exclusion records a
 capture gap and degrades completeness; no component may bypass it.
@@ -122,11 +116,9 @@ worktree. Exact attribution under multiple sessions, human edits, or background
 writers is unsupported. Background execution may be recorded as observed while
 mutation attribution is explicitly degraded.
 
-Current official Claude Code documentation lists relevant hook events and
-fields, but their installed-version behavior, correlation, ordering, batching,
-process model, concurrency, and fitness for checkpoint/verifier boundaries must
-be validated in F0.5. Documentation availability is not an implementation or
-fidelity guarantee.
+The committed F1 smoke validates the required PreToolUse/PostToolUse and
+PostToolUseFailure behavior on Claude Code 2.1.144. Other versions, background
+execution attribution, and concurrent writers do not inherit that result.
 
 ## Reuse boundaries
 

@@ -8,12 +8,13 @@ infrastructure.
 
 - **Active MVP hypothesis:** Agent Forensics
 - **Status:** SELECTED FOR VALIDATION
-- **Implementation:** F0 CONTRACTS + DISPOSABLE F0.5 PROBES; PRODUCT NOT STARTED
+- **Implementation:** F1 PRODUCT CORE — REAL CAPTURE + VERIFIED REPOSITORY STATE
 - **Product validation:** NOT ESTABLISHED
 - **Research novelty:** NOT ESTABLISHED
 - **F0:** PASS
 - **F0.5:** PASS
-- **F1+:** NOT STARTED
+- **F1 Product Core Foundation:** PASS
+- **Failure Window / Workspace Fork / Incident Theater:** NOT STARTED
 
 The provisional technical definition is **verification-bound project-state
 incident reconstruction for coding agents**. The external demo narrative may be
@@ -30,7 +31,7 @@ demonstrated the Claude incident and Git restore components independently. The
 conditional closure then demonstrated one narrow integrated real path under
 Claude Code 2.1.144 and Ubuntu/WSL2: exact `pytest -q` PASS pre-state, Claude
 mutation, FAIL pre-state, restoration of that same passing captured state, and
-manifest verification. This is probe evidence, not production implementation.
+manifest verification.
 
 F0.5 is **PASS**. The closure also made executable state part of canonical
 identity for every captured present regular file and verified restoration for
@@ -38,14 +39,41 @@ tracked and selected-untracked files. Claims remain limited to:
 
 > **Captured repository scope in the tested version and environment.**
 
+F1 adds a production entry point, sanitized Claude event capture, immutable
+captured repository-state evidence, and exact-verifier receipts bound to their
+same-session pre-execution checkpoints. A real production smoke recorded PASS,
+a Claude Edit, and FAIL as two verified states. Product validation remains NOT
+ESTABLISHED.
+
+Create `.acr.json` in the repository:
+
+```json
+{
+  "forensics": {
+    "verifier": "pytest -q",
+    "selected_untracked_paths": []
+  }
+}
+```
+
+Then start the instrumented session normally:
+
+```bash
+acr claude
+```
+
+`acr claude` uses a temporary additive `--settings` file; it does not overwrite
+`~/.claude/settings.json` or project/local Claude settings. Evidence defaults to
+`.acr/evidence` and verifier output bodies, raw prompts, tool response bodies,
+environment values, and transcript paths are not persisted.
+
 The Reality Spike leaves prompt-level correlation on the installed CLI,
 background mutation attribution, shared-journal concurrency, Git GC durability,
 and broader restore fidelity unsupported, degraded, or unknown. Real evidence
 and exact boundaries are recorded in
-[`docs/f0.5-reality-spike.md`](docs/f0.5-reality-spike.md). Production hook
-capture, checkpoints, verifier integration, analysis, Incident Theater, and
-Workspace Fork remain unimplemented. This was not a production Workspace Fork
-or complete workspace restoration. F1+ is not authorized.
+[`docs/f0.5-reality-spike.md`](docs/f0.5-reality-spike.md). Failure Boundary,
+Incident Theater, and Workspace Fork remain unimplemented. Neither F0.5 nor F1
+was a production Workspace Fork or complete workspace restoration.
 
 See the active [`Agent Forensics MVP plan`](agent-forensics-mvp-plan.md),
 [`current milestone`](docs/current-milestone.md),

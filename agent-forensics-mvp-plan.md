@@ -4,7 +4,7 @@
 >
 > This document is the active implementation authority for current development.
 > It records a selected hypothesis, provisional architecture, bounded scope, and
-> validation gates. Except for the explicitly recorded F0 schema/fixture status,
+> validation gates. Except for the explicitly recorded completed gate status,
 > it does not describe implemented operational capabilities, validated
 > architecture, established product demand, research novelty, or causal truth.
 >
@@ -17,12 +17,13 @@
 
 - **Active MVP hypothesis:** Agent Forensics
 - **Status:** SELECTED FOR MVP VALIDATION
-- **Implementation:** F0 CONTRACTS + DISPOSABLE F0.5 PROBES; PRODUCT NOT STARTED
+- **Implementation:** F1 PRODUCT CORE FOUNDATION — REAL CAPTURE + VERIFIED STATE
 - **Product validation:** NOT ESTABLISHED
 - **Research novelty:** NOT ESTABLISHED
 - **F0:** PASS
 - **Pre-F0.5 integrity correction:** PASS
 - **F0.5:** PASS
+- **F1 Product Core Foundation:** PASS
 
 Provisional technical definition:
 
@@ -649,35 +650,52 @@ Only after F0.5 PASS and separate implementation authorization may the project:
 Contradictions are evidence. Record them and revise the design; do not fabricate
 agreement or silently force the provisional architecture.
 
-### F1 — Incident Theater on fixture
+### Roadmap correction after F0.5
 
-After F0.5 PASS, implement the incident view against the revised fixture and
-stable view model.
+The original roadmap ordered Incident Theater on the fixture before real event
+capture, repository checkpoints, verifier binding, historical replay, and
+Workspace Fork. That ordering remains part of the planning history, but F0.5
+showed that the product core should be established before presentation work.
+The active implementation order is now:
 
-### F2 — Real event capture
+```text
+production real capture
+→ verified repository state
+→ failure-window derivation
+→ real Workspace Fork
+→ minimal product ViewModel / CLI
+→ Incident Theater
+→ polish
+```
 
-Capture validated Claude hook inputs into the `AgentEvent` journal.
+### F1 — Product Core Foundation
 
-### F3 — Real repository checkpoints
+Capture a real Claude Code session into sanitized `AgentEvent` evidence and bind
+an exact configured verifier result to a production pre-execution
+`WorkspaceCheckpoint`. Freeze only the v0.1 contract and capture semantics used
+by this runtime slice. Do not productize Failure Window, Workspace Fork, or UI.
 
-Materialize mutation-bound captured repository-state evidence under the frozen
-scope and policy.
+### F2 — Failure Boundary
 
-### F4 — Verification / Failure Window
+Derive Last Observed Passing State, First Observed Failing State, and Failure
+Window from production evidence without causal claims.
 
-Produce pre-state-bound `VerificationReceipt` evidence and deterministic,
-versioned `IncidentReport` derivation.
-
-### F5 — Historical replay UI
-
-Drive timeline, diff, capture coverage, and replay from real evidence.
-
-### F6 — Workspace Fork
+### F3 — Workspace Fork
 
 Restore and manifest-verify captured historical repository scope, then emit a
 `ForkReceipt`.
 
-### F7 — Controlled 60-second demo
+### F4 — Minimal product ViewModel / CLI
+
+Expose stable evidence-derived session and failure-boundary views without
+making the frontend an evidence authority.
+
+### F5 — Incident Theater
+
+Build the minimal incident experience on real production evidence rather than
+the synthetic fixture.
+
+### F6 — Controlled 60-second demo and polish
 
 Demonstrate:
 
@@ -706,14 +724,26 @@ verifier-bound PASS captured state, a Claude mutation, a verifier-bound FAIL
 captured state, and restoration/manifest verification of that same passing
 state. Canonical state identity and disposable restoration also cover the
 executable boolean for captured present regular files, tracked and
-selected-untracked. This does not authorize production hooks, production
-checkpoints, verifier integration, Workspace Fork, a production analyzer,
-frontend work, or F1+.
+selected-untracked. This evidence did not itself authorize production hooks,
+production checkpoints, verifier integration, Workspace Fork, a production
+analyzer, or frontend work. Separate authorization on 2026-09-11 started F1
+Product Core Foundation, limited to real session capture plus verified
+repository state. F1 is PASS after the committed production smoke recorded
+below.
 
 The completed reality gate is:
 
 > **F0.5 Reality Spike — PASS**
 
 F0.5 probe observations and verdict are recorded in
-[`docs/f0.5-reality-spike.md`](docs/f0.5-reality-spike.md). Nothing in the F0.5
-authorization permits F1+, M4, or duplicate-read intervention work.
+[`docs/f0.5-reality-spike.md`](docs/f0.5-reality-spike.md). F1 does not authorize
+Failure Boundary, Workspace Fork, Incident Theater, M4, or duplicate-read
+intervention work.
+
+The F1 production smoke evidence is recorded under
+[`docs/receipts/f1_product_core`](docs/receipts/f1_product_core). One real Claude
+Code 2.1.144 session produced sanitized events, an exact-`pytest -q` PASS receipt,
+a Claude Edit, and an exact-`pytest -q` FAIL receipt. Both receipts resolve to
+same-session production checkpoints whose canonical manifest bytes recompute to
+their recorded hashes. This establishes the F1 implementation capability only;
+product validation remains NOT ESTABLISHED.

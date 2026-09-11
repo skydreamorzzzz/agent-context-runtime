@@ -4,13 +4,16 @@
 
 - Active MVP hypothesis: Agent Forensics
 - Status: SELECTED FOR VALIDATION
-- Implementation: F0 CONTRACTS + DISPOSABLE F0.5 PROBES; PRODUCT NOT STARTED
+- Implementation: F1 PRODUCT CORE — REAL CAPTURE + VERIFIED REPOSITORY STATE
 - Product validation: NOT ESTABLISHED
 - Research novelty: NOT ESTABLISHED
 - F0: PASS
 - Pre-F0.5 integrity correction: PASS
 - F0.5: PASS
-- F1+: NOT STARTED
+- F1 Product Core Foundation: PASS
+- Failure Window productization: NOT STARTED
+- Workspace Fork: NOT STARTED
+- Incident Theater: NOT STARTED
 
 F0 added five provisional Forensics record types in
 `src/acr/forensics_contracts.py`, a content-addressed synthetic incident fixture,
@@ -29,12 +32,11 @@ recorded full local repository result is 141 tests PASS with Ruff PASS. This is
 internal F0 consistency evidence only, not Reality Spike or operational
 feasibility evidence.
 
-Every Forensics contract and operational policy remains provisional. The
-initial F0.5 evidence independently demonstrated the Claude PASS-to-FAIL and Git
-restore components. The accepted conditional closure then restored the passing
-captured state from the same real Claude incident and manifest-verified it.
-Executable state now participates in canonical identity for captured present
-regular files and was restored in both directions for tracked and
+The initial F0.5 evidence independently demonstrated the Claude PASS-to-FAIL and
+Git restore components. The accepted conditional closure then restored the
+passing captured state from the same real Claude incident and manifest-verified
+it. Executable state now participates in canonical identity for captured
+present regular files and was restored in both directions for tracked and
 selected-untracked paths. The recorded verdict is:
 
 > **F0.5 Reality Spike: PASS**
@@ -45,12 +47,37 @@ implementation and does not establish product demand, general architectural
 feasibility, complete restoration fidelity, causal analysis, or research
 novelty. The closure establishes captured repository scope only in the tested
 Claude Code 2.1.144 and Ubuntu/WSL2 environment; it was not a production
-Workspace Fork or complete workspace restoration. F1+ remains NOT STARTED and
-requires separate authorization.
+Workspace Fork or complete workspace restoration.
 
 Recorded final local conditional-closure result: 151 tests PASS; Ruff PASS. No
 repository workflow files were present, so this is not described as GitHub CI
 evidence.
+
+F1 freezes only the production semantics required by `AgentEvent`,
+`WorkspaceCheckpoint`, `VerificationReceipt`, `CapturedPathState`, capture
+scope, and canonical captured-state identity. Historical F0 primary records
+remain readable with their provisional marker; `IncidentReport` and
+`ForkReceipt` remain provisional.
+
+The production entry point is `acr claude`. It supplies additive hooks through a
+temporary Claude `--settings` file and does not overwrite user or repository
+Claude configuration. The adapter persists sanitized stable events; the
+checkpoint runtime independently captures repository files rather than source
+content from Claude tool payloads. Exact verifier pre/result events are joined
+only with same-session and same-tool-use correlation, and every receipt resolves
+to the tested pre-checkpoint and identical manifest hash.
+
+The committed F1 smoke under `docs/receipts/f1_product_core` used one real Claude
+Code 2.1.144 production session. It observed exact `pytest -q` PASS, a Claude
+Edit, and exact `pytest -q` FAIL, producing 10 events, two checkpoints, and two
+verification receipts. The production session audit passed and both canonical
+manifest SHA256 values recomputed exactly. Full local regression: 162 tests
+PASS; Ruff PASS.
+
+> **F1 Product Core Foundation: PASS**
+
+Failure Window productization, Workspace Fork, and Incident Theater remain NOT
+STARTED. Product validation and research novelty remain NOT ESTABLISHED.
 
 ## Legacy Track — Context Optimization Research
 

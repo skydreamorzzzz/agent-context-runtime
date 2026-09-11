@@ -128,8 +128,11 @@ def test_integrated_closure_receipt_binds_same_incident_restore() -> None:
         assert hashlib.sha256(artifact.read_bytes()).hexdigest() == reference["sha256"]
 
 
-def test_persisted_hook_records_do_not_contain_disallowed_raw_values() -> None:
-    invocation_files = sorted(EVIDENCE_ROOT.glob("*/invocations/*.json"))
+@pytest.mark.parametrize("evidence_root", [EVIDENCE_ROOT, CLOSURE_EVIDENCE_ROOT])
+def test_persisted_hook_records_do_not_contain_disallowed_raw_values(
+    evidence_root: Path,
+) -> None:
+    invocation_files = sorted(evidence_root.glob("**/invocations/*.json"))
 
     assert invocation_files
     for artifact in invocation_files:
