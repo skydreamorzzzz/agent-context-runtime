@@ -112,6 +112,68 @@ function activityBlock(items) {
     </div>`;
 }
 
+function overviewBlock(session) {
+  const status = session.summary.overall_status || "green";
+  const label = status === "red" ? "FAILED" : status === "yellow" ? "WARNING" : "HEALTHY";
+  const count = session.summary.changed_file_count;
+  return `
+    <section class="overview-panel panel-card">
+      <div>
+        <p class="section-label">Session overview</p>
+        <h2>${escapeHtml(session.presentation.title)}</h2>
+        <p class="panel-copy">${escapeHtml(session.presentation.description)}</p>
+      </div>
+      <div class="overview-status status-${status}">
+        <span class="status-dot"></span><strong>${label}</strong>
+        <small>${session.summary.verified_fail_present ? "Verified failure observed" : "No verified failure"}</small>
+      </div>
+      <div class="overview-metrics">
+        <span><b>1</b><small>PASS boundary</small></span>
+        <span><b>1</b><small>FAIL boundary</small></span>
+        <span><b>${count}</b><small>changed ${count === 1 ? "file" : "files"}</small></span>
+        <span><b>${session.summary.diagnostic_warning_count}</b><small>heuristic warnings</small></span>
+      </div>
+    </section>`;
+}
+
+function diagnosticBlock(items) {
+  return `
+    <section class="dashboard-panel diagnostics-panel">
+      <div class="panel-heading">
+        <div><p class="section-label">Legacy diagnostic layer</p><h2>W01–W08 diagnostic signals</h2></div>
+        <span class="panel-note">Heuristic signals are not causal attribution.</span>
+      </div>
+      <div class="signal-grid">${items.map((item) => `
+        <article class="signal-card signal-${escapeHtml(item.severity)}">
+          <div class="signal-top"><span class="signal-code">${escapeHtml(item.rule)}</span><span class="signal-state">${escapeHtml(item.status === "warning" ? "SUSPECTED REDUNDANCY" : item.status === "normal" ? "NORMAL" : "NOT EVALUATED")}</span></div>
+          <h3>${escapeHtml(item.title)}</h3>
+          <p>${escapeHtml(item.summary)}</p>
+          ${item.status === "warning" ? `<small>${escapeHtml(item.occurrences)} occurrence${item.occurrences === 1 ? "" : "s"} · worth inspecting</small>` : ""}
+        </article>`).join("")}</div>
+      <p class="metadata-note">Annotations marked as heuristic are demo presentation metadata; privacy-bounded F1 evidence does not contain the bodies needed to evaluate every signal.</p>
+    </section>`;
+}
+
+function timelineBlock(items) {
+  return `
+    <section class="dashboard-panel timeline-panel">
+      <div class="panel-heading"><div><p class="section-label">Observed sequence</p><h2>Incident timeline</h2></div><span class="panel-note">No causal claim</span></div>
+      <div class="timeline-list">${items.map((item) => `
+        <div class="timeline-item timeline-${escapeHtml(item.status)}">
+          <span class="timeline-marker">${item.status === "green" ? "✓" : item.status === "red" ? "×" : "•"}</span>
+          <div><strong>${escapeHtml(item.label)}</strong><p>${escapeHtml(item.detail)}</p></div>
+        </div>`).join("")}</div>
+    </section>`;
+}
+
+function integrityBlock(integrity) {
+  return `<section class="dashboard-panel evidence-panel"><div class="panel-heading"><div><p class="section-label">Evidence integrity</p><h2>Trusted boundary checks</h2></div><span class="healthy-badge">${integrity.status === "verified" ? "✓ VERIFIED" : "! UNSUPPORTED"}</span></div><div class="check-list">${integrity.checks.map((item) => `<div class="check-row"><span class="check-icon ${item.status === "pass" ? "" : "check-fail"}">${item.status === "pass" ? "✓" : "×"}</span><span>${escapeHtml(item.label)}</span><small>${escapeHtml(item.detail || item.status)}</small></div>`).join("")}</div></section>`;
+}
+
+function privacyBlock(privacy) {
+  return `<section class="dashboard-panel privacy-panel"><div class="panel-heading"><div><p class="section-label">Privacy boundary</p><h2>What stays out of the journal</h2></div><span class="healthy-badge">✓ ENFORCED</span></div><div class="privacy-columns"><div><small class="subheading">Captured</small>${privacy.captured.map((item) => `<span class="privacy-item captured">✓ ${escapeHtml(item)}</span>`).join("")}</div><div><small class="subheading">Not persisted</small>${privacy.not_persisted.map((item) => `<span class="privacy-item">× ${escapeHtml(item)}</span>`).join("")}</div></div><p class="metadata-note">${escapeHtml(privacy.diagnostic_note)}</p></section>`;
+}
+
 function renderSession(session) {
   elements.sessionTitle.textContent = session.presentation.title;
   elements.sessionId.textContent = session.session_id;
@@ -119,6 +181,9 @@ function renderSession(session) {
   const count = session.summary.changed_file_count;
   const noun = count === 1 ? "file" : "files";
   elements.demo.innerHTML = `
+    ${overviewBlock(session)}
+    ${diagnosticBlock(session.diagnostics)}
+    ${timelineBlock(session.timeline)}
     ${stateCard("pass", session.last_pass, session.verifier)}
     ${connector()}
     ${activityBlock(session.observed_activity)}
@@ -143,11 +208,10 @@ function renderSession(session) {
           PASS and the first verified FAIL.
         </p>
       </div>
-      <div class="coming-next" aria-label="Workspace fork is not yet available">
-        <span>Fork last passing state</span>
-        Coming next
-      </div>
+      <div class="coming-next" aria-label="Workspace fork is not yet available"><span>Fork last passing state</span>Coming next</div>
     </aside>`;
+
+  elements.demo.insertAdjacentHTML("beforeend", `${integrityBlock(session.evidence_integrity)}${privacyBlock(session.privacy_boundary)}`);
 
   document.querySelectorAll(".diff-toggle").forEach((button) => {
     button.addEventListener("click", () => {

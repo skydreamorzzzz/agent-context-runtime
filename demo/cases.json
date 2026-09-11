@@ -1,6 +1,20 @@
 {
   "session-6886bc4f40144176bb747ba0556a02d0": {
     "description": "One captured repository file changed between observed verifier outcomes.",
-    "title": "Calculator regression"
+    "title": "Calculator regression",
+    "diagnostics": {
+      "W02": {
+        "occurrences": 1,
+        "severity": "yellow",
+        "status": "warning",
+        "summary": "Large tool result observed"
+      },
+      "W06": {
+        "occurrences": 3,
+        "severity": "yellow",
+        "status": "warning",
+        "summary": "Repeated command pattern observed"
+      }
+    }
   }
 }

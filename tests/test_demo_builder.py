@@ -15,7 +15,7 @@ def test_builder_projects_committed_f1_smoke_into_demo_view_model() -> None:
     payload = build_demo_data(EVIDENCE_ROOT, cases_path=CASE_METADATA)
     round_trip = json.loads(json.dumps(payload))
 
-    assert round_trip["schema"] == "acr.demo-view/0.1"
+    assert round_trip["schema"] == "acr.demo-view/0.2"
     assert round_trip["skipped_sessions"] == []
     assert len(round_trip["sessions"]) == 1
     session = round_trip["sessions"][0]
@@ -35,3 +35,17 @@ def test_builder_projects_committed_f1_smoke_into_demo_view_model() -> None:
             "sequence": 6,
         }
     ]
+    assert session["summary"]["overall_status"] == "red"
+    assert session["summary"]["diagnostic_warning_count"] == 2
+    assert {item["rule"] for item in session["diagnostics"]} == {
+        "W01", "W02", "W03", "W04", "W05", "W06", "W07", "W08"
+    }
+    assert session["diagnostics"][0]["status"] == "not_evaluated"
+    assert session["diagnostics"][1]["severity"] == "yellow"
+    assert session["diagnostics"][5]["occurrences"] == 3
+    assert [item["kind"] for item in session["timeline"]] == [
+        "verified_pass", "observed_activity", "repository_transition", "verified_fail"
+    ]
+    assert session["evidence_integrity"]["status"] == "verified"
+    assert all(item["status"] == "pass" for item in session["evidence_integrity"]["checks"])
+    assert session["privacy_boundary"]["status"] == "enforced"

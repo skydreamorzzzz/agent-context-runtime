@@ -86,6 +86,10 @@ python -m http.server 8000 -d demo
 
 Then open `http://localhost:8000`.
 
+The W01–W08 diagnostic annotations are demo presentation metadata layered over
+the privacy-bounded evidence; they are heuristic signals, not causal findings
+or additional forensic records.
+
 The Reality Spike leaves prompt-level correlation on the installed CLI,
 background mutation attribution, shared-journal concurrency, Git GC durability,
 and broader restore fidelity unsupported, degraded, or unknown. Real evidence
