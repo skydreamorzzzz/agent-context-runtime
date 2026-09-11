@@ -36,6 +36,7 @@ def test_builder_projects_committed_f1_smoke_into_demo_view_model() -> None:
         }
     ]
     assert session["summary"]["overall_status"] == "red"
+    assert session["overall_status"] == "red"
     assert session["summary"]["diagnostic_warning_count"] == 2
     assert {item["rule"] for item in session["diagnostics"]} == {
         "W01", "W02", "W03", "W04", "W05", "W06", "W07", "W08"

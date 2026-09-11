@@ -349,6 +349,7 @@ def build_session_view(
         "changed_files": changed_files,
         "first_fail": _receipt_view(failing_receipt),
         "last_pass": _receipt_view(passing_receipt),
+        "overall_status": overall_status,
         "observed_activity": activity,
         "timeline": _timeline_view(passing_receipt, failing_receipt, activity, changed_files),
         "diagnostics": diagnostics,
