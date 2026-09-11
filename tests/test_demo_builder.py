@@ -62,3 +62,58 @@ def test_step_status_has_explicit_priority() -> None:
     assert step_status({"has_verified_failure": True, "diagnostic_refs": [{"rule": "W06"}]}) == "red"
     assert step_status({}) == "neutral"
     assert step_status({"diagnostic_refs": [], "is_normal_observed_operation": False}) == "neutral"
+
+
+def test_presentation_diagnostic_binds_to_concrete_timeline_step() -> None:
+    session = build_demo_data(EVIDENCE_ROOT, cases_path=CASE_METADATA)["sessions"][0]
+    bound = build_session_view_with_metadata(
+        {
+            "diagnostics": {
+                "W06": {
+                    "status": "warning",
+                    "severity": "yellow",
+                    "summary": "Repeated command pattern observed",
+                    "occurrences": 1,
+                    "event_sequences": [6],
+                }
+            }
+        }
+    )
+    step = next(item for item in bound["timeline"] if item["sequence"] == 6)
+    assert step["status"] == "yellow"
+    assert step["diagnostic_refs"] == [
+        {
+            "rule": "W06",
+            "title": "Repeated Command",
+            "summary": "Repeated command pattern observed",
+        }
+    ]
+    assert session["timeline"][1]["status"] == "neutral"
+
+
+def build_session_view_with_metadata(metadata: dict[str, object]) -> dict[str, object]:
+    from scripts.build_demo_data import build_session_view
+
+    return build_session_view(
+        EVIDENCE_ROOT,
+        "session-6886bc4f40144176bb747ba0556a02d0",
+        metadata,
+    )
+
+
+def test_session_warning_without_event_sequences_does_not_color_step() -> None:
+    session = build_session_view_with_metadata(
+        {
+            "diagnostics": {
+                "W01": {
+                    "status": "warning",
+                    "severity": "yellow",
+                    "summary": "Session-level signal",
+                }
+            }
+        }
+    )
+    assert session["summary"]["diagnostic_warning_count"] == 1
+    assert [item["status"] for item in session["timeline"]] == [
+        "green", "neutral", "neutral", "red"
+    ]

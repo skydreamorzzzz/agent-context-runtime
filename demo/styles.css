@@ -504,6 +504,9 @@ select {
 .signal-card h3 { margin: 12px 0 5px; font-size: 13px; }
 .signal-card p { min-height: 31px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
 .signal-card small { display: block; margin-top: 9px; color: var(--amber); font-family: var(--mono); font-size: 9px; }
+.affected-steps { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 9px; }
+.affected-steps span { margin-right: 3px; color: var(--muted); font-family: var(--mono); font-size: 9px; }
+.affected-steps b { padding: 3px 5px; border: 1px solid rgba(246, 198, 103, .45); border-radius: 4px; color: var(--amber); background: rgba(246, 198, 103, .08); font-family: var(--mono); font-size: 9px; }
 .signal-yellow { border-color: rgba(246, 198, 103, .5); background: rgba(246, 198, 103, .06); }
 .signal-yellow .signal-state { color: var(--amber); }
 .signal-green .signal-state { color: var(--green); }

@@ -148,7 +148,7 @@ function diagnosticBlock(items) {
           <div class="signal-top"><span class="signal-code">${escapeHtml(item.rule)}</span><span class="signal-state">${escapeHtml(item.status === "warning" ? "SUSPECTED REDUNDANCY" : item.status === "normal" ? "NORMAL" : "NOT EVALUATED")}</span></div>
           <h3>${escapeHtml(item.title)}</h3>
           <p>${escapeHtml(item.summary)}</p>
-          ${item.status === "warning" ? `<small>${escapeHtml(item.occurrences)} occurrence${item.occurrences === 1 ? "" : "s"} · worth inspecting · demo metadata</small>` : ""}
+          ${item.status === "warning" ? `<small>${escapeHtml(item.occurrences)} occurrence${item.occurrences === 1 ? "" : "s"} · worth inspecting · demo metadata</small>${item.event_sequences.length ? `<div class="affected-steps"><span>Affected steps</span>${item.event_sequences.map((sequence) => `<b>#${escapeHtml(sequence)}</b>`).join("")}</div>` : ""}` : ""}
         </article>`).join("")}</div>
       <p class="metadata-note">Annotations marked as heuristic are demo presentation metadata; privacy-bounded F1 evidence does not contain the bodies needed to evaluate every signal.</p>
     </section>`;
