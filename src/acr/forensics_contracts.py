@@ -291,6 +291,10 @@ class VerificationReceipt(RuntimeForensicsRecord):
                 raise ValueError("frozen verification receipts require occurrence correlation")
             if self.command.status != "observed" or self.passed.status != "observed":
                 raise ValueError("frozen verification command and result must be observed")
+            if self.exit_code.status != "observed" or self.exit_code.value is None:
+                raise ValueError("frozen verification exit code must be observed")
+            if self.passed.value is not (self.exit_code.value == 0):
+                raise ValueError("frozen verification result must match observed exit code")
             if self.output_capture != "not_persisted_by_policy":
                 raise ValueError("frozen verification receipts must state output capture policy")
             if self.stdout_ref is not None or self.stderr_ref is not None:

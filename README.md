@@ -41,9 +41,11 @@ tracked and selected-untracked files. Claims remain limited to:
 
 F1 adds a production entry point, sanitized Claude event capture, immutable
 captured repository-state evidence, and exact-verifier receipts bound to their
-same-session pre-execution checkpoints. A real production smoke recorded PASS,
-a Claude Edit, and FAIL as two verified states. Product validation remains NOT
-ESTABLISHED.
+same-session pre-execution checkpoints. Trusted PASS requires observed exit 0;
+trusted FAIL requires an observed non-zero exit code. A corrected real
+production smoke recorded PASS, an ordinary Claude Bash mutation of an existing
+tracked file, and real exit-1 FAIL as two verified states. Product validation
+remains NOT ESTABLISHED.
 
 Create `.acr.json` in the repository:
 
@@ -66,6 +68,10 @@ acr claude
 `~/.claude/settings.json` or project/local Claude settings. Evidence defaults to
 `.acr/evidence` and verifier output bodies, raw prompts, tool response bodies,
 environment values, and transcript paths are not persisted.
+
+Frozen verifier evidence is currently limited to the exactly validated Claude
+Code 2.1.144 on Ubuntu/WSL2 runtime profile. Other versions or platform families
+block trusted capture rather than inheriting compatibility.
 
 The Reality Spike leaves prompt-level correlation on the installed CLI,
 background mutation attribution, shared-journal concurrency, Git GC durability,

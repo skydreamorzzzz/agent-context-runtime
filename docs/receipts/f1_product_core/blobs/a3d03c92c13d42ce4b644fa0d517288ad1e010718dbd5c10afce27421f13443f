@@ -1,0 +1,6 @@
+{
+  "forensics": {
+    "verifier": "pytest -q",
+    "selected_untracked_paths": []
+  }
+}

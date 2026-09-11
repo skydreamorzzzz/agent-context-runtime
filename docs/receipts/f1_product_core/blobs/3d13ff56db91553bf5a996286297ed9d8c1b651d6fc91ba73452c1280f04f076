@@ -1,0 +1,54 @@
+{
+  "kind": "provenance",
+  "schema_version": "1.0",
+  "id": "prov-473eb8ba30ae4b1e8d6df5157f20cb56",
+  "producer_ref": {
+    "blob_hash": "2a1cfb5cc92389ac969b164f4d1f3caf2a55fe5fb97ad8241154d5842ba1a5db",
+    "source_id": "acr_forensics_producer_manifest",
+    "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+    "locator": "/producer-manifest",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  },
+  "provenance_ref": null,
+  "output_object": "event-b4fa6419269e43e890a5e0a1f0f32913",
+  "field": "*",
+  "input_refs": [
+    {
+      "blob_hash": "1382cae8770a67e6624e45d8cd75c4b38ab159d82b1f775dee682928f368f88d",
+      "source_id": "claude_hook_sanitized",
+      "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+      "locator": "/hook-observations/4",
+      "labels": [
+        {
+          "scope": "runtime",
+          "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+          "available_seq": null,
+          "taints": []
+        }
+      ]
+    }
+  ],
+  "transform_name": "claude_hook_to_agent_event",
+  "transform_version": "0.1",
+  "config_ref": {
+    "blob_hash": "40578e6d26d3b96aee3d2d59aa0709081f2208bdb180d7a9d4d14cf0b1ae9815",
+    "source_id": "acr_forensics_verifier_config",
+    "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+    "locator": "/verifier-config",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  }
+}

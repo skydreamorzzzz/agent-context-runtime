@@ -24,6 +24,7 @@
 - **Pre-F0.5 integrity correction:** PASS
 - **F0.5:** PASS
 - **F1 Product Core Foundation:** PASS
+- **F2 Failure Boundary:** AUTHORIZED NEXT / NOT STARTED
 
 Provisional technical definition:
 
@@ -360,6 +361,12 @@ The maximum intended meaning is:
 > repository state.
 
 It does not mean that the project was globally good, correct, or complete.
+
+For the frozen F1 runtime slice, trusted `passed=true` is equivalent to an
+observed exit code of zero and trusted `passed=false` is equivalent to an
+observed non-zero exit code. A `PostToolUseFailure` without strict stable
+exit-code evidence remains a sanitized terminal event and does not produce a
+trusted receipt.
 
 Verifiers are explicitly user-configured. A standalone, strictly matched
 invocation such as `pytest -q` may become receipt-eligible. A compound command
@@ -736,14 +743,18 @@ The completed reality gate is:
 > **F0.5 Reality Spike — PASS**
 
 F0.5 probe observations and verdict are recorded in
-[`docs/f0.5-reality-spike.md`](docs/f0.5-reality-spike.md). F1 does not authorize
-Failure Boundary, Workspace Fork, Incident Theater, M4, or duplicate-read
+[`docs/f0.5-reality-spike.md`](docs/f0.5-reality-spike.md). The corrected F1 gate
+authorizes Failure Boundary as the next gate, but it remains NOT STARTED. F1 does
+not authorize Workspace Fork, Incident Theater, M4, or duplicate-read
 intervention work.
 
-The F1 production smoke evidence is recorded under
+The corrected F1 production smoke evidence is recorded under
 [`docs/receipts/f1_product_core`](docs/receipts/f1_product_core). One real Claude
-Code 2.1.144 session produced sanitized events, an exact-`pytest -q` PASS receipt,
-a Claude Edit, and an exact-`pytest -q` FAIL receipt. Both receipts resolve to
-same-session production checkpoints whose canonical manifest bytes recompute to
-their recorded hashes. This establishes the F1 implementation capability only;
-product validation remains NOT ESTABLISHED.
+Code 2.1.144 session on Ubuntu/WSL2 produced sanitized events, an exact
+`pytest -q` PASS receipt with observed exit 0, an ordinary Bash mutation of an
+existing tracked file, and an exact-`pytest -q` FAIL receipt with observed exit 1. No
+Edit/Write event was recorded. Both receipts resolve to same-session production
+checkpoints whose distinct canonical manifest bytes recompute to their recorded
+hashes. This supersedes the prior smoke whose failure exit code was unknown and
+establishes the corrected F1 implementation capability only; product validation
+remains NOT ESTABLISHED. Failure Boundary remains NOT STARTED.

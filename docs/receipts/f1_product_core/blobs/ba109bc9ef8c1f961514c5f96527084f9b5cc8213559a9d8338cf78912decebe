@@ -1,7 +1,0 @@
-{
-  "forensics": {
-    "verifier": "pytest -q",
-    "selected_untracked_paths": ["selected_untracked.txt"],
-    "data_root": ".acr/evidence"
-  }
-}

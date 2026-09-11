@@ -14,7 +14,7 @@ from acr.adapters.claude_hooks import (
     is_exact_verifier_invocation,
     sanitize_claude_hook_payload,
 )
-from acr.contracts import EvidenceRef, InformationLabel
+from acr.contracts import EvidenceRef, Fact, InformationLabel
 from acr.forensics.config import ForensicsConfig
 from acr.forensics.session import audit_session, build_claude_settings, handle_claude_hook
 from acr.forensics.store import ForensicsEvidenceStore
@@ -77,10 +77,19 @@ def _initialize(data_root: Path, repo: Path, session_id: str = "session-test") -
         selected_untracked_paths=["selected.sh"],
         max_blob_bytes=1024 * 1024,
         claude_version="2.1.144 (Claude Code)",
+        platform_family="Ubuntu/WSL2",
     )
 
 
-def _payload(event: str, repo: Path, operation: str, command: str = "pytest -q") -> bytes:
+def _payload(
+    event: str,
+    repo: Path,
+    operation: str,
+    command: str = "pytest -q",
+    *,
+    error: str = "Exit code 1\nPRIVATE_FAILURE_BODY",
+    is_interrupt: bool = False,
+) -> bytes:
     value: dict[str, object] = {
         "cwd": str(repo),
         "hook_event_name": event,
@@ -93,8 +102,8 @@ def _payload(event: str, repo: Path, operation: str, command: str = "pytest -q")
     if event == "PostToolUse":
         value["tool_response"] = {"stdout": "PRIVATE_TOOL_RESPONSE"}
     elif event == "PostToolUseFailure":
-        value["error"] = "PRIVATE_FAILURE_BODY"
-        value["is_interrupt"] = False
+        value["error"] = error
+        value["is_interrupt"] = is_interrupt
     return json.dumps(value).encode()
 
 
@@ -142,6 +151,22 @@ def test_claude_adapter_sanitizes_content_and_only_promotes_exact_verifier(
     assert is_exact_verifier_invocation(background, "pytest -q") is False
     compound_safe = sanitize_claude_hook_payload(compound, repo, "pytest -q")
     assert compound_safe["tool_input_summary"]["command"] is None
+    for background_value in (True, False):
+        ordinary = json.loads(_payload("PreToolUse", repo, "ordinary", "printf PRIVATE"))
+        ordinary["tool_input"]["run_in_background"] = background_value
+        ordinary_safe = sanitize_claude_hook_payload(ordinary, repo, "pytest -q")
+        assert ordinary_safe["tool_input_summary"] == {
+            "command": None,
+            "command_class": "other_not_persisted",
+            "run_in_background": background_value,
+        }
+
+    failed = sanitize_claude_hook_payload(
+        json.loads(_payload("PostToolUseFailure", repo, "failed")), repo, "pytest -q"
+    )
+    assert failed["termination_kind"] == "exited"
+    assert failed["exit_code"] == 1
+    assert "PRIVATE_FAILURE_BODY" not in json.dumps(failed)
 
 
 def test_config_rejects_compound_verifier_and_path_traversal() -> None:
@@ -210,6 +235,10 @@ def test_production_capture_binds_pass_and_fail_to_distinct_real_states(
     assert len(events) == 4
     assert all(item.contract_status == "v0.1_frozen" for item in [*events, *checkpoints, *receipts])
     assert {item.passed.value for item in receipts} == {True, False}
+    assert {(item.passed.value, item.exit_code.value) for item in receipts} == {
+        (True, 0),
+        (False, 1),
+    }
     assert len({item.captured_workspace_manifest_hash for item in checkpoints}) == 2
     by_id = {item.id: item for item in checkpoints}
     for receipt in receipts:
@@ -253,6 +282,93 @@ def test_production_capture_binds_pass_and_fail_to_distinct_real_states(
         b"ghp_NEVER_PERSIST_THIS_VALUE",
     ):
         assert forbidden not in persisted
+
+    failed_receipt = next(item for item in receipts if item.passed.value is False)
+    invalid = failed_receipt.model_dump(mode="json")
+    invalid["exit_code"] = Fact[int](
+        status="unknown", reason="not_observed"
+    ).model_dump(mode="json")
+    with pytest.raises(ValidationError, match="exit code must be observed"):
+        VerificationReceipt.model_validate(invalid)
+
+
+@pytest.mark.parametrize(
+    ("error", "is_interrupt", "termination_kind"),
+    [
+        ("PRIVATE timeout-like failure", False, "unclassified_failure"),
+        ("PRIVATE shell-start failure", False, "unclassified_failure"),
+        ("Exit code 130\nPRIVATE interrupted", True, "interrupted"),
+    ],
+)
+def test_receipt_ineligible_failure_is_persisted_without_trusted_receipt(
+    tmp_path: Path,
+    error: str,
+    is_interrupt: bool,
+    termination_kind: str,
+) -> None:
+    repo = _make_repo(tmp_path)
+    data_root = tmp_path / "evidence"
+    _initialize(data_root, repo)
+    assert handle_claude_hook(
+        raw_input=_payload("PreToolUse", repo, "ineligible"),
+        data_root=data_root,
+        session_id="session-test",
+        repo_root=repo,
+    ) == 0
+    assert handle_claude_hook(
+        raw_input=_payload(
+            "PostToolUseFailure",
+            repo,
+            "ineligible",
+            error=error,
+            is_interrupt=is_interrupt,
+        ),
+        data_root=data_root,
+        session_id="session-test",
+        repo_root=repo,
+    ) == 0
+
+    store = ForensicsEvidenceStore(data_root, "session-test")
+    assert len(store.record_files("events")) == 2
+    assert store.record_files("receipts") == []
+    terminal = max(
+        _records(store, "events", AgentEvent),
+        key=lambda item: item.ordering.sequence.value or -1,
+    )
+    observation = json.loads(store.blob_bytes(terminal.source_evidence_ref.blob_hash))
+    assert observation["termination_kind"] == termination_kind
+    assert observation["exit_code"] is None
+    assert audit_session(data_root, "session-test") == []
+    persisted = b"".join(path.read_bytes() for path in data_root.rglob("*") if path.is_file())
+    assert error.encode() not in persisted
+
+
+def test_unvalidated_runtime_profile_cannot_emit_frozen_evidence(tmp_path: Path) -> None:
+    repo = _make_repo(tmp_path)
+    data_root = tmp_path / "evidence"
+    store = ForensicsEvidenceStore(data_root, "session-test")
+    store.initialize_session(
+        repo_identity_hash=hashlib.sha256(str(repo.resolve()).encode()).hexdigest(),
+        verifier="pytest -q",
+        selected_untracked_paths=[],
+        max_blob_bytes=1024 * 1024,
+        claude_version="unvalidated",
+        platform_family="unvalidated",
+    )
+
+    assert handle_claude_hook(
+        raw_input=_payload("PreToolUse", repo, "blocked"),
+        data_root=data_root,
+        session_id="session-test",
+        repo_root=repo,
+    ) == 2
+    assert store.record_files("events") == []
+    assert store.record_files("checkpoints") == []
+    assert store.record_files("receipts") == []
+    assert any(
+        "unvalidated Claude runtime profile" in issue
+        for issue in audit_session(data_root, "session-test")
+    )
 
 
 def test_compound_or_uncorrelated_verifier_never_emits_receipt(tmp_path: Path) -> None:
@@ -407,11 +523,32 @@ def test_committed_f1_smoke_references_and_privacy_boundary() -> None:
     collect(verdict)
     assert verdict["result"] == "PASS"
     assert verdict["observations"]["results_in_observed_order"] == ["PASS", "FAIL"]
+    assert verdict["observations"]["edit_or_write_event_count"] == 0
+    assert verdict["observations"]["intervening_tool"] == "Bash"
+    assert verdict["observations"]["ordinary_bash_command_body_persisted"] is False
+    assert verdict["failure_receipt"]["passed"] is False
+    assert verdict["failure_receipt"]["passed_status"] == "observed"
+    assert verdict["failure_receipt"]["exit_code"] == 1
+    assert verdict["failure_receipt"]["exit_code_status"] == "observed"
     assert len(references) == 6
     for reference in references:
         artifact = F1_SMOKE_EVIDENCE / reference["path"]
         assert artifact.is_file()
         assert hashlib.sha256(artifact.read_bytes()).hexdigest() == reference["sha256"]
+
+    assert audit_session(F1_SMOKE_EVIDENCE, verdict["session_id"]) == []
+    passing = VerificationReceipt.model_validate_json(
+        (F1_SMOKE_EVIDENCE / verdict["passing_receipt"]["record"]["path"]).read_text()
+    )
+    failing = VerificationReceipt.model_validate_json(
+        (F1_SMOKE_EVIDENCE / verdict["failure_receipt"]["record"]["path"]).read_text()
+    )
+    assert (passing.passed.value, passing.exit_code.value) == (True, 0)
+    assert (failing.passed.value, failing.exit_code.value) == (False, 1)
+    assert (
+        passing.tested_captured_workspace_manifest_hash
+        != failing.tested_captured_workspace_manifest_hash
+    )
 
     persisted = b"\n".join(
         path.read_bytes() for path in F1_SMOKE_EVIDENCE.rglob("*") if path.is_file()
@@ -420,6 +557,8 @@ def test_committed_f1_smoke_references_and_privacy_boundary() -> None:
         b"/home/",
         b"/tmp/",
         b"Follow these steps exactly",
+        b"sed -i",
+        b"assert -1 == 5",
         b"ghp_",
         b"sk-ant-",
         b"-----BEGIN PRIVATE KEY-----",

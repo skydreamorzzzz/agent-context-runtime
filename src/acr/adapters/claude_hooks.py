@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,7 @@ SUPPORTED_HOOK_EVENTS = {
     "SessionEnd",
 }
 TOOL_HOOK_EVENTS = {"PreToolUse", "PostToolUse", "PostToolUseFailure"}
+_EXIT_CODE_LINE = re.compile(r"Exit code ([0-9]+)")
 
 
 def _sha256_text(value: str) -> str:
@@ -91,14 +93,13 @@ def sanitize_claude_hook_payload(
         summary: dict[str, Any]
         if tool_name == "Bash" and isinstance(tool_input, dict):
             exact = is_exact_verifier_invocation(payload, verifier)
+            background = tool_input.get("run_in_background")
             summary = {
                 "command": verifier if exact else None,
                 "command_class": (
                     "exact_configured_verifier" if exact else "other_not_persisted"
                 ),
-                "run_in_background": (
-                    tool_input.get("run_in_background") if exact else None
-                ),
+                "run_in_background": background if isinstance(background, bool) else None,
             }
         elif tool_name in {"Read", "Edit", "Write"} and isinstance(tool_input, dict):
             summary = {
@@ -120,6 +121,28 @@ def sanitize_claude_hook_payload(
         )
         safe["is_interrupt"] = payload.get("is_interrupt") is True
         safe["error_body_persisted"] = False
+        safe["termination_kind"] = None
+        safe["exit_code"] = None
+        if (
+            tool_name == "Bash"
+            and isinstance(tool_input, dict)
+            and is_exact_verifier_invocation(payload, verifier)
+        ):
+            if event_name == "PostToolUse":
+                safe["termination_kind"] = "success"
+                safe["exit_code"] = 0
+            elif event_name == "PostToolUseFailure":
+                if safe["is_interrupt"]:
+                    safe["termination_kind"] = "interrupted"
+                else:
+                    error = payload.get("error")
+                    first_line = error.splitlines()[0] if isinstance(error, str) and error else ""
+                    match = _EXIT_CODE_LINE.fullmatch(first_line)
+                    if match is None:
+                        safe["termination_kind"] = "unclassified_failure"
+                    else:
+                        safe["termination_kind"] = "exited"
+                        safe["exit_code"] = int(match.group(1))
     elif event_name == "SessionStart":
         source = payload.get("source")
         safe["source"] = source if source in {"startup", "resume", "clear", "compact"} else "unknown"

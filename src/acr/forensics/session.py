@@ -5,6 +5,7 @@ from __future__ import annotations
 import fcntl
 import hashlib
 import json
+import platform
 import shlex
 import shutil
 import subprocess
@@ -35,10 +36,48 @@ from acr.forensics_contracts import (
 
 MAX_HOOK_INPUT_BYTES = 1024 * 1024
 _HOOK_EVENTS = ("SessionStart", "PreToolUse", "PostToolUse", "PostToolUseFailure", "SessionEnd")
+_VALIDATED_CLAUDE_VERSION = "2.1.144 (Claude Code)"
+_VALIDATED_PLATFORM_FAMILY = "Ubuntu/WSL2"
 
 
 class SessionIntegrityError(RuntimeError):
     """Production evidence failed its required local integrity boundary."""
+
+
+def _platform_family() -> str:
+    release = platform.release().lower()
+    try:
+        os_release = Path("/etc/os-release").read_text()
+    except OSError:
+        os_release = ""
+    if "microsoft" in release and "ID=ubuntu\n" in os_release:
+        return "Ubuntu/WSL2"
+    return "unvalidated"
+
+
+def _require_validated_runtime_profile(metadata: dict[str, Any]) -> None:
+    if (
+        metadata.get("claude_version") != _VALIDATED_CLAUDE_VERSION
+        or metadata.get("platform_family") != _VALIDATED_PLATFORM_FAMILY
+    ):
+        raise SessionIntegrityError(
+            "unvalidated Claude runtime profile: trusted v0.1 evidence is disabled"
+        )
+
+
+def _trusted_terminal_result(observation: dict[str, Any]) -> tuple[bool, int] | None:
+    kind = observation.get("termination_kind")
+    exit_code = observation.get("exit_code")
+    if kind == "success" and exit_code == 0:
+        return True, 0
+    if (
+        kind == "exited"
+        and isinstance(exit_code, int)
+        and not isinstance(exit_code, bool)
+        and exit_code != 0
+    ):
+        return False, exit_code
+    return None
 
 
 def _repo_identity(repo_root: Path) -> str:
@@ -127,6 +166,10 @@ def run_claude_session(
         claude_version = subprocess.check_output([claude, "--version"], text=True).strip()
     except (OSError, subprocess.CalledProcessError) as error:
         raise SessionIntegrityError("Claude Code version could not be observed") from error
+    platform_family = _platform_family()
+    _require_validated_runtime_profile(
+        {"claude_version": claude_version, "platform_family": platform_family}
+    )
 
     session_id = f"session-{uuid.uuid4().hex}"
     store = ForensicsEvidenceStore(data_root, session_id)
@@ -136,6 +179,7 @@ def run_claude_session(
         selected_untracked_paths=config.selected_untracked_paths,
         max_blob_bytes=config.max_blob_bytes,
         claude_version=claude_version,
+        platform_family=platform_family,
     )
     hook_command = shlex.join(
         [
@@ -263,8 +307,9 @@ def _persist_verifier_result(
 ) -> VerificationReceipt:
     if event.operation is None or observation["cwd_scope"] != ".":
         raise SessionIntegrityError("verifier result lacks root-scoped occurrence evidence")
-    if observation.get("is_interrupt") is True:
-        raise SessionIntegrityError("interrupted verifier result is not receipt-eligible")
+    terminal_result = _trusted_terminal_result(observation)
+    if terminal_result is None:
+        raise SessionIntegrityError("verifier terminal result is not receipt-eligible")
     pending = store.load_pending(event.operation.occurrence_id)
     expected = {
         "command": metadata["verifier"],
@@ -305,15 +350,7 @@ def _persist_verifier_result(
         transform_name="bind_exact_verifier_result",
         config_ref=config_ref,
     )
-    passed = observation["hook_event_name"] == "PostToolUse"
-    exit_code = (
-        Fact(value=0, status="observed", refs=[event_ref])
-        if passed
-        else Fact(
-            status="unknown",
-            reason="Claude_failure_hook_has_no_structured_exit_code",
-        )
-    )
+    passed, exit_code = terminal_result
     receipt = VerificationReceipt(
         id=receipt_id,
         producer_ref=producer_ref,
@@ -326,7 +363,7 @@ def _persist_verifier_result(
         tested_captured_workspace_manifest_hash=checkpoint.captured_workspace_manifest_hash,
         command=Fact(value=metadata["verifier"], status="observed", refs=[config_ref]),
         passed=Fact(value=passed, status="observed", refs=[event_ref]),
-        exit_code=exit_code,
+        exit_code=Fact(value=exit_code, status="observed", refs=[event_ref]),
         started_at=Fact(
             value=datetime.fromisoformat(pending["started_at"]),
             status="observed",
@@ -374,11 +411,12 @@ def handle_claude_hook(
         if not isinstance(payload, dict):
             raise TypeError("hook payload is not an object")
         metadata = store.load_session()
+        exact = is_exact_verifier_invocation(payload, metadata["verifier"])
+        exact_pre = exact and payload.get("hook_event_name") == "PreToolUse"
+        _require_validated_runtime_profile(metadata)
         repo_root = repo_root.resolve()
         if _repo_identity(repo_root) != metadata["repo_identity_hash"]:
             raise SessionIntegrityError("hook repository identity does not match session")
-        exact = is_exact_verifier_invocation(payload, metadata["verifier"])
-        exact_pre = exact and payload.get("hook_event_name") == "PreToolUse"
         observation = sanitize_claude_hook_payload(payload, repo_root, metadata["verifier"])
         store.bind_external_session(observation["external_session_hash"])
         event, event_ref = _event_from_observation(store, metadata, observation)
@@ -391,7 +429,11 @@ def handle_claude_hook(
                 event=event,
                 event_ref=event_ref,
             )
-        elif exact and payload.get("hook_event_name") in {"PostToolUse", "PostToolUseFailure"}:
+        elif (
+            exact
+            and payload.get("hook_event_name") in {"PostToolUse", "PostToolUseFailure"}
+            and _trusted_terminal_result(observation) is not None
+        ):
             _persist_verifier_result(
                 store=store,
                 metadata=metadata,
@@ -453,6 +495,7 @@ def audit_session(data_root: Path, session_id: str) -> list[str]:
     issues: list[str] = []
     try:
         metadata = store.load_session()
+        _require_validated_runtime_profile(metadata)
         external_hash = store.load_external_session_hash()
         producer_ref, config_ref = _producer_and_config_refs(metadata)
     except (ValueError, SessionIntegrityError) as error:
@@ -477,7 +520,7 @@ def audit_session(data_root: Path, session_id: str) -> list[str]:
 
     checkpoints: dict[str, WorkspaceCheckpoint] = {}
     exact_pre_events: dict[str, tuple[AgentEvent, EvidenceRef]] = {}
-    exact_post_events: dict[str, tuple[AgentEvent, EvidenceRef]] = {}
+    exact_post_events: dict[str, tuple[AgentEvent, EvidenceRef, dict[str, Any]]] = {}
     for path in store.record_files("events"):
         try:
             event = AgentEvent.model_validate_json(path.read_text())
@@ -525,7 +568,11 @@ def audit_session(data_root: Path, session_id: str) -> list[str]:
                 elif event.event_kind in {"claude.PostToolUse", "claude.PostToolUseFailure"}:
                     if event.operation.occurrence_id in exact_post_events:
                         raise ValueError("duplicate exact verifier result occurrence")
-                    exact_post_events[event.operation.occurrence_id] = (event, record_ref)
+                    exact_post_events[event.operation.occurrence_id] = (
+                        event,
+                        record_ref,
+                        observation,
+                    )
         except (OSError, ValueError) as error:
             issues.append(f"invalid event {path.name}: {error}")
     for path in store.record_files("checkpoints"):
@@ -587,20 +634,34 @@ def audit_session(data_root: Path, session_id: str) -> list[str]:
                 raise ValueError("receipt producer mismatch")
             if receipt.operation is None:
                 raise ValueError("receipt operation correlation missing")
+            if receipt.operation.occurrence_id in receipt_operations:
+                raise ValueError("duplicate trusted receipt occurrence")
             receipt_operations.add(receipt.operation.occurrence_id)
             pending = store.load_pending(receipt.operation.occurrence_id)
             pre_event, expected_pre_ref = exact_pre_events[receipt.operation.occurrence_id]
-            post_event, expected_post_ref = exact_post_events[receipt.operation.occurrence_id]
+            post_event, expected_post_ref, post_observation = exact_post_events[
+                receipt.operation.occurrence_id
+            ]
             pending_pre_ref = EvidenceRef.model_validate(pending["pre_event_ref"])
             if pending_pre_ref != expected_pre_ref:
                 raise ValueError("pending marker does not resolve its pre-event")
-            observed_passed = post_event.event_kind == "claude.PostToolUse"
-            if receipt.passed.value != observed_passed:
+            terminal_result = _trusted_terminal_result(post_observation)
+            if terminal_result is None:
+                raise ValueError("receipt result event is not receipt-eligible")
+            observed_passed, observed_exit_code = terminal_result
+            if (
+                receipt.passed.value != observed_passed
+                or receipt.exit_code.value != observed_exit_code
+            ):
                 raise ValueError("receipt result does not match the correlated result event")
             if expected_post_ref.occurrence_identity not in {
                 item.occurrence_identity for item in receipt.passed.refs
             }:
                 raise ValueError("receipt result fact does not reference its result event")
+            if expected_post_ref.occurrence_identity not in {
+                item.occurrence_identity for item in receipt.exit_code.refs
+            }:
+                raise ValueError("receipt exit-code fact does not reference its result event")
             if expected_pre_ref.occurrence_identity not in {
                 item.occurrence_identity for item in receipt.started_at.refs
             }:
@@ -651,8 +712,13 @@ def audit_session(data_root: Path, session_id: str) -> list[str]:
             issues.append("exact verifier pre-state has no durable correlation")
     if exact_pre_events.keys() != exact_post_events.keys():
         issues.append("exact verifier pre/result occurrence correlation is incomplete")
-    if exact_post_events.keys() != receipt_operations:
-        issues.append("exact verifier result has no trusted receipt correlation")
+    receipt_eligible_operations = {
+        operation_id
+        for operation_id, (_, _, observation) in exact_post_events.items()
+        if _trusted_terminal_result(observation) is not None
+    }
+    if receipt_eligible_operations != receipt_operations:
+        issues.append("receipt-eligible verifier result has no trusted receipt correlation")
     return issues
 
 

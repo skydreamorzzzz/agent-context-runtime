@@ -46,16 +46,21 @@ restore-fidelity claim.
 
 `VerificationReceipt` names its `pre_checkpoint_id` and the tested captured
 manifest hash. An optional post-checkpoint must be a different checkpoint and is
-never the tested state. `IncidentReport` is explicitly `derived_view`, requires
-provenance, admits only false/unknown entries in `capture_gaps`, and rejects
-causal fields through strict extra-field validation.
+never the tested state. For frozen receipts, `passed=true` requires an observed
+exit code of zero, while `passed=false` requires an observed non-zero exit code.
+A Bash failure hook without stable exit-code evidence remains event evidence and
+cannot become a trusted receipt. `IncidentReport` is explicitly `derived_view`,
+requires provenance, admits only false/unknown entries in `capture_gaps`, and
+rejects causal fields through strict extra-field validation.
 `ForkReceipt` is schema-only in F0 and limits its claim scope to captured
 repository state; the fixture records it as `not_executed`.
 
 The F1 production session audit resolves each receipt's pre-checkpoint in the
 same session, requires identical tested/checkpoint manifest hashes, and verifies
 the exact verifier's hashed Claude session plus tool-use occurrence correlation.
-If correlation is unsupported or missing, no trusted receipt is emitted. A
+Receipt-eligible terminal evidence must resolve to exactly one receipt;
+unclassified failure or interruption events may resolve to none. If correlation
+or terminal evidence is unsupported or missing, no trusted receipt is emitted. A
 standalone historical F0 `VerificationReceipt` still does not prove those
 relationships.
 

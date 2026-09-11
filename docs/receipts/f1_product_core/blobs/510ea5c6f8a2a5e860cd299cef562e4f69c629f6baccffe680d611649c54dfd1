@@ -1,0 +1,190 @@
+{
+  "kind": "verification_receipt",
+  "schema_version": "1.0",
+  "id": "vr-dcc5e9ff4f91b023021c0c04bc4c5ac572744a86",
+  "producer_ref": {
+    "blob_hash": "2a1cfb5cc92389ac969b164f4d1f3caf2a55fe5fb97ad8241154d5842ba1a5db",
+    "source_id": "acr_forensics_producer_manifest",
+    "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+    "locator": "/producer-manifest",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  },
+  "provenance_ref": {
+    "blob_hash": "9f685f62b3e2be63e13c05d9941eee98a92e204fc7e037a653eebb2d173d7048",
+    "source_id": "acr_forensics_record",
+    "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+    "locator": "/sessions/session-6886bc4f40144176bb747ba0556a02d0/provenance/prov-28ece3bfa9ec4229aa34de2372dd6ba2.json",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  },
+  "contract_status": "v0.1_frozen",
+  "session_id": "session-6886bc4f40144176bb747ba0556a02d0",
+  "verifier_id": "exact-command-40578e6d26d3b96a",
+  "verifier_spec_hash": "40578e6d26d3b96aee3d2d59aa0709081f2208bdb180d7a9d4d14cf0b1ae9815",
+  "verifier_config_ref": {
+    "blob_hash": "40578e6d26d3b96aee3d2d59aa0709081f2208bdb180d7a9d4d14cf0b1ae9815",
+    "source_id": "acr_forensics_verifier_config",
+    "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+    "locator": "/verifier-config",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  },
+  "pre_checkpoint_id": "cp-6d004fd0bd924ce38c79d021270c13ef",
+  "tested_captured_workspace_manifest_hash": "730ef41fa69101a7220204b1296423c5c0ca007c1f181c5f44384b5b0187e10b",
+  "command": {
+    "value": "pytest -q",
+    "status": "observed",
+    "reason": null,
+    "refs": [
+      {
+        "blob_hash": "40578e6d26d3b96aee3d2d59aa0709081f2208bdb180d7a9d4d14cf0b1ae9815",
+        "source_id": "acr_forensics_verifier_config",
+        "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+        "locator": "/verifier-config",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      }
+    ]
+  },
+  "passed": {
+    "value": false,
+    "status": "observed",
+    "reason": null,
+    "refs": [
+      {
+        "blob_hash": "7be4b007f5fe9ef6d4312dea80d40b42bdb0be7f02291730e43fb5ad16e7a4ef",
+        "source_id": "acr_forensics_record",
+        "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+        "locator": "/sessions/session-6886bc4f40144176bb747ba0556a02d0/events/event-fc77f1c363a040e7a0108cafc9e59756.json",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      }
+    ]
+  },
+  "exit_code": {
+    "value": 1,
+    "status": "observed",
+    "reason": null,
+    "refs": [
+      {
+        "blob_hash": "7be4b007f5fe9ef6d4312dea80d40b42bdb0be7f02291730e43fb5ad16e7a4ef",
+        "source_id": "acr_forensics_record",
+        "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+        "locator": "/sessions/session-6886bc4f40144176bb747ba0556a02d0/events/event-fc77f1c363a040e7a0108cafc9e59756.json",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      }
+    ]
+  },
+  "started_at": {
+    "value": "2026-09-11T06:38:11.545218Z",
+    "status": "observed",
+    "reason": null,
+    "refs": [
+      {
+        "blob_hash": "dc27bf70ada05bc9ad3963624a6339fcd1c08fa8a94bdddcc0169e3d969a61f0",
+        "source_id": "acr_forensics_record",
+        "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+        "locator": "/sessions/session-6886bc4f40144176bb747ba0556a02d0/events/event-e623718f2e164f37a47a2bf53ef1a45c.json",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      }
+    ]
+  },
+  "finished_at": {
+    "value": "2026-09-11T06:38:11.739757Z",
+    "status": "observed",
+    "reason": null,
+    "refs": [
+      {
+        "blob_hash": "7be4b007f5fe9ef6d4312dea80d40b42bdb0be7f02291730e43fb5ad16e7a4ef",
+        "source_id": "acr_forensics_record",
+        "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+        "locator": "/sessions/session-6886bc4f40144176bb747ba0556a02d0/events/event-fc77f1c363a040e7a0108cafc9e59756.json",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      }
+    ]
+  },
+  "ordering": {
+    "sequence": {
+      "value": 11,
+      "status": "observed",
+      "reason": null,
+      "refs": [
+        {
+          "blob_hash": "7be4b007f5fe9ef6d4312dea80d40b42bdb0be7f02291730e43fb5ad16e7a4ef",
+          "source_id": "acr_forensics_record",
+          "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+          "locator": "/sessions/session-6886bc4f40144176bb747ba0556a02d0/events/event-fc77f1c363a040e7a0108cafc9e59756.json",
+          "labels": [
+            {
+              "scope": "runtime",
+              "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+              "available_seq": null,
+              "taints": []
+            }
+          ]
+        }
+      ]
+    },
+    "basis": "locked_session_sequence_v1"
+  },
+  "operation": {
+    "occurrence_id": "call_00_ET_V0K8qzL9BiSrXv7TPiUX5236",
+    "name": "Bash"
+  },
+  "output_capture": "not_persisted_by_policy",
+  "stdout_ref": null,
+  "stderr_ref": null,
+  "post_checkpoint_id": null
+}

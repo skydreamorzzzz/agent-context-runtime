@@ -8,7 +8,7 @@ F0 provisional contracts / synthetic fixture: PASS
 Pre-F0.5 integrity correction: PASS
 F0.5 Reality Spike: PASS
 F1 Product Core Foundation: PASS
-Failure Window productization: NOT STARTED
+F2 Failure Boundary: AUTHORIZED NEXT / NOT STARTED
 Workspace Fork: NOT STARTED
 Incident Theater: NOT STARTED
 ```
@@ -88,12 +88,18 @@ This is local test evidence, not a GitHub CI result.
   state. Privacy exclusions and unsupported paths become explicit capture gaps.
 - Exact verifier results require the same hashed Claude session and tool-use
   occurrence, and resolve a same-session pre-checkpoint with an identical tested
-  manifest hash. Missing correlation emits no trusted receipt.
-- One real Claude Code 2.1.144 production session recorded PASS, a Claude Edit,
-  and FAIL as two checkpoints and two receipts. The evidence-set audit and both
-  independent manifest SHA256 recomputations passed. Evidence is committed at
-  `docs/receipts/f1_product_core`.
-- Full local result: 162 tests PASS; Ruff PASS. Repository GitHub checks are
+  manifest hash. Trusted PASS requires observed exit 0 and trusted FAIL requires
+  an observed non-zero exit code. Unclassified failures and interruptions remain
+  sanitized events without receipts; missing correlation emits no trusted receipt.
+- Frozen capture is limited to the exactly validated Claude Code 2.1.144 on
+  Ubuntu/WSL2 profile. Other versions or platform families block trusted capture.
+- One corrected real production session recorded exact `pytest -q` PASS, an
+  ordinary Claude Bash mutation of existing tracked `calculator.py`, and exact
+  `pytest -q` exit-1 FAIL as two checkpoints and two receipts. It recorded no
+  Edit/Write event. The evidence-set audit, privacy scan, and both independent
+  manifest SHA256 recomputations passed. Evidence is committed at
+  `docs/receipts/f1_product_core` and supersedes the prior unknown-exit smoke.
+- Full local result: 166 tests PASS; Ruff PASS. Repository GitHub checks are
   reported separately because no repository workflow is assumed.
 
 The Legacy Context Optimization M4 remains frozen. No duplicate-read candidate,
@@ -103,5 +109,6 @@ intervention, request deletion, or provider-rewriting work is authorized.
 
 > **F1 Product Core Foundation is complete; the next gate is Failure Boundary**
 
-Failure Window productization, Workspace Fork, Incident Theater, and frontend
-work remain NOT STARTED and require separate authorization.
+Failure Boundary remains NOT STARTED and is authorized as the next gate.
+Workspace Fork, Incident Theater, and frontend work remain NOT STARTED and
+require separate authorization.

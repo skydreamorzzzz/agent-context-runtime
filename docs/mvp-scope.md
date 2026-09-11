@@ -30,6 +30,11 @@ captured path/manifest semantics, and minimal receipt integrity boundary used by
 this slice. Restore, fork, analyzer, Failure Window, and frontend details remain
 provisional or not started.
 
+Trusted verifier evidence is currently limited to the exactly validated Claude
+Code 2.1.144 on Ubuntu/WSL2 profile. PASS means observed exit 0; FAIL means an
+observed non-zero exit. Unsupported terminal evidence remains a sanitized event
+without a trusted receipt.
+
 ## State claim boundary
 
 The planned state hash is `captured_workspace_manifest_hash`. It covers only

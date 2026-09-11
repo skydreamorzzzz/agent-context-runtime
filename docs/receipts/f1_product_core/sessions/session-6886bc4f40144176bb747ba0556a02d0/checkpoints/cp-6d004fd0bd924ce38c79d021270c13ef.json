@@ -1,0 +1,435 @@
+{
+  "kind": "workspace_checkpoint",
+  "schema_version": "1.0",
+  "id": "cp-6d004fd0bd924ce38c79d021270c13ef",
+  "producer_ref": {
+    "blob_hash": "2a1cfb5cc92389ac969b164f4d1f3caf2a55fe5fb97ad8241154d5842ba1a5db",
+    "source_id": "acr_forensics_producer_manifest",
+    "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+    "locator": "/producer-manifest",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  },
+  "provenance_ref": {
+    "blob_hash": "252b4c45519a79367615b8c8ea9515a2d7727ec203794fbd6808e2708d928e78",
+    "source_id": "acr_forensics_record",
+    "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+    "locator": "/sessions/session-6886bc4f40144176bb747ba0556a02d0/provenance/prov-14c1d091810e41c0b6693f4f23fc385a.json",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  },
+  "contract_status": "v0.1_frozen",
+  "session_id": "session-6886bc4f40144176bb747ba0556a02d0",
+  "ordering": {
+    "sequence": {
+      "value": 9,
+      "status": "observed",
+      "reason": null,
+      "refs": [
+        {
+          "blob_hash": "dc27bf70ada05bc9ad3963624a6339fcd1c08fa8a94bdddcc0169e3d969a61f0",
+          "source_id": "acr_forensics_record",
+          "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+          "locator": "/sessions/session-6886bc4f40144176bb747ba0556a02d0/events/event-e623718f2e164f37a47a2bf53ef1a45c.json",
+          "labels": [
+            {
+              "scope": "runtime",
+              "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+              "available_seq": null,
+              "taints": []
+            }
+          ]
+        }
+      ]
+    },
+    "basis": "locked_session_sequence_v1"
+  },
+  "timestamp": "2026-09-11T06:38:11.640625Z",
+  "git_base": {
+    "value": "d680ae5fb7899192e83e5548007ca50a39de1bbb",
+    "status": "observed",
+    "reason": null,
+    "refs": [
+      {
+        "blob_hash": "24875de9d7804af87d956be6c0e5a314fa6c2a90c03bae445efa3b138eec4bb9",
+        "source_id": "acr_forensics_capture_observation",
+        "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+        "locator": "/captures/call_00_ET_V0K8qzL9BiSrXv7TPiUX5236",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      }
+    ]
+  },
+  "captured_workspace_manifest_hash": "730ef41fa69101a7220204b1296423c5c0ca007c1f181c5f44384b5b0187e10b",
+  "manifest_ref": {
+    "blob_hash": "730ef41fa69101a7220204b1296423c5c0ca007c1f181c5f44384b5b0187e10b",
+    "source_id": "acr_forensics_manifest",
+    "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+    "locator": "/manifests/730ef41fa69101a7220204b1296423c5c0ca007c1f181c5f44384b5b0187e10b.json",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  },
+  "captured_paths": [
+    {
+      "repo_relative_path": ".acr.json",
+      "path_kind": "tracked",
+      "state": "present",
+      "state_ref": {
+        "blob_hash": "24875de9d7804af87d956be6c0e5a314fa6c2a90c03bae445efa3b138eec4bb9",
+        "source_id": "acr_forensics_capture_observation",
+        "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+        "locator": "/captures/call_00_ET_V0K8qzL9BiSrXv7TPiUX5236",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      },
+      "content_ref": {
+        "blob_hash": "a3d03c92c13d42ce4b644fa0d517288ad1e010718dbd5c10afce27421f13443f",
+        "source_id": "acr_forensics_captured_file",
+        "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+        "locator": "/captured-files/.acr.json",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      },
+      "executable": false
+    },
+    {
+      "repo_relative_path": "calculator.py",
+      "path_kind": "tracked",
+      "state": "present",
+      "state_ref": {
+        "blob_hash": "24875de9d7804af87d956be6c0e5a314fa6c2a90c03bae445efa3b138eec4bb9",
+        "source_id": "acr_forensics_capture_observation",
+        "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+        "locator": "/captures/call_00_ET_V0K8qzL9BiSrXv7TPiUX5236",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      },
+      "content_ref": {
+        "blob_hash": "e1a894022d1a082987b87adecb623438c9e386d86b2b621cff4a5fe7fdf7edc8",
+        "source_id": "acr_forensics_captured_file",
+        "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+        "locator": "/captured-files/calculator.py",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      },
+      "executable": false
+    },
+    {
+      "repo_relative_path": "test_calculator.py",
+      "path_kind": "tracked",
+      "state": "present",
+      "state_ref": {
+        "blob_hash": "24875de9d7804af87d956be6c0e5a314fa6c2a90c03bae445efa3b138eec4bb9",
+        "source_id": "acr_forensics_capture_observation",
+        "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+        "locator": "/captures/call_00_ET_V0K8qzL9BiSrXv7TPiUX5236",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      },
+      "content_ref": {
+        "blob_hash": "f25455f4eb3db8669adf0b066da0e55abaea0ac8dc4074be77676df0d543b193",
+        "source_id": "acr_forensics_captured_file",
+        "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+        "locator": "/captured-files/test_calculator.py",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      },
+      "executable": false
+    }
+  ],
+  "capture_scope": [
+    {
+      "area": "tracked_regular_files",
+      "repo_relative_path": null,
+      "captured": {
+        "value": true,
+        "status": "observed",
+        "reason": null,
+        "refs": [
+          {
+            "blob_hash": "24875de9d7804af87d956be6c0e5a314fa6c2a90c03bae445efa3b138eec4bb9",
+            "source_id": "acr_forensics_capture_observation",
+            "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+            "locator": "/captures/call_00_ET_V0K8qzL9BiSrXv7TPiUX5236",
+            "labels": [
+              {
+                "scope": "runtime",
+                "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+                "available_seq": null,
+                "taints": []
+              }
+            ]
+          }
+        ]
+      },
+      "disposition": "included",
+      "reason": null
+    },
+    {
+      "area": "selected_untracked_files",
+      "repo_relative_path": null,
+      "captured": {
+        "value": true,
+        "status": "observed",
+        "reason": null,
+        "refs": [
+          {
+            "blob_hash": "24875de9d7804af87d956be6c0e5a314fa6c2a90c03bae445efa3b138eec4bb9",
+            "source_id": "acr_forensics_capture_observation",
+            "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+            "locator": "/captures/call_00_ET_V0K8qzL9BiSrXv7TPiUX5236",
+            "labels": [
+              {
+                "scope": "runtime",
+                "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+                "available_seq": null,
+                "taints": []
+              }
+            ]
+          }
+        ]
+      },
+      "disposition": "included",
+      "reason": null
+    },
+    {
+      "area": "ignored_files",
+      "repo_relative_path": null,
+      "captured": {
+        "value": false,
+        "status": "observed",
+        "reason": null,
+        "refs": [
+          {
+            "blob_hash": "24875de9d7804af87d956be6c0e5a314fa6c2a90c03bae445efa3b138eec4bb9",
+            "source_id": "acr_forensics_capture_observation",
+            "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+            "locator": "/captures/call_00_ET_V0K8qzL9BiSrXv7TPiUX5236",
+            "labels": [
+              {
+                "scope": "runtime",
+                "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+                "available_seq": null,
+                "taints": []
+              }
+            ]
+          }
+        ]
+      },
+      "disposition": "not_captured",
+      "reason": "outside_v0.1_capture_scope"
+    },
+    {
+      "area": "environment",
+      "repo_relative_path": null,
+      "captured": {
+        "value": false,
+        "status": "observed",
+        "reason": null,
+        "refs": [
+          {
+            "blob_hash": "24875de9d7804af87d956be6c0e5a314fa6c2a90c03bae445efa3b138eec4bb9",
+            "source_id": "acr_forensics_capture_observation",
+            "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+            "locator": "/captures/call_00_ET_V0K8qzL9BiSrXv7TPiUX5236",
+            "labels": [
+              {
+                "scope": "runtime",
+                "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+                "available_seq": null,
+                "taints": []
+              }
+            ]
+          }
+        ]
+      },
+      "disposition": "not_captured",
+      "reason": "privacy_boundary"
+    },
+    {
+      "area": "running_processes",
+      "repo_relative_path": null,
+      "captured": {
+        "value": false,
+        "status": "observed",
+        "reason": null,
+        "refs": [
+          {
+            "blob_hash": "24875de9d7804af87d956be6c0e5a314fa6c2a90c03bae445efa3b138eec4bb9",
+            "source_id": "acr_forensics_capture_observation",
+            "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+            "locator": "/captures/call_00_ET_V0K8qzL9BiSrXv7TPiUX5236",
+            "labels": [
+              {
+                "scope": "runtime",
+                "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+                "available_seq": null,
+                "taints": []
+              }
+            ]
+          }
+        ]
+      },
+      "disposition": "not_captured",
+      "reason": "outside_v0.1_capture_scope"
+    },
+    {
+      "area": "database",
+      "repo_relative_path": null,
+      "captured": {
+        "value": false,
+        "status": "observed",
+        "reason": null,
+        "refs": [
+          {
+            "blob_hash": "24875de9d7804af87d956be6c0e5a314fa6c2a90c03bae445efa3b138eec4bb9",
+            "source_id": "acr_forensics_capture_observation",
+            "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+            "locator": "/captures/call_00_ET_V0K8qzL9BiSrXv7TPiUX5236",
+            "labels": [
+              {
+                "scope": "runtime",
+                "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+                "available_seq": null,
+                "taints": []
+              }
+            ]
+          }
+        ]
+      },
+      "disposition": "unsupported",
+      "reason": "outside_v0.1_capture_scope"
+    },
+    {
+      "area": "network",
+      "repo_relative_path": null,
+      "captured": {
+        "value": false,
+        "status": "observed",
+        "reason": null,
+        "refs": [
+          {
+            "blob_hash": "24875de9d7804af87d956be6c0e5a314fa6c2a90c03bae445efa3b138eec4bb9",
+            "source_id": "acr_forensics_capture_observation",
+            "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+            "locator": "/captures/call_00_ET_V0K8qzL9BiSrXv7TPiUX5236",
+            "labels": [
+              {
+                "scope": "runtime",
+                "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+                "available_seq": null,
+                "taints": []
+              }
+            ]
+          }
+        ]
+      },
+      "disposition": "unsupported",
+      "reason": "outside_v0.1_capture_scope"
+    }
+  ],
+  "capture_completeness": {
+    "value": false,
+    "status": "observed",
+    "reason": null,
+    "refs": [
+      {
+        "blob_hash": "24875de9d7804af87d956be6c0e5a314fa6c2a90c03bae445efa3b138eec4bb9",
+        "source_id": "acr_forensics_capture_observation",
+        "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+        "locator": "/captures/call_00_ET_V0K8qzL9BiSrXv7TPiUX5236",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      }
+    ]
+  },
+  "trigger": {
+    "value": "pre_exact_configured_verifier",
+    "status": "observed",
+    "reason": null,
+    "refs": [
+      {
+        "blob_hash": "dc27bf70ada05bc9ad3963624a6339fcd1c08fa8a94bdddcc0169e3d969a61f0",
+        "source_id": "acr_forensics_record",
+        "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+        "locator": "/sessions/session-6886bc4f40144176bb747ba0556a02d0/events/event-e623718f2e164f37a47a2bf53ef1a45c.json",
+        "labels": [
+          {
+            "scope": "runtime",
+            "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+            "available_seq": null,
+            "taints": []
+          }
+        ]
+      }
+    ]
+  },
+  "capture_policy_version": "acr.capture-policy/0.1",
+  "manifest_scope": "explicitly_captured_repository_scope"
+}

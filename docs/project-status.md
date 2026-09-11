@@ -11,7 +11,7 @@
 - Pre-F0.5 integrity correction: PASS
 - F0.5: PASS
 - F1 Product Core Foundation: PASS
-- Failure Window productization: NOT STARTED
+- F2 Failure Boundary: AUTHORIZED NEXT / NOT STARTED
 - Workspace Fork: NOT STARTED
 - Incident Theater: NOT STARTED
 
@@ -65,14 +65,20 @@ Claude configuration. The adapter persists sanitized stable events; the
 checkpoint runtime independently captures repository files rather than source
 content from Claude tool payloads. Exact verifier pre/result events are joined
 only with same-session and same-tool-use correlation, and every receipt resolves
-to the tested pre-checkpoint and identical manifest hash.
+to the tested pre-checkpoint and identical manifest hash. Frozen receipts enforce
+PASS as observed exit 0 and FAIL as an observed non-zero exit. Unclassified
+failure and interruption events persist without being promoted to receipts.
+Trusted capture is limited to the validated Claude Code 2.1.144 on Ubuntu/WSL2
+profile.
 
-The committed F1 smoke under `docs/receipts/f1_product_core` used one real Claude
-Code 2.1.144 production session. It observed exact `pytest -q` PASS, a Claude
-Edit, and exact `pytest -q` FAIL, producing 10 events, two checkpoints, and two
-verification receipts. The production session audit passed and both canonical
-manifest SHA256 values recomputed exactly. Full local regression: 162 tests
-PASS; Ruff PASS.
+The corrected committed F1 smoke under `docs/receipts/f1_product_core` used one
+real Claude Code 2.1.144 production session on Ubuntu/WSL2. It observed exact
+`pytest -q` PASS, an ordinary Claude Bash mutation of an existing tracked file,
+and exact `pytest -q` exit-1 FAIL, producing 8 events, two checkpoints, and two
+verification receipts. No Edit/Write event was recorded. The production session
+audit and privacy scan passed, and both canonical manifest SHA256 values
+recomputed exactly. It supersedes the prior unknown-exit smoke. Full local
+regression: 166 tests PASS; Ruff PASS.
 
 > **F1 Product Core Foundation: PASS**
 

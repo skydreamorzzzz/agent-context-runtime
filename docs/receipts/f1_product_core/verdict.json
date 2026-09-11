@@ -1,18 +1,25 @@
 {
-  "claim_scope": "one production Claude Code 2.1.144 session in one controlled Git repository",
+  "claim_scope": "one production Claude Code 2.1.144 session on Ubuntu/WSL2 in one controlled Git repository",
   "failure_checkpoint": {
     "manifest": {
-      "path": "manifests/83246d1d1b4ad6d61313392ed77581a08e03f964155f69ad53fabefa7795d3d7.json",
-      "sha256": "83246d1d1b4ad6d61313392ed77581a08e03f964155f69ad53fabefa7795d3d7"
+      "path": "manifests/730ef41fa69101a7220204b1296423c5c0ca007c1f181c5f44384b5b0187e10b.json",
+      "sha256": "730ef41fa69101a7220204b1296423c5c0ca007c1f181c5f44384b5b0187e10b"
     },
     "record": {
-      "path": "sessions/session-9570f94c478a4b3d9b6fffe4221c5013/checkpoints/cp-7a22c88db2214700b014329b39eb6794.json",
-      "sha256": "1fd900f0f85b005fa78795aef86127b17a9633ac62fbed075187e5436132c50b"
+      "path": "sessions/session-6886bc4f40144176bb747ba0556a02d0/checkpoints/cp-6d004fd0bd924ce38c79d021270c13ef.json",
+      "sha256": "27013d14147d0822ae797bf558cb612c351d0cd9bbc9671fe1dab5b189d349d4"
     }
   },
   "failure_receipt": {
-    "path": "sessions/session-9570f94c478a4b3d9b6fffe4221c5013/receipts/vr-ee2a8e94f1c6734fd88326eda36aed21140af78a.json",
-    "sha256": "835708cb61d941bc6db6af8a1bf4d4444d49a66f68d8ebcdc0668335b674837d"
+    "exit_code": 1,
+    "exit_code_status": "observed",
+    "passed": false,
+    "passed_status": "observed",
+    "record": {
+      "path": "sessions/session-6886bc4f40144176bb747ba0556a02d0/receipts/vr-dcc5e9ff4f91b023021c0c04bc4c5ac572744a86.json",
+      "sha256": "510ea5c6f8a2a5e860cd299cef562e4f69c629f6baccffe680d611649c54dfd1"
+    },
+    "termination_kind": "exited"
   },
   "limitations": {
     "failure_window_productized": false,
@@ -22,30 +29,46 @@
   },
   "observations": {
     "checkpoint_count": 2,
-    "event_count": 10,
+    "edit_or_write_event_count": 0,
+    "event_count": 8,
+    "intervening_tool": "Bash",
+    "ordinary_bash_command_body_persisted": false,
+    "privacy_scan": "PASS",
     "production_session_audit": "PASS",
     "receipt_count": 2,
     "results_in_observed_order": [
       "PASS",
       "FAIL"
     ],
+    "tracked_existing_path_changed": "calculator.py",
     "verifier": "pytest -q"
   },
   "passing_checkpoint": {
     "manifest": {
-      "path": "manifests/3f4399b5dad35985910997affacf7695b1572c383847d887240b7ad8cf45fc76.json",
-      "sha256": "3f4399b5dad35985910997affacf7695b1572c383847d887240b7ad8cf45fc76"
+      "path": "manifests/43e9c05e20f6c97efcedd3354e3a494f3ccaf930c10133d16b0cfd6b0bc66d48.json",
+      "sha256": "43e9c05e20f6c97efcedd3354e3a494f3ccaf930c10133d16b0cfd6b0bc66d48"
     },
     "record": {
-      "path": "sessions/session-9570f94c478a4b3d9b6fffe4221c5013/checkpoints/cp-adf60cdbb655422ab38194f7d0543648.json",
-      "sha256": "8e9348f50c7e026094d962de48448ab5b737a0ef77c4e406b551757b655648a7"
+      "path": "sessions/session-6886bc4f40144176bb747ba0556a02d0/checkpoints/cp-e3f4058c3cd74cefb0bf34e0cc1837d9.json",
+      "sha256": "b9ce98fb409acc4ccaf60a785c8264d75dbe0806b78d88dfc0dd40be47b37f62"
     }
   },
   "passing_receipt": {
-    "path": "sessions/session-9570f94c478a4b3d9b6fffe4221c5013/receipts/vr-a825729fd8b20a901ecfdc810669dc2d5d338daf.json",
-    "sha256": "5fa11d17bd239bdf7a3acc3807a62eec8d11e655fb8e5d265ce3d73be8034f87"
+    "exit_code": 0,
+    "exit_code_status": "observed",
+    "passed": true,
+    "passed_status": "observed",
+    "record": {
+      "path": "sessions/session-6886bc4f40144176bb747ba0556a02d0/receipts/vr-b5e2cbdd0d811acf54dd24d1ebf33066e9b9f1f9.json",
+      "sha256": "95c5ba5433e1ac34435c5688a0f5138f145b7099a2fb686cd77c7f82e98c7b45"
+    },
+    "termination_kind": "success"
   },
   "result": "PASS",
-  "schema": "acr.f1-product-core-smoke-verdict/0.1",
-  "session_id": "session-9570f94c478a4b3d9b6fffe4221c5013"
+  "runtime_profile": {
+    "claude_version": "2.1.144 (Claude Code)",
+    "platform_family": "Ubuntu/WSL2"
+  },
+  "schema": "acr.f1-product-core-smoke-verdict/0.2",
+  "session_id": "session-6886bc4f40144176bb747ba0556a02d0"
 }

@@ -68,7 +68,12 @@ A `VerificationReceipt` requires both captured pre-verifier state and matched
 verifier execution/result evidence. The F1 session integrity boundary resolves
 the pre-checkpoint in the same session, compares manifest hashes, and requires
 the same hashed Claude session and tool-use occurrence. It emits no trusted
-receipt when that correlation cannot be proved.
+receipt when that correlation cannot be proved. `PostToolUse` is receipt-eligible
+PASS evidence only with observed exit 0. `PostToolUseFailure` is receipt-eligible
+FAIL evidence only when its transient raw error has the strict first line
+`Exit code N` with non-zero `N`; only the structured termination kind and exit
+code persist. Unclassified failures and interruptions persist as sanitized
+events without receipts.
 
 `WorkspaceCheckpoint` is the restoration authority for a future Workspace
 Fork. An `IncidentReport` may select or reference a checkpoint, but as a derived
@@ -117,8 +122,13 @@ writers is unsupported. Background execution may be recorded as observed while
 mutation attribution is explicitly degraded.
 
 The committed F1 smoke validates the required PreToolUse/PostToolUse and
-PostToolUseFailure behavior on Claude Code 2.1.144. Other versions, background
-execution attribution, and concurrent writers do not inherit that result.
+non-zero-exit PostToolUseFailure behavior on Claude Code 2.1.144 under
+Ubuntu/WSL2. Other runtime profiles are blocked from frozen verifier evidence;
+background execution attribution and concurrent writers do not inherit that
+result. A normal failed pre-capture hook returns exit 2 in an effort to block the
+verifier, but hook timeout or unsupported Claude behavior is not claimed to make
+verifier execution impossible. The trusted invariant is narrower: without a
+trusted pre-verifier captured state, no trusted receipt is emitted.
 
 ## Reuse boundaries
 

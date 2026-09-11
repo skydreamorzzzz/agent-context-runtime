@@ -1,0 +1,110 @@
+{
+  "kind": "provenance",
+  "schema_version": "1.0",
+  "id": "prov-14c1d091810e41c0b6693f4f23fc385a",
+  "producer_ref": {
+    "blob_hash": "2a1cfb5cc92389ac969b164f4d1f3caf2a55fe5fb97ad8241154d5842ba1a5db",
+    "source_id": "acr_forensics_producer_manifest",
+    "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+    "locator": "/producer-manifest",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  },
+  "provenance_ref": null,
+  "output_object": "cp-6d004fd0bd924ce38c79d021270c13ef",
+  "field": "*",
+  "input_refs": [
+    {
+      "blob_hash": "24875de9d7804af87d956be6c0e5a314fa6c2a90c03bae445efa3b138eec4bb9",
+      "source_id": "acr_forensics_capture_observation",
+      "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+      "locator": "/captures/call_00_ET_V0K8qzL9BiSrXv7TPiUX5236",
+      "labels": [
+        {
+          "scope": "runtime",
+          "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+          "available_seq": null,
+          "taints": []
+        }
+      ]
+    },
+    {
+      "blob_hash": "730ef41fa69101a7220204b1296423c5c0ca007c1f181c5f44384b5b0187e10b",
+      "source_id": "acr_forensics_manifest",
+      "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+      "locator": "/manifests/730ef41fa69101a7220204b1296423c5c0ca007c1f181c5f44384b5b0187e10b.json",
+      "labels": [
+        {
+          "scope": "runtime",
+          "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+          "available_seq": null,
+          "taints": []
+        }
+      ]
+    },
+    {
+      "blob_hash": "a3d03c92c13d42ce4b644fa0d517288ad1e010718dbd5c10afce27421f13443f",
+      "source_id": "acr_forensics_captured_file",
+      "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+      "locator": "/captured-files/.acr.json",
+      "labels": [
+        {
+          "scope": "runtime",
+          "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+          "available_seq": null,
+          "taints": []
+        }
+      ]
+    },
+    {
+      "blob_hash": "e1a894022d1a082987b87adecb623438c9e386d86b2b621cff4a5fe7fdf7edc8",
+      "source_id": "acr_forensics_captured_file",
+      "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+      "locator": "/captured-files/calculator.py",
+      "labels": [
+        {
+          "scope": "runtime",
+          "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+          "available_seq": null,
+          "taints": []
+        }
+      ]
+    },
+    {
+      "blob_hash": "f25455f4eb3db8669adf0b066da0e55abaea0ac8dc4074be77676df0d543b193",
+      "source_id": "acr_forensics_captured_file",
+      "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+      "locator": "/captured-files/test_calculator.py",
+      "labels": [
+        {
+          "scope": "runtime",
+          "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+          "available_seq": null,
+          "taints": []
+        }
+      ]
+    }
+  ],
+  "transform_name": "capture_repository_state",
+  "transform_version": "0.1",
+  "config_ref": {
+    "blob_hash": "40578e6d26d3b96aee3d2d59aa0709081f2208bdb180d7a9d4d14cf0b1ae9815",
+    "source_id": "acr_forensics_verifier_config",
+    "trajectory_key": "session-6886bc4f40144176bb747ba0556a02d0",
+    "locator": "/verifier-config",
+    "labels": [
+      {
+        "scope": "runtime",
+        "run_id": "session-6886bc4f40144176bb747ba0556a02d0",
+        "available_seq": null,
+        "taints": []
+      }
+    ]
+  }
+}

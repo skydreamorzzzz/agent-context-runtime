@@ -131,6 +131,7 @@ class ForensicsEvidenceStore:
         selected_untracked_paths: list[str],
         max_blob_bytes: int,
         claude_version: str,
+        platform_family: str,
     ) -> dict[str, Any]:
         producer_bytes = canonical_json_bytes(
             {
@@ -166,6 +167,7 @@ class ForensicsEvidenceStore:
                 "transcript_paths_persisted": False,
                 "verifier_output_bodies_persisted": False,
             },
+            "platform_family": platform_family,
             "producer_ref": producer_ref.model_dump(mode="json"),
             "repo_identity_hash": repo_identity_hash,
             "schema": "acr.forensics-session/0.1",
@@ -184,8 +186,10 @@ class ForensicsEvidenceStore:
         except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
             raise ValueError("missing or malformed forensics session metadata") from error
         required = {
+            "claude_version",
             "config_ref",
             "max_blob_bytes",
+            "platform_family",
             "producer_ref",
             "repo_identity_hash",
             "selected_untracked_paths",
@@ -199,6 +203,8 @@ class ForensicsEvidenceStore:
             raise ValueError("forensics session metadata identity mismatch")
         if (
             not isinstance(value["verifier"], str)
+            or not isinstance(value["claude_version"], str)
+            or not isinstance(value["platform_family"], str)
             or not isinstance(value["verifier_spec_hash"], str)
             or not isinstance(value["repo_identity_hash"], str)
             or not isinstance(value["max_blob_bytes"], int)
