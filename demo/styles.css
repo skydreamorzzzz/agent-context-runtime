@@ -511,11 +511,22 @@ select {
 .timeline-list { position: relative; display: grid; gap: 0; }
 .timeline-list::before { position: absolute; top: 8px; bottom: 8px; left: 11px; width: 1px; background: var(--line); content: ""; }
 .timeline-item { position: relative; display: grid; grid-template-columns: 24px 1fr; gap: 12px; padding: 8px 0 16px; }
+.timeline-item::after { position: absolute; top: 8px; bottom: 16px; left: -12px; width: 2px; border-radius: 2px; content: ""; }
+.timeline-green::after { background: var(--green); }
+.timeline-yellow::after { background: var(--amber); }
+.timeline-red::after { background: var(--red); }
+.timeline-neutral::after { background: #53616d; }
 .timeline-marker { z-index: 1; display: grid; place-items: center; width: 23px; height: 23px; border: 1px solid #50606d; border-radius: 50%; color: #aebbc6; background: #11171d; font-family: var(--mono); font-size: 12px; }
 .timeline-green .timeline-marker { color: var(--green); border-color: rgba(91,240,165,.55); }
 .timeline-red .timeline-marker { color: var(--red); border-color: rgba(255,102,125,.55); }
 .timeline-item strong { display: block; padding-top: 2px; font-size: 13px; }
 .timeline-item p { margin: 4px 0 0; color: var(--muted); font-family: var(--mono); font-size: 10px; }
+.timeline-status { margin-left: 7px; color: var(--muted); font-family: var(--mono); font-size: 8px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.timeline-green .timeline-status { color: var(--green); }
+.timeline-yellow .timeline-status { color: var(--amber); }
+.timeline-red .timeline-status { color: var(--red); }
+.timeline-diagnostics { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.timeline-diagnostics span { padding: 4px 6px; border: 1px solid rgba(246, 198, 103, .45); border-radius: 5px; color: var(--amber); background: rgba(246, 198, 103, .08); font-family: var(--mono); font-size: 9px; }
 
 .healthy-badge { color: var(--green); font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .08em; }
 .check-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 20px; }

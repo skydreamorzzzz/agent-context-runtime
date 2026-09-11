@@ -17,6 +17,7 @@
       "diagnostics": [
         {
           "description": "Historical context or token input growth.",
+          "event_sequences": [],
           "occurrences": 0,
           "rule": "W01",
           "severity": "neutral",
@@ -27,16 +28,18 @@
         },
         {
           "description": "A single tool response contains a large payload.",
-          "occurrences": 1,
+          "event_sequences": [],
+          "occurrences": 0,
           "rule": "W02",
-          "severity": "yellow",
+          "severity": "neutral",
           "source": "demo presentation metadata",
-          "status": "warning",
-          "summary": "Large tool result observed",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
           "title": "Large Tool Output"
         },
         {
           "description": "A long failure stack or error log was not truncated.",
+          "event_sequences": [],
           "occurrences": 0,
           "rule": "W03",
           "severity": "neutral",
@@ -47,6 +50,7 @@
         },
         {
           "description": "Large, highly similar context repeats.",
+          "event_sequences": [],
           "occurrences": 0,
           "rule": "W04",
           "severity": "neutral",
@@ -57,6 +61,7 @@
         },
         {
           "description": "A single user input is unusually large.",
+          "event_sequences": [],
           "occurrences": 0,
           "rule": "W05",
           "severity": "neutral",
@@ -67,16 +72,18 @@
         },
         {
           "description": "Similar tool commands repeat in a short window.",
-          "occurrences": 3,
+          "event_sequences": [],
+          "occurrences": 0,
           "rule": "W06",
-          "severity": "yellow",
+          "severity": "neutral",
           "source": "demo presentation metadata",
-          "status": "warning",
-          "summary": "Repeated command pattern observed",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
           "title": "Repeated Command"
         },
         {
           "description": "Tool calls form a dense repeated loop.",
+          "event_sequences": [],
           "occurrences": 0,
           "rule": "W07",
           "severity": "neutral",
@@ -87,6 +94,7 @@
         },
         {
           "description": "Assistant output shows highly similar retries.",
+          "event_sequences": [],
           "occurrences": 0,
           "rule": "W08",
           "severity": "neutral",
@@ -190,13 +198,14 @@
       "summary": {
         "boundary_status": "observed",
         "changed_file_count": 1,
-        "diagnostic_warning_count": 2,
+        "diagnostic_warning_count": 0,
         "overall_status": "red",
         "verified_fail_present": true
       },
       "timeline": [
         {
           "detail": "pytest -q \u00b7 exit code 0",
+          "diagnostic_refs": [],
           "kind": "verified_pass",
           "label": "Verified PASS",
           "sequence": 5,
@@ -204,6 +213,7 @@
         },
         {
           "detail": "Observed between verification boundaries",
+          "diagnostic_refs": [],
           "kind": "observed_activity",
           "label": "Bash operation",
           "sequence": 6,
@@ -211,6 +221,7 @@
         },
         {
           "detail": "calculator.py",
+          "diagnostic_refs": [],
           "kind": "repository_transition",
           "label": "Repository state changed",
           "sequence": null,
@@ -218,6 +229,7 @@
         },
         {
           "detail": "pytest -q \u00b7 exit code 1",
+          "diagnostic_refs": [],
           "kind": "verified_fail",
           "label": "Verified FAIL",
           "sequence": 11,

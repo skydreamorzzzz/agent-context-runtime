@@ -197,6 +197,11 @@ def _diagnostic_view(presentation: dict[str, Any]) -> list[dict[str, Any]]:
                 "occurrences": annotation.get("occurrences", 0)
                 if isinstance(annotation, dict) and isinstance(annotation.get("occurrences", 0), int)
                 else 0,
+                "event_sequences": annotation.get("event_sequences", [])
+                if isinstance(annotation, dict)
+                and isinstance(annotation.get("event_sequences", []), list)
+                and all(isinstance(value, int) for value in annotation.get("event_sequences", []))
+                else [],
                 "source": "demo presentation metadata",
             }
         )
@@ -208,26 +213,38 @@ def _timeline_view(
     failing: VerificationReceipt,
     activity: list[dict[str, Any]],
     changed_files: list[dict[str, Any]],
+    diagnostics: list[dict[str, Any]],
+    verifier: str,
 ) -> list[dict[str, Any]]:
+    def refs_for(sequence: int) -> list[dict[str, str]]:
+        return [
+            {"rule": item["rule"], "title": item["title"], "summary": item["summary"]}
+            for item in diagnostics
+            if sequence in item["event_sequences"] and item["status"] == "warning"
+        ]
+
     entries: list[dict[str, Any]] = [
         {
             "kind": "verified_pass",
             "label": "Verified PASS",
-            "detail": "pytest -q · exit code 0",
+            "detail": f"{verifier} · exit code {passing.exit_code.value}",
             "status": "green",
             "sequence": _sequence(passing),
+            "diagnostic_refs": [],
         }
     ]
-    entries.extend(
-        {
-            "kind": "observed_activity",
-            "label": item["label"],
-            "detail": "Observed between verification boundaries",
-            "status": "neutral",
-            "sequence": item["sequence"],
-        }
-        for item in activity
-    )
+    for item in activity:
+        refs = refs_for(item["sequence"])
+        entries.append(
+            {
+                "kind": "observed_activity",
+                "label": item["label"],
+                "detail": "Observed between verification boundaries",
+                "status": step_status({"diagnostic_refs": refs, "is_normal_observed_operation": False}),
+                "sequence": item["sequence"],
+                "diagnostic_refs": refs,
+            }
+        )
     paths = ", ".join(item["path"] for item in changed_files) or "No captured path change"
     entries.append(
         {
@@ -236,18 +253,31 @@ def _timeline_view(
             "detail": paths,
             "status": "neutral",
             "sequence": None,
+            "diagnostic_refs": [],
         }
     )
     entries.append(
         {
             "kind": "verified_fail",
             "label": "Verified FAIL",
-            "detail": "pytest -q · exit code 1",
+            "detail": f"{verifier} · exit code {failing.exit_code.value}",
             "status": "red",
             "sequence": _sequence(failing),
+            "diagnostic_refs": [],
         }
     )
     return entries
+
+
+def step_status(step: dict[str, Any]) -> str:
+    """Apply the small, ordered status rule used by the demo timeline."""
+    if step.get("has_verified_failure"):
+        return "red"
+    if step.get("diagnostic_refs"):
+        return "yellow"
+    if step.get("has_verified_success") or step.get("is_normal_observed_operation"):
+        return "green"
+    return "neutral"
 
 
 def _integrity_view(
@@ -351,7 +381,14 @@ def build_session_view(
         "last_pass": _receipt_view(passing_receipt),
         "overall_status": overall_status,
         "observed_activity": activity,
-        "timeline": _timeline_view(passing_receipt, failing_receipt, activity, changed_files),
+        "timeline": _timeline_view(
+            passing_receipt,
+            failing_receipt,
+            activity,
+            changed_files,
+            diagnostics,
+            metadata["verifier"],
+        ),
         "diagnostics": diagnostics,
         "evidence_integrity": _integrity_view(
             passing_receipt, failing_receipt, passing_checkpoint, failing_checkpoint

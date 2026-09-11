@@ -148,7 +148,7 @@ function diagnosticBlock(items) {
           <div class="signal-top"><span class="signal-code">${escapeHtml(item.rule)}</span><span class="signal-state">${escapeHtml(item.status === "warning" ? "SUSPECTED REDUNDANCY" : item.status === "normal" ? "NORMAL" : "NOT EVALUATED")}</span></div>
           <h3>${escapeHtml(item.title)}</h3>
           <p>${escapeHtml(item.summary)}</p>
-          ${item.status === "warning" ? `<small>${escapeHtml(item.occurrences)} occurrence${item.occurrences === 1 ? "" : "s"} · worth inspecting</small>` : ""}
+          ${item.status === "warning" ? `<small>${escapeHtml(item.occurrences)} occurrence${item.occurrences === 1 ? "" : "s"} · worth inspecting · demo metadata</small>` : ""}
         </article>`).join("")}</div>
       <p class="metadata-note">Annotations marked as heuristic are demo presentation metadata; privacy-bounded F1 evidence does not contain the bodies needed to evaluate every signal.</p>
     </section>`;
@@ -161,7 +161,7 @@ function timelineBlock(items) {
       <div class="timeline-list">${items.map((item) => `
         <div class="timeline-item timeline-${escapeHtml(item.status)}">
           <span class="timeline-marker">${item.status === "green" ? "✓" : item.status === "red" ? "×" : "•"}</span>
-          <div><strong>${escapeHtml(item.label)}</strong><p>${escapeHtml(item.detail)}</p></div>
+          <div><strong>${escapeHtml(item.label)} <span class="timeline-status">${escapeHtml(item.status)}</span></strong><p>${item.sequence === null ? "" : `sequence ${escapeHtml(item.sequence)} · `}${escapeHtml(item.detail)}</p>${item.diagnostic_refs.length ? `<div class="timeline-diagnostics">${item.diagnostic_refs.map((ref) => `<span>${escapeHtml(ref.rule)} ${escapeHtml(ref.title)}</span>`).join("")}</div>` : ""}</div>
         </div>`).join("")}</div>
     </section>`;
 }

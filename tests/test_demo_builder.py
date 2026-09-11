@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.build_demo_data import build_demo_data
+from scripts.build_demo_data import build_demo_data, step_status
 
 EVIDENCE_ROOT = Path("docs/receipts/f1_product_core")
 CASE_METADATA = Path("demo/cases.json")
@@ -37,16 +37,28 @@ def test_builder_projects_committed_f1_smoke_into_demo_view_model() -> None:
     ]
     assert session["summary"]["overall_status"] == "red"
     assert session["overall_status"] == "red"
-    assert session["summary"]["diagnostic_warning_count"] == 2
+    assert session["summary"]["diagnostic_warning_count"] == 0
     assert {item["rule"] for item in session["diagnostics"]} == {
         "W01", "W02", "W03", "W04", "W05", "W06", "W07", "W08"
     }
     assert session["diagnostics"][0]["status"] == "not_evaluated"
-    assert session["diagnostics"][1]["severity"] == "yellow"
-    assert session["diagnostics"][5]["occurrences"] == 3
+    assert all(item["status"] == "not_evaluated" for item in session["diagnostics"])
+    assert all(item["event_sequences"] == [] for item in session["diagnostics"])
     assert [item["kind"] for item in session["timeline"]] == [
         "verified_pass", "observed_activity", "repository_transition", "verified_fail"
     ]
+    assert [item["status"] for item in session["timeline"]] == [
+        "green", "neutral", "neutral", "red"
+    ]
+    assert all(item["diagnostic_refs"] == [] for item in session["timeline"])
     assert session["evidence_integrity"]["status"] == "verified"
     assert all(item["status"] == "pass" for item in session["evidence_integrity"]["checks"])
     assert session["privacy_boundary"]["status"] == "enforced"
+
+
+def test_step_status_has_explicit_priority() -> None:
+    assert step_status({"has_verified_success": True}) == "green"
+    assert step_status({"diagnostic_refs": [{"rule": "W04"}]}) == "yellow"
+    assert step_status({"has_verified_failure": True, "diagnostic_refs": [{"rule": "W06"}]}) == "red"
+    assert step_status({}) == "neutral"
+    assert step_status({"diagnostic_refs": [], "is_normal_observed_operation": False}) == "neutral"
