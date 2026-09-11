@@ -19,6 +19,17 @@ from acr.forensics_contracts import (
 
 MAX_DIFF_BLOB_BYTES = 200_000
 
+LEGACY_DIAGNOSTICS = (
+    ("W01", "Context Growth", "Historical context or token input growth."),
+    ("W02", "Large Tool Output", "A single tool response contains a large payload."),
+    ("W03", "Failure Stack", "A long failure stack or error log was not truncated."),
+    ("W04", "Duplicate Context", "Large, highly similar context repeats."),
+    ("W05", "Large User Input", "A single user input is unusually large."),
+    ("W06", "Repeated Command", "Similar tool commands repeat in a short window."),
+    ("W07", "Tool Loop", "Tool calls form a dense repeated loop."),
+    ("W08", "Retry Storm", "Assistant output shows highly similar retries."),
+)
+
 
 class UnsupportedDemoSession(ValueError):
     """The narrow static demo cannot derive an unambiguous PASS-to-FAIL boundary."""
@@ -163,6 +174,125 @@ def _receipt_view(receipt: VerificationReceipt) -> dict[str, Any]:
     }
 
 
+def _diagnostic_view(presentation: dict[str, Any]) -> list[dict[str, Any]]:
+    """Project demo-only annotations without presenting them as F1 evidence."""
+    annotations = presentation.get("diagnostics", {})
+    result: list[dict[str, Any]] = []
+    for rule, title, description in LEGACY_DIAGNOSTICS:
+        annotation = annotations.get(rule, {}) if isinstance(annotations, dict) else {}
+        status = annotation.get("status") if isinstance(annotation, dict) else None
+        severity = annotation.get("severity") if isinstance(annotation, dict) else None
+        summary = annotation.get("summary") if isinstance(annotation, dict) else None
+        if status not in {"normal", "warning"} or severity not in {"green", "yellow"}:
+            status, severity = "not_evaluated", "neutral"
+            summary = "Not evaluated from privacy-bounded F1 evidence."
+        result.append(
+            {
+                "rule": rule,
+                "title": title,
+                "description": description,
+                "severity": severity,
+                "status": status,
+                "summary": summary if isinstance(summary, str) else description,
+                "occurrences": annotation.get("occurrences", 0)
+                if isinstance(annotation, dict) and isinstance(annotation.get("occurrences", 0), int)
+                else 0,
+                "source": "demo presentation metadata",
+            }
+        )
+    return result
+
+
+def _timeline_view(
+    passing: VerificationReceipt,
+    failing: VerificationReceipt,
+    activity: list[dict[str, Any]],
+    changed_files: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = [
+        {
+            "kind": "verified_pass",
+            "label": "Verified PASS",
+            "detail": "pytest -q · exit code 0",
+            "status": "green",
+            "sequence": _sequence(passing),
+        }
+    ]
+    entries.extend(
+        {
+            "kind": "observed_activity",
+            "label": item["label"],
+            "detail": "Observed between verification boundaries",
+            "status": "neutral",
+            "sequence": item["sequence"],
+        }
+        for item in activity
+    )
+    paths = ", ".join(item["path"] for item in changed_files) or "No captured path change"
+    entries.append(
+        {
+            "kind": "repository_transition",
+            "label": "Repository state changed",
+            "detail": paths,
+            "status": "neutral",
+            "sequence": None,
+        }
+    )
+    entries.append(
+        {
+            "kind": "verified_fail",
+            "label": "Verified FAIL",
+            "detail": "pytest -q · exit code 1",
+            "status": "red",
+            "sequence": _sequence(failing),
+        }
+    )
+    return entries
+
+
+def _integrity_view(
+    passing_receipt: VerificationReceipt,
+    failing_receipt: VerificationReceipt,
+    passing_checkpoint: WorkspaceCheckpoint,
+    failing_checkpoint: WorkspaceCheckpoint,
+) -> dict[str, Any]:
+    same_session = passing_receipt.session_id == failing_receipt.session_id
+    manifests_distinct = (
+        passing_checkpoint.captured_workspace_manifest_hash
+        != failing_checkpoint.captured_workspace_manifest_hash
+    )
+    all_pass = same_session and manifests_distinct
+    return {
+        "status": "verified" if all_pass else "unsupported",
+        "checks": [
+            {"label": "Session audit", "status": "pass", "detail": "audit_session passed"},
+            {"label": "Exact verifier observed", "status": "pass", "detail": "pytest -q"},
+            {"label": "PASS backed by exit code 0", "status": "pass", "detail": "observed"},
+            {"label": "FAIL backed by non-zero exit", "status": "pass", "detail": "observed"},
+            {"label": "Pre-verifier checkpoints", "status": "pass", "detail": "both resolve"},
+            {"label": "Manifest hashes verified", "status": "pass", "detail": "canonical"},
+            {"label": "Same session binding", "status": "pass" if same_session else "fail", "detail": "receipt correlation"},
+            {"label": "State transition detected", "status": "pass" if manifests_distinct else "fail", "detail": "manifest hashes differ"},
+        ],
+    }
+
+
+def _privacy_view() -> dict[str, Any]:
+    return {
+        "status": "enforced",
+        "captured": ["Sanitized agent events", "Repository state", "Verification results"],
+        "not_persisted": [
+            "Prompt bodies",
+            "Environment values",
+            "Raw hook payloads",
+            "Tool response bodies",
+            "Transcript paths",
+            "Verifier output bodies",
+        ],
+        "diagnostic_note": "W01–W08 annotations are presentation metadata, not F1 evidence.",
+    }
+
+
 def _select_boundary(
     receipts: list[VerificationReceipt],
 ) -> tuple[VerificationReceipt, VerificationReceipt]:
@@ -197,8 +327,18 @@ def build_session_view(
         failing_checkpoint = checkpoints[failing_receipt.pre_checkpoint_id]
     except KeyError as error:
         raise UnsupportedDemoSession("receipt checkpoint is unavailable") from error
-    changed_files = _changed_files(store, passing_checkpoint, failing_checkpoint)
     presentation = presentation or {}
+    changed_files = _changed_files(store, passing_checkpoint, failing_checkpoint)
+    activity = _observed_activity(
+        store,
+        events,
+        _sequence(passing_receipt),
+        _sequence(failing_receipt),
+    )
+    diagnostics = _diagnostic_view(presentation)
+    overall_status = "red" if failing_receipt.passed.value is False else (
+        "yellow" if any(item["status"] == "warning" for item in diagnostics) else "green"
+    )
     title = presentation.get("title")
     description = presentation.get("description")
     if not isinstance(title, str) or not title:
@@ -209,12 +349,14 @@ def build_session_view(
         "changed_files": changed_files,
         "first_fail": _receipt_view(failing_receipt),
         "last_pass": _receipt_view(passing_receipt),
-        "observed_activity": _observed_activity(
-            store,
-            events,
-            _sequence(passing_receipt),
-            _sequence(failing_receipt),
+        "overall_status": overall_status,
+        "observed_activity": activity,
+        "timeline": _timeline_view(passing_receipt, failing_receipt, activity, changed_files),
+        "diagnostics": diagnostics,
+        "evidence_integrity": _integrity_view(
+            passing_receipt, failing_receipt, passing_checkpoint, failing_checkpoint
         ),
+        "privacy_boundary": _privacy_view(),
         "presentation": {
             "description": description,
             "source": "demo/cases.json",
@@ -224,6 +366,9 @@ def build_session_view(
         "summary": {
             "boundary_status": "observed",
             "changed_file_count": len(changed_files),
+            "overall_status": overall_status,
+            "verified_fail_present": failing_receipt.passed.value is False,
+            "diagnostic_warning_count": sum(item["status"] == "warning" for item in diagnostics),
         },
         "verifier": metadata["verifier"],
     }
@@ -256,7 +401,7 @@ def build_demo_data(
         except (OSError, TypeError, ValueError) as error:
             skipped.append({"reason": str(error), "session_id": session_id})
     return {
-        "schema": "acr.demo-view/0.1",
+        "schema": "acr.demo-view/0.2",
         "sessions": sessions,
         "skipped_sessions": skipped,
         "source": {

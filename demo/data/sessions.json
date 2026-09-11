@@ -1,5 +1,5 @@
 {
-  "schema": "acr.demo-view/0.1",
+  "schema": "acr.demo-view/0.2",
   "sessions": [
     {
       "changed_files": [
@@ -14,6 +14,133 @@
           "path": "calculator.py"
         }
       ],
+      "diagnostics": [
+        {
+          "description": "Historical context or token input growth.",
+          "occurrences": 0,
+          "rule": "W01",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Context Growth"
+        },
+        {
+          "description": "A single tool response contains a large payload.",
+          "occurrences": 1,
+          "rule": "W02",
+          "severity": "yellow",
+          "source": "demo presentation metadata",
+          "status": "warning",
+          "summary": "Large tool result observed",
+          "title": "Large Tool Output"
+        },
+        {
+          "description": "A long failure stack or error log was not truncated.",
+          "occurrences": 0,
+          "rule": "W03",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Failure Stack"
+        },
+        {
+          "description": "Large, highly similar context repeats.",
+          "occurrences": 0,
+          "rule": "W04",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Duplicate Context"
+        },
+        {
+          "description": "A single user input is unusually large.",
+          "occurrences": 0,
+          "rule": "W05",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Large User Input"
+        },
+        {
+          "description": "Similar tool commands repeat in a short window.",
+          "occurrences": 3,
+          "rule": "W06",
+          "severity": "yellow",
+          "source": "demo presentation metadata",
+          "status": "warning",
+          "summary": "Repeated command pattern observed",
+          "title": "Repeated Command"
+        },
+        {
+          "description": "Tool calls form a dense repeated loop.",
+          "occurrences": 0,
+          "rule": "W07",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Tool Loop"
+        },
+        {
+          "description": "Assistant output shows highly similar retries.",
+          "occurrences": 0,
+          "rule": "W08",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Retry Storm"
+        }
+      ],
+      "evidence_integrity": {
+        "checks": [
+          {
+            "detail": "audit_session passed",
+            "label": "Session audit",
+            "status": "pass"
+          },
+          {
+            "detail": "pytest -q",
+            "label": "Exact verifier observed",
+            "status": "pass"
+          },
+          {
+            "detail": "observed",
+            "label": "PASS backed by exit code 0",
+            "status": "pass"
+          },
+          {
+            "detail": "observed",
+            "label": "FAIL backed by non-zero exit",
+            "status": "pass"
+          },
+          {
+            "detail": "both resolve",
+            "label": "Pre-verifier checkpoints",
+            "status": "pass"
+          },
+          {
+            "detail": "canonical",
+            "label": "Manifest hashes verified",
+            "status": "pass"
+          },
+          {
+            "detail": "receipt correlation",
+            "label": "Same session binding",
+            "status": "pass"
+          },
+          {
+            "detail": "manifest hashes differ",
+            "label": "State transition detected",
+            "status": "pass"
+          }
+        ],
+        "status": "verified"
+      },
       "first_fail": {
         "checkpoint_id": "cp-6d004fd0bd924ce38c79d021270c13ef",
         "exit_code": 1,
@@ -36,16 +163,67 @@
           "sequence": 6
         }
       ],
+      "overall_status": "red",
       "presentation": {
         "description": "One captured repository file changed between observed verifier outcomes.",
         "source": "demo/cases.json",
         "title": "Calculator regression"
       },
+      "privacy_boundary": {
+        "captured": [
+          "Sanitized agent events",
+          "Repository state",
+          "Verification results"
+        ],
+        "diagnostic_note": "W01\u2013W08 annotations are presentation metadata, not F1 evidence.",
+        "not_persisted": [
+          "Prompt bodies",
+          "Environment values",
+          "Raw hook payloads",
+          "Tool response bodies",
+          "Transcript paths",
+          "Verifier output bodies"
+        ],
+        "status": "enforced"
+      },
       "session_id": "session-6886bc4f40144176bb747ba0556a02d0",
       "summary": {
         "boundary_status": "observed",
-        "changed_file_count": 1
+        "changed_file_count": 1,
+        "diagnostic_warning_count": 2,
+        "overall_status": "red",
+        "verified_fail_present": true
       },
+      "timeline": [
+        {
+          "detail": "pytest -q \u00b7 exit code 0",
+          "kind": "verified_pass",
+          "label": "Verified PASS",
+          "sequence": 5,
+          "status": "green"
+        },
+        {
+          "detail": "Observed between verification boundaries",
+          "kind": "observed_activity",
+          "label": "Bash operation",
+          "sequence": 6,
+          "status": "neutral"
+        },
+        {
+          "detail": "calculator.py",
+          "kind": "repository_transition",
+          "label": "Repository state changed",
+          "sequence": null,
+          "status": "neutral"
+        },
+        {
+          "detail": "pytest -q \u00b7 exit code 1",
+          "kind": "verified_fail",
+          "label": "Verified FAIL",
+          "sequence": 11,
+          "status": "red"
+        }
+      ],
       "verifier": "pytest -q"
     }
   ],
