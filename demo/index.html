@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Agent Forensics — a black box for coding agents.">
+    <title>Agent Forensics — Coding Agent Black Box</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="ambient ambient-left" aria-hidden="true"></div>
+    <div class="ambient ambient-right" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <a class="brand" href="#" aria-label="Agent Forensics home">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+        <span>
+          <strong>Agent Forensics</strong>
+          <small>Coding Agent Black Box</small>
+        </span>
+      </a>
+      <div class="evidence-badge"><i></i> Evidence-backed demo</div>
+    </header>
+
+    <main class="page-shell">
+      <section class="hero" aria-labelledby="page-title">
+        <p class="eyebrow">VERIFIED REPOSITORY STATE</p>
+        <h1 id="page-title">See where an agent session<br><span>crossed into failure.</span></h1>
+        <p class="hero-copy">
+          A read-only reconstruction from captured repository evidence — no prompt bodies,
+          no inferred root cause.
+        </p>
+      </section>
+
+      <section class="session-bar" aria-label="Demo session">
+        <div class="session-heading">
+          <span class="session-kicker">SESSION</span>
+          <strong id="session-title">Loading evidence…</strong>
+          <span id="session-id" class="session-id"></span>
+        </div>
+        <label id="session-control" class="session-control is-hidden">
+          <span>Choose case</span>
+          <select id="session-select"></select>
+        </label>
+        <div class="verifier-chip">
+          <span>VERIFIER</span>
+          <code id="verifier">—</code>
+        </div>
+      </section>
+
+      <div id="loading" class="loading" role="status">Reading generated Demo ViewModel…</div>
+      <div id="error" class="error-panel is-hidden" role="alert"></div>
+      <section id="demo" class="demo-flow is-hidden" aria-live="polite"></section>
+    </main>
+
+    <footer>
+      <span>Observed ≠ inferred</span>
+      <span class="footer-rule"></span>
+      <span>Derived from immutable F1 evidence</span>
+    </footer>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>

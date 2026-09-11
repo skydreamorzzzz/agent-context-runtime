@@ -4,14 +4,15 @@
 
 - Active MVP hypothesis: Agent Forensics
 - Status: SELECTED FOR VALIDATION
-- Implementation: F1 PRODUCT CORE — REAL CAPTURE + VERIFIED REPOSITORY STATE
+- Implementation: STATIC DEMO OF COMMITTED F1 VERIFIED-STATE EVIDENCE
 - Product validation: NOT ESTABLISHED
 - Research novelty: NOT ESTABLISHED
 - F0: PASS
 - Pre-F0.5 integrity correction: PASS
 - F0.5: PASS
 - F1 Product Core Foundation: PASS
-- F2 Failure Boundary: AUTHORIZED NEXT / NOT STARTED
+- Demo Visualization Slice: PASS
+- F2 Failure Boundary: DEFERRED / NOT STARTED
 - Workspace Fork: NOT STARTED
 - Incident Theater: NOT STARTED
 
@@ -82,8 +83,21 @@ regression: 166 tests PASS; Ruff PASS.
 
 > **F1 Product Core Foundation: PASS**
 
-Failure Window productization, Workspace Fork, and Incident Theater remain NOT
-STARTED. Product validation and research novelty remain NOT ESTABLISHED.
+The current demo-first strategy projects the committed F1 evidence through a
+small Python builder into `demo/data/sessions.json`, then renders it with static
+HTML, CSS, and vanilla JavaScript. The frontend consumes only that presentation
+ViewModel. The first case shows the observed PASS-to-FAIL boundary, the
+intervening Bash occurrence, the sole changed captured path `calculator.py`, and
+a unified diff derived from captured content blobs.
+The generated ViewModel contains one supported session and no skipped sessions.
+Full local regression is 167 tests PASS with Ruff PASS; the static page and its
+three resources returned HTTP 200 from Python's standard-library static server.
+
+> **Demo Visualization Slice: PASS**
+
+Formal Failure Window productization, Workspace Fork, restore, and
+production-grade Incident Theater remain DEFERRED / NOT STARTED. Product
+validation and research novelty remain NOT ESTABLISHED.
 
 ## Legacy Track — Context Optimization Research
 

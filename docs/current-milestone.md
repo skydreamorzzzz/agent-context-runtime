@@ -1,4 +1,4 @@
-# Current milestone: F1 Product Core Foundation
+# Current milestone: Demo Visualization Slice
 
 ## Current state
 
@@ -8,7 +8,8 @@ F0 provisional contracts / synthetic fixture: PASS
 Pre-F0.5 integrity correction: PASS
 F0.5 Reality Spike: PASS
 F1 Product Core Foundation: PASS
-F2 Failure Boundary: AUTHORIZED NEXT / NOT STARTED
+Demo Visualization Slice: PASS
+F2 Failure Boundary: DEFERRED / NOT STARTED
 Workspace Fork: NOT STARTED
 Incident Theater: NOT STARTED
 ```
@@ -105,10 +106,23 @@ This is local test evidence, not a GitHub CI result.
 The Legacy Context Optimization M4 remains frozen. No duplicate-read candidate,
 intervention, request deletion, or provider-rewriting work is authorized.
 
-## Active engineering boundary
+## Demo Visualization Slice
 
-> **F1 Product Core Foundation is complete; the next gate is Failure Boundary**
+- `scripts/build_demo_data.py` discovers committed F1 sessions, requires the
+  existing session audit to pass, and derives only the narrow PASS-to-FAIL happy
+  path needed for display.
+- `demo/data/sessions.json` is a generated presentation ViewModel. The static
+  frontend does not read forensic records, provenance, or blobs directly.
+- The first case displays the committed corrected F1 smoke as verified PASS,
+  one observed Bash operation, one modified captured file with a blob-derived
+  unified diff, and verified FAIL.
+- `demo/` is plain HTML, CSS, and JavaScript with no Node build, runtime backend,
+  database, or API.
+- Full local result: 167 tests PASS; Ruff PASS. Static HTTP resource loading
+  returned 200 for the page, stylesheet, script, and generated JSON.
 
-Failure Boundary remains NOT STARTED and is authorized as the next gate.
-Workspace Fork, Incident Theater, and frontend work remain NOT STARTED and
-require separate authorization.
+> **Demo Visualization Slice: PASS**
+
+Formal Failure Boundary productization is deferred and remains NOT STARTED.
+Workspace Fork, restore, production IncidentReport work, and production-grade
+frontend/backend work remain outside this demo slice.

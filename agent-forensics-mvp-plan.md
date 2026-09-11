@@ -17,14 +17,15 @@
 
 - **Active MVP hypothesis:** Agent Forensics
 - **Status:** SELECTED FOR MVP VALIDATION
-- **Implementation:** F1 PRODUCT CORE FOUNDATION — REAL CAPTURE + VERIFIED STATE
+- **Implementation:** STATIC DEMO VISUALIZATION OF COMMITTED F1 EVIDENCE
 - **Product validation:** NOT ESTABLISHED
 - **Research novelty:** NOT ESTABLISHED
 - **F0:** PASS
 - **Pre-F0.5 integrity correction:** PASS
 - **F0.5:** PASS
 - **F1 Product Core Foundation:** PASS
-- **F2 Failure Boundary:** AUTHORIZED NEXT / NOT STARTED
+- **Demo Visualization Slice:** PASS
+- **F2 Failure Boundary:** DEFERRED / NOT STARTED
 
 Provisional technical definition:
 
@@ -675,6 +676,23 @@ production real capture
 → polish
 ```
 
+### Demo-first strategy correction after F1
+
+The roadmap above remains implementation history. After F1 PASS, the active
+strategy changed from production-grade Agent Forensics work to a static online
+demo of committed evidence. The current path is intentionally narrower:
+
+```text
+committed corrected F1 smoke
+→ Python demo-data projection
+→ static JSON ViewModel
+→ HTML + CSS + vanilla JavaScript
+```
+
+This presentation-only slice may later expand to curated committed sessions.
+It does not implement or freeze the formal F2 Failure Boundary engine, an
+`IncidentReport` pipeline, restore, Workspace Fork, or a runtime backend.
+
 ### F1 — Product Core Foundation
 
 Capture a real Claude Code session into sanitized `AgentEvent` evidence and bind
@@ -744,8 +762,9 @@ The completed reality gate is:
 
 F0.5 probe observations and verdict are recorded in
 [`docs/f0.5-reality-spike.md`](docs/f0.5-reality-spike.md). The corrected F1 gate
-authorizes Failure Boundary as the next gate, but it remains NOT STARTED. F1 does
-not authorize Workspace Fork, Incident Theater, M4, or duplicate-read
+is preserved as production-foundation evidence. Under the demo-first strategy,
+formal Failure Boundary is deferred and remains NOT STARTED. F1 does not
+authorize Workspace Fork, production Incident Theater, M4, or duplicate-read
 intervention work.
 
 The corrected F1 production smoke evidence is recorded under

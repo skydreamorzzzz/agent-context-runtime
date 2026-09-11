@@ -73,6 +73,19 @@ Frozen verifier evidence is currently limited to the exactly validated Claude
 Code 2.1.144 on Ubuntu/WSL2 runtime profile. Other versions or platform families
 block trusted capture rather than inheriting compatibility.
 
+## Agent Forensics Demo
+
+Build and serve the static demo:
+
+```bash
+python scripts/build_demo_data.py \
+  --evidence-root docs/receipts/f1_product_core \
+  --output demo/data/sessions.json
+python -m http.server 8000 -d demo
+```
+
+Then open `http://localhost:8000`.
+
 The Reality Spike leaves prompt-level correlation on the installed CLI,
 background mutation attribution, shared-journal concurrency, Git GC durability,
 and broader restore fidelity unsupported, degraded, or unknown. Real evidence
