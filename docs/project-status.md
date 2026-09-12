@@ -4,7 +4,7 @@
 
 - Active MVP hypothesis: Agent Forensics
 - Status: SELECTED FOR VALIDATION
-- Implementation: STATIC DEMO OF COMMITTED F1 VERIFIED-STATE EVIDENCE
+- Implementation: STATIC DEMO + LOCAL OPT-IN DEMO RAW CAPTURE
 - Product validation: NOT ESTABLISHED
 - Research novelty: NOT ESTABLISHED
 - F0: PASS
@@ -94,6 +94,24 @@ Full local regression is 167 tests PASS with Ruff PASS; the static page and its
 three resources returned HTTP 200 from Python's standard-library static server.
 
 > **Demo Visualization Slice: PASS**
+
+The static demo now has a separate, explicitly opted-in local research source:
+`acr claude --demo-raw-capture` copies Claude Code's own session JSONL under
+gitignored `.acr/demo-raw/<acr-session-id>/`, normalizes ordered user,
+assistant, and tool steps, and runs two exact demo-only diagnostics. D01 marks a
+later complete-request Read only when the same path has the exact same recorded
+result; D02 marks a later exact repeated Bash command while excluding the
+configured verifier. They are labeled W04-compatible and W06-compatible, not
+as recovered implementations of the historical W rules.
+
+One controlled local Claude Code 2.1.144 smoke recorded PASS, two identical
+`git status --short` tool occurrences, a Bash mutation of existing tracked
+`calculator.py`, and exit-1 FAIL. D02 produced one raw-derived yellow hit. Its
+Claude `tool_use_id` exactly matched the F1 occurrence and projected to the
+concrete F1 timeline step; the session audit passed. An attempted repeated-Read
+smoke produced two Read occurrences but Claude returned a different deduplication
+result for the second call, so D01 correctly emitted no hit. Raw transcripts
+remain local and uncommitted. Full local regression: 174 tests PASS; Ruff PASS.
 
 Formal Failure Window productization, Workspace Fork, restore, and
 production-grade Incident Theater remain DEFERRED / NOT STARTED. Product

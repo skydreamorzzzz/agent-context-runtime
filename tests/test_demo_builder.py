@@ -84,6 +84,7 @@ def test_presentation_diagnostic_binds_to_concrete_timeline_step() -> None:
     assert step["diagnostic_refs"] == [
         {
             "rule": "W06",
+            "source": "demo presentation metadata",
             "title": "Repeated Command",
             "summary": "Repeated command pattern observed",
         }
@@ -117,3 +118,58 @@ def test_session_warning_without_event_sequences_does_not_color_step() -> None:
     assert [item["status"] for item in session["timeline"]] == [
         "green", "neutral", "neutral", "red"
     ]
+
+
+def test_demo_raw_hit_correlates_exactly_to_f1_occurrence(tmp_path: Path) -> None:
+    raw_session = tmp_path / "session-6886bc4f40144176bb747ba0556a02d0"
+    (raw_session / "normalized").mkdir(parents=True)
+    (raw_session / "diagnostics").mkdir()
+    (raw_session / "metadata.json").write_text(
+        json.dumps({"source_hash": "a" * 64})
+    )
+    occurrence_id = "call_00_izUXyuwVhQB9ZBVu5Sy48960"
+    (raw_session / "normalized" / "steps.json").write_text(
+        json.dumps(
+            {
+                "steps": [
+                    {
+                        "sequence": 4,
+                        "kind": "tool",
+                        "tool": "Bash",
+                        "occurrence_id": occurrence_id,
+                        "input": {"command": "git status --short"},
+                    }
+                ]
+            }
+        )
+    )
+    (raw_session / "diagnostics" / "hits.json").write_text(
+        json.dumps(
+            {
+                "hits": [
+                    {
+                        "diagnostic_id": "exact_repeated_command_v1",
+                        "event_sequence": 4,
+                        "occurrence_id": occurrence_id,
+                        "rule_family": "W06-compatible",
+                        "source_class": "demo_raw",
+                        "summary": "Exact command repeated",
+                    }
+                ]
+            }
+        )
+    )
+    from scripts.build_demo_data import build_session_view
+
+    session = build_session_view(
+        EVIDENCE_ROOT,
+        "session-6886bc4f40144176bb747ba0556a02d0",
+        {},
+        raw_session,
+    )
+    step = next(item for item in session["timeline"] if item["sequence"] == 6)
+    assert step["status"] == "yellow"
+    assert step["diagnostic_refs"][0]["rule"] == "D02"
+    assert step["diagnostic_refs"][0]["source"] == "demo_raw"
+    assert session["raw_trajectory"]["correlation_status"] == "exact"
+    assert [item["path"] for item in session["changed_files"]] == ["calculator.py"]

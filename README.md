@@ -86,6 +86,21 @@ python -m http.server 8000 -d demo
 
 Then open `http://localhost:8000`.
 
+For a controlled local research session, explicitly opt in to raw trajectory capture:
+
+```bash
+acr claude --demo-raw-capture
+python scripts/build_demo_data.py \
+  --evidence-root .acr/evidence \
+  --raw-root .acr/demo-raw \
+  --output demo/data/sessions.json
+```
+
+Demo Raw Capture copies Claude Code's local JSONL and derives exact repeated-read/result
+and exact repeated-command signals. It may contain prompts, assistant responses, commands,
+tool output, and failure text. It is local-only, stored under gitignored `.acr/demo-raw/`,
+disabled by default, and remains separate from privacy-bounded F1 evidence.
+
 The W01–W08 diagnostic annotations are demo presentation metadata layered over
 the privacy-bounded evidence; they are heuristic signals, not causal findings
 or additional forensic records.

@@ -13,5 +13,8 @@ dist/
 build/
 *.egg-info/
 
+# Explicit opt-in demo trajectories contain prompts, responses, and tool bodies.
+.acr/demo-raw/
+
 # Windows alternate data-stream marker copied alongside downloaded files.
 *:Zone.Identifier

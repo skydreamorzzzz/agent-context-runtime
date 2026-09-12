@@ -183,7 +183,8 @@
           "Repository state",
           "Verification results"
         ],
-        "diagnostic_note": "W01\u2013W08 annotations are presentation metadata, not F1 evidence.",
+        "demo_raw_active": false,
+        "diagnostic_note": "W01\u2013W08 \u6ce8\u89e3\u662f\u5c55\u793a\u5143\u6570\u636e\uff0c\u4e0d\u662f F1 evidence\u3002",
         "not_persisted": [
           "Prompt bodies",
           "Environment values",

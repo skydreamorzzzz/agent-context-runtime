@@ -153,6 +153,7 @@ def _observed_activity(
         operation_id = event.operation.occurrence_id
         if operation_id not in operations:
             operations[operation_id] = {
+                "_occurrence_id": operation_id,
                 "event_count": 0,
                 "kind": event.operation.name,
                 "label": f"{event.operation.name} operation",
@@ -160,6 +161,108 @@ def _observed_activity(
             }
         operations[operation_id]["event_count"] += 1
     return sorted(operations.values(), key=lambda item: item["sequence"])
+
+
+def _raw_diagnostic_view(
+    raw_session_dir: Path | None,
+    events: list[AgentEvent],
+    activity: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    """Project local raw hits and bind them to F1 occurrences only by exact ID."""
+
+    if raw_session_dir is None:
+        return [], None
+    steps_path = raw_session_dir / "normalized" / "steps.json"
+    hits_path = raw_session_dir / "diagnostics" / "hits.json"
+    metadata_path = raw_session_dir / "metadata.json"
+    if not (steps_path.is_file() and hits_path.is_file() and metadata_path.is_file()):
+        return [], {"correlation_status": "unavailable", "source_class": "demo_raw"}
+    steps = json.loads(steps_path.read_text()).get("steps", [])
+    hits = json.loads(hits_path.read_text()).get("hits", [])
+    metadata = json.loads(metadata_path.read_text())
+    if not isinstance(steps, list) or not isinstance(hits, list):
+        raise UnsupportedDemoSession("demo raw projection is malformed")
+
+    f1_sequences: dict[str, int] = {}
+    for event in events:
+        if event.operation is not None:
+            occurrence_id = event.operation.occurrence_id
+            f1_sequences[occurrence_id] = min(
+                f1_sequences.get(occurrence_id, _sequence(event)), _sequence(event)
+            )
+    raw_steps = {
+        step.get("occurrence_id"): step
+        for step in steps
+        if isinstance(step, dict) and isinstance(step.get("occurrence_id"), str)
+    }
+    for item in activity:
+        raw_step = raw_steps.get(item.get("_occurrence_id"))
+        if not isinstance(raw_step, dict):
+            continue
+        if raw_step.get("tool") == "Read" and isinstance(raw_step.get("input"), dict):
+            path = raw_step["input"].get("file_path")
+            if isinstance(path, str) and path:
+                item["label"] = f"Read {Path(path).name}"
+
+    definitions = {
+        "exact_repeated_read_result_v1": (
+            "D01",
+            "Exact Repeated Read",
+            "W04-compatible exact repeated Read result; not a full W04 implementation.",
+        ),
+        "exact_repeated_command_v1": (
+            "D02",
+            "Exact Repeated Command",
+            "W06-compatible exact repeated command; not a full W06 implementation.",
+        ),
+    }
+    grouped: dict[str, dict[str, Any]] = {}
+    exact_count = 0
+    unavailable_count = 0
+    for hit in hits:
+        if not isinstance(hit, dict) or hit.get("diagnostic_id") not in definitions:
+            continue
+        diagnostic_id = hit["diagnostic_id"]
+        occurrence_id = hit.get("occurrence_id")
+        f1_sequence = f1_sequences.get(occurrence_id) if isinstance(occurrence_id, str) else None
+        correlation = "exact" if f1_sequence is not None else "unavailable"
+        exact_count += correlation == "exact"
+        unavailable_count += correlation == "unavailable"
+        rule, title, description = definitions[diagnostic_id]
+        item = grouped.setdefault(
+            diagnostic_id,
+            {
+                "description": description,
+                "event_sequences": [],
+                "occurrences": 0,
+                "raw_event_sequences": [],
+                "rule": rule,
+                "rule_family": hit.get("rule_family"),
+                "severity": "yellow",
+                "source": "demo_raw",
+                "status": "warning",
+                "summary": hit.get("summary", description),
+                "title": title,
+            },
+        )
+        item["occurrences"] += 1
+        if isinstance(hit.get("event_sequence"), int):
+            item["raw_event_sequences"].append(hit["event_sequence"])
+        if f1_sequence is not None:
+            item["event_sequences"].append(f1_sequence)
+    if exact_count and unavailable_count:
+        correlation_status = "partial"
+    elif exact_count:
+        correlation_status = "exact"
+    else:
+        correlation_status = "unavailable"
+    return list(grouped.values()), {
+        "correlation_status": correlation_status,
+        "diagnostic_hit_count": len(hits),
+        "normalized_step_count": len(steps),
+        "source_class": "demo_raw",
+        "source_hash": metadata.get("source_hash"),
+    }
 
 
 def _receipt_view(receipt: VerificationReceipt) -> dict[str, Any]:
@@ -218,7 +321,12 @@ def _timeline_view(
 ) -> list[dict[str, Any]]:
     def refs_for(sequence: int) -> list[dict[str, str]]:
         return [
-            {"rule": item["rule"], "title": item["title"], "summary": item["summary"]}
+            {
+                "rule": item["rule"],
+                "title": item["title"],
+                "summary": item["summary"],
+                "source": item["source"],
+            }
             for item in diagnostics
             if sequence in item["event_sequences"] and item["status"] == "warning"
         ]
@@ -307,7 +415,7 @@ def _integrity_view(
     }
 
 
-def _privacy_view() -> dict[str, Any]:
+def _privacy_view(*, demo_raw_active: bool) -> dict[str, Any]:
     return {
         "status": "enforced",
         "captured": ["Sanitized agent events", "Repository state", "Verification results"],
@@ -319,7 +427,12 @@ def _privacy_view() -> dict[str, Any]:
             "Transcript paths",
             "Verifier output bodies",
         ],
-        "diagnostic_note": "W01–W08 annotations are presentation metadata, not F1 evidence.",
+        "demo_raw_active": demo_raw_active,
+        "diagnostic_note": (
+            "本地 Demo Raw Capture 已启用；raw 正文位于 gitignored 本地目录，不属于 F1 journal。"
+            if demo_raw_active
+            else "W01–W08 注解是展示元数据，不是 F1 evidence。"
+        ),
     }
 
 
@@ -340,6 +453,7 @@ def build_session_view(
     evidence_root: Path,
     session_id: str,
     presentation: dict[str, Any] | None = None,
+    raw_session_dir: Path | None = None,
 ) -> dict[str, Any]:
     issues = audit_session(evidence_root, session_id)
     if issues:
@@ -366,6 +480,10 @@ def build_session_view(
         _sequence(failing_receipt),
     )
     diagnostics = _diagnostic_view(presentation)
+    raw_diagnostics, raw_trajectory = _raw_diagnostic_view(
+        raw_session_dir, events, activity
+    )
+    diagnostics.extend(raw_diagnostics)
     overall_status = "red" if failing_receipt.passed.value is False else (
         "yellow" if any(item["status"] == "warning" for item in diagnostics) else "green"
     )
@@ -375,12 +493,16 @@ def build_session_view(
         title = f"Session {session_id.removeprefix('session-')[:8]}"
     if not isinstance(description, str):
         description = "Observed verified-state transition"
-    return {
+    public_activity = [
+        {key: value for key, value in item.items() if not key.startswith("_")}
+        for item in activity
+    ]
+    result = {
         "changed_files": changed_files,
         "first_fail": _receipt_view(failing_receipt),
         "last_pass": _receipt_view(passing_receipt),
         "overall_status": overall_status,
-        "observed_activity": activity,
+        "observed_activity": public_activity,
         "timeline": _timeline_view(
             passing_receipt,
             failing_receipt,
@@ -393,7 +515,7 @@ def build_session_view(
         "evidence_integrity": _integrity_view(
             passing_receipt, failing_receipt, passing_checkpoint, failing_checkpoint
         ),
-        "privacy_boundary": _privacy_view(),
+        "privacy_boundary": _privacy_view(demo_raw_active=raw_trajectory is not None),
         "presentation": {
             "description": description,
             "source": "demo/cases.json",
@@ -409,6 +531,9 @@ def build_session_view(
         },
         "verifier": metadata["verifier"],
     }
+    if raw_trajectory is not None:
+        result["raw_trajectory"] = raw_trajectory
+    return result
 
 
 def _load_case_metadata(path: Path | None) -> dict[str, dict[str, Any]]:
@@ -424,6 +549,7 @@ def build_demo_data(
     evidence_root: Path,
     *,
     cases_path: Path | None = None,
+    raw_root: Path | None = None,
 ) -> dict[str, Any]:
     sessions_root = evidence_root / "sessions"
     discovered = sorted(path.name for path in sessions_root.iterdir() if path.is_dir())
@@ -433,7 +559,12 @@ def build_demo_data(
     for session_id in discovered:
         try:
             sessions.append(
-                build_session_view(evidence_root, session_id, case_metadata.get(session_id))
+                build_session_view(
+                    evidence_root,
+                    session_id,
+                    case_metadata.get(session_id),
+                    raw_root / session_id if raw_root is not None else None,
+                )
             )
         except (OSError, TypeError, ValueError) as error:
             skipped.append({"reason": str(error), "session_id": session_id})
@@ -453,8 +584,13 @@ def main() -> None:
     parser.add_argument("--evidence-root", type=Path, default=Path("docs/receipts/f1_product_core"))
     parser.add_argument("--output", type=Path, default=Path("demo/data/sessions.json"))
     parser.add_argument("--cases", type=Path, default=Path("demo/cases.json"))
+    parser.add_argument("--raw-root", type=Path)
     args = parser.parse_args()
-    payload = build_demo_data(args.evidence_root, cases_path=args.cases)
+    payload = build_demo_data(
+        args.evidence_root,
+        cases_path=args.cases,
+        raw_root=args.raw_root,
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
     print(

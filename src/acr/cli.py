@@ -17,6 +17,7 @@ from acr.audit import audit, audit_evaluation, audit_run
 from acr.config import validate_run_config
 from acr.contracts import Run
 from acr.coverage import audit_coverage_report, render_coverage_markdown, scan_archive
+from acr.demo_raw import DemoRawCaptureError, observe_demo_raw_hook
 from acr.evaluation import LocalAddEvaluator
 from acr.experiment import PairPreflightBlocked, prepare_noop_pair, run_noop_pair
 from acr.forensics.session import (
@@ -54,11 +55,17 @@ def main() -> None:
     claude = commands.add_parser("claude", help="run Claude Code with Agent Forensics capture")
     claude.add_argument("--config", default=".acr.json")
     claude.add_argument("--data-root")
+    claude.add_argument(
+        "--demo-raw-capture",
+        action="store_true",
+        help="opt in to sensitive local-only Claude trajectory capture",
+    )
     claude.add_argument("claude_args", nargs=argparse.REMAINDER)
     hook = commands.add_parser("_forensics-hook", help="internal Claude hook endpoint")
     hook.add_argument("--data-root", required=True)
     hook.add_argument("--session-id", required=True)
     hook.add_argument("--repo-root", required=True)
+    hook.add_argument("--demo-raw-session-dir")
     session_audit = commands.add_parser("audit-session")
     session_audit.add_argument("--data-root", required=True)
     session_audit.add_argument("--session-id", required=True)
@@ -96,14 +103,24 @@ def main() -> None:
                 config_path=Path(args.config),
                 data_root_override=Path(args.data_root) if args.data_root else None,
                 claude_args=forwarded,
+                demo_raw_capture=args.demo_raw_capture,
             )
         except (ValueError, SessionIntegrityError) as error:
             raise SystemExit(f"BLOCKED: {error}") from None
         summary = {"latest_verifier": latest, "session_id": session_id}
+        if args.demo_raw_capture:
+            summary["demo_raw"] = str(
+                Path.cwd().resolve() / ".acr" / "demo-raw" / session_id
+            )
         print(json.dumps(summary, sort_keys=True))
         raise SystemExit(return_code)
     if args.command == "_forensics-hook":
         raw_input = sys.stdin.buffer.read(MAX_HOOK_INPUT_BYTES + 1)
+        if args.demo_raw_session_dir:
+            try:
+                observe_demo_raw_hook(raw_input, Path(args.demo_raw_session_dir))
+            except (DemoRawCaptureError, OSError, TypeError, ValueError) as error:
+                print(f"Demo raw capture warning: {error}", file=sys.stderr)
         status = handle_claude_hook(
             raw_input=raw_input,
             data_root=Path(args.data_root),

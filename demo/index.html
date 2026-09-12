@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,7 +12,7 @@
     <div class="ambient ambient-right" aria-hidden="true"></div>
 
     <header class="site-header">
-      <a class="brand" href="#" aria-label="Agent Forensics home">
+      <a class="brand" href="#" aria-label="Agent Forensics 首页">
         <span class="brand-mark" aria-hidden="true">
           <span></span><span></span><span></span>
         </span>
@@ -21,27 +21,26 @@
           <small>Coding Agent Black Box</small>
         </span>
       </a>
-      <div class="evidence-badge"><i></i> Evidence-backed demo</div>
+      <div class="evidence-badge"><i></i> 真实证据驱动 Demo</div>
     </header>
 
     <main class="page-shell">
       <section class="hero" aria-labelledby="page-title">
-        <p class="eyebrow">VERIFIED REPOSITORY STATE</p>
-        <h1 id="page-title">See where an agent session<br><span>crossed into failure.</span></h1>
+        <p class="eyebrow">已验证仓库状态</p>
+        <h1 id="page-title">看清 Agent 会话<br><span>在哪里跨入失败。</span></h1>
         <p class="hero-copy">
-          A read-only reconstruction from captured repository evidence — no prompt bodies,
-          no inferred root cause.
+          基于已捕获仓库证据的只读重建——不把已观测事实包装成根因推断。
         </p>
       </section>
 
       <section class="session-bar" aria-label="Demo session">
         <div class="session-heading">
-          <span class="session-kicker">SESSION</span>
-          <strong id="session-title">Loading evidence…</strong>
+          <span class="session-kicker">会话</span>
+          <strong id="session-title">正在加载证据…</strong>
           <span id="session-id" class="session-id"></span>
         </div>
         <label id="session-control" class="session-control is-hidden">
-          <span>Choose case</span>
+          <span>选择案例</span>
           <select id="session-select"></select>
         </label>
         <div class="verifier-chip">
@@ -50,7 +49,7 @@
         </div>
       </section>
 
-      <div id="loading" class="loading" role="status">Reading generated Demo ViewModel…</div>
+      <div id="loading" class="loading" role="status">正在读取 Demo ViewModel…</div>
       <div id="error" class="error-panel is-hidden" role="alert"></div>
       <section id="demo" class="demo-flow is-hidden" aria-live="polite"></section>
     </main>
@@ -58,7 +57,7 @@
     <footer>
       <span>Observed ≠ inferred</span>
       <span class="footer-rule"></span>
-      <span>Derived from immutable F1 evidence</span>
+      <span>红/绿来自 F1 evidence；黄色可来自本地 demo_raw</span>
     </footer>
 
     <script src="app.js" defer></script>

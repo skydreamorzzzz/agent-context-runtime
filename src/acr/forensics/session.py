@@ -22,6 +22,7 @@ from acr.adapters.claude_hooks import (
     sanitize_claude_hook_payload,
 )
 from acr.contracts import EvidenceRef, Fact, InformationLabel, Provenance
+from acr.demo_raw import demo_raw_session_path, initialize_demo_raw_session
 from acr.forensics.checkpoint import CheckpointCaptureError, capture_workspace_checkpoint
 from acr.forensics.config import load_project_config
 from acr.forensics.store import ForensicsEvidenceStore, canonical_json_bytes, sha256_bytes
@@ -139,6 +140,7 @@ def run_claude_session(
     config_path: Path,
     data_root_override: Path | None,
     claude_args: list[str],
+    demo_raw_capture: bool = False,
 ) -> tuple[int, str, dict[str, Any] | None]:
     """Launch one real Claude session with temporary, additive hook settings."""
 
@@ -181,20 +183,32 @@ def run_claude_session(
         claude_version=claude_version,
         platform_family=platform_family,
     )
-    hook_command = shlex.join(
-        [
-            sys.executable,
-            "-m",
-            "acr.cli",
-            "_forensics-hook",
-            "--data-root",
-            str(data_root),
-            "--session-id",
-            session_id,
-            "--repo-root",
-            str(repo_root),
-        ]
+    raw_session_dir = demo_raw_session_path(
+        repo_root, session_id, enabled=demo_raw_capture
     )
+    if raw_session_dir is not None:
+        initialize_demo_raw_session(
+            raw_session_dir,
+            acr_session_id=session_id,
+            claude_version=claude_version,
+            repo_root=repo_root,
+            verifier=config.verifier,
+        )
+    hook_parts = [
+        sys.executable,
+        "-m",
+        "acr.cli",
+        "_forensics-hook",
+        "--data-root",
+        str(data_root),
+        "--session-id",
+        session_id,
+        "--repo-root",
+        str(repo_root),
+    ]
+    if raw_session_dir is not None:
+        hook_parts.extend(["--demo-raw-session-dir", str(raw_session_dir)])
+    hook_command = shlex.join(hook_parts)
     active_lock = _active_session_lock(repo_root)
     try:
         with tempfile.TemporaryDirectory(prefix="acr-claude-settings-") as temporary:
