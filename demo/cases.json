@@ -1,6 +1,6 @@
 {
   "session-6886bc4f40144176bb747ba0556a02d0": {
-    "description": "One captured repository file changed between observed verifier outcomes.",
-    "title": "Calculator regression"
+    "description": "Baseline / Minimal Smoke：一个已捕获文件在 PASS 与 FAIL 之间发生变化。",
+    "title": "Calculator Regression · Baseline"
   }
 }

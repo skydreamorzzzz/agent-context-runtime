@@ -86,6 +86,12 @@ python -m http.server 8000 -d demo
 
 Then open `http://localhost:8000`.
 
+The default build includes three sanitized artifacts exported from real Claude
+Code sessions—one verified failure, one raw-derived exact repeated-command
+warning, and one changed repository that finishes PASS—plus the original
+Calculator Regression baseline. Artifacts under `demo/case-artifacts/` contain
+only display-safe fields and provenance; raw transcripts are not committed.
+
 For a controlled local research session, explicitly opt in to raw trajectory capture:
 
 ```bash

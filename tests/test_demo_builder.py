@@ -19,7 +19,7 @@ def test_builder_projects_committed_f1_smoke_into_demo_view_model() -> None:
     assert round_trip["skipped_sessions"] == []
     assert len(round_trip["sessions"]) == 1
     session = round_trip["sessions"][0]
-    assert session["presentation"]["title"] == "Calculator regression"
+    assert session["presentation"]["title"] == "Calculator Regression · Baseline"
     assert session["last_pass"]["exit_code"] == 0
     assert session["first_fail"]["exit_code"] == 1
     assert session["last_pass"]["manifest_hash"] != session["first_fail"]["manifest_hash"]
@@ -170,6 +170,63 @@ def test_demo_raw_hit_correlates_exactly_to_f1_occurrence(tmp_path: Path) -> Non
     step = next(item for item in session["timeline"] if item["sequence"] == 6)
     assert step["status"] == "yellow"
     assert step["diagnostic_refs"][0]["rule"] == "D02"
-    assert step["diagnostic_refs"][0]["source"] == "demo_raw"
+    assert step["diagnostic_refs"][0]["source"] == "demo_raw_derived"
     assert session["raw_trajectory"]["correlation_status"] == "exact"
     assert [item["path"] for item in session["changed_files"]] == ["calculator.py"]
+
+
+def test_committed_demo_cases_cover_real_red_yellow_and_green() -> None:
+    payload = build_demo_data(
+        EVIDENCE_ROOT,
+        cases_path=CASE_METADATA,
+        artifacts_root=Path("demo/case-artifacts"),
+    )
+    assert len(payload["sessions"]) >= 4
+    artifacts = [item for item in payload["sessions"] if item.get("artifact")]
+    assert len(artifacts) >= 3
+    assert {item["overall_status"] for item in artifacts} >= {"red", "yellow", "green"}
+
+    red = next(item for item in artifacts if item["overall_status"] == "red")
+    yellow = next(item for item in artifacts if item["overall_status"] == "yellow")
+    green = next(item for item in artifacts if item["overall_status"] == "green")
+    assert red["end_verification"]["outcome"] == "fail"
+    assert red["end_verification"]["exit_code"] != 0
+    yellow_steps = [item for item in yellow["timeline"] if item["status"] == "yellow"]
+    assert yellow_steps
+    assert yellow_steps[0]["diagnostic_refs"][0]["source"] == "demo_raw_derived"
+    assert yellow["artifact"]["source_class"] == "demo_raw_derived"
+    d02 = next(item for item in yellow["diagnostics"] if item["rule"] == "D02")
+    assert d02["event_sequences"]
+    assert d02["related_event_sequences"]
+    assert green["end_verification"] == green["final_pass"]
+    assert green["end_verification"]["exit_code"] == 0
+    assert green["changed_files"]
+    assert any("Baseline" in item["presentation"]["title"] for item in payload["sessions"])
+
+
+def test_committed_artifacts_exclude_raw_trajectory_bodies() -> None:
+    forbidden_keys = {"body", "input", "output", "prompt", "response", "transcript_path"}
+
+    def keys(value: object) -> set[str]:
+        if isinstance(value, dict):
+            return set(value) | set().union(*(keys(item) for item in value.values()))
+        if isinstance(value, list):
+            return set().union(*(keys(item) for item in value))
+        return set()
+
+    for path in Path("demo/case-artifacts").glob("*.json"):
+        text = path.read_text()
+        artifact = json.loads(text)
+        assert forbidden_keys.isdisjoint(keys(artifact))
+        assert "/home/" not in text
+        assert "/.claude/" not in text
+        assert artifact["provenance"]["real_capture"] is True
+        assert artifact["provenance"]["raw_committed"] is False
+
+
+def test_frontend_case_selector_renders_status_marked_multiple_cases() -> None:
+    html = Path("demo/index.html").read_text()
+    javascript = Path("demo/app.js").read_text()
+    assert 'id="session-select"' in html
+    assert "sessions.length <= 1" in javascript
+    assert all(marker in javascript for marker in ("🔴", "🟡", "🟢"))

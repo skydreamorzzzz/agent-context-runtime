@@ -36,13 +36,61 @@ const formatTime = (value) => {
   });
 };
 
-function stateCard(kind, receipt, verifier) {
-  const isPass = kind === "pass";
+const stepLabels = {
+  "Verified PASS": "已验证通过",
+  "Verified FAIL": "已验证失败",
+  "Repository state changed": "仓库状态变化",
+  "Repository state unchanged": "仓库状态未变化",
+  "Bash operation": "Bash 操作",
+  "Edit operation": "Edit 操作",
+  "Read operation": "Read 操作",
+  "Write operation": "Write 操作",
+};
+
+const statusLabels = {
+  green: "正常",
+  yellow: "疑似冗余",
+  red: "失败",
+  neutral: "证据不足",
+};
+
+const integrityLabels = {
+  "Session audit": "会话审计",
+  "Exact verifier observed": "已观测 exact verifier",
+  "Initial PASS backed by exit code 0": "初始 PASS 有退出码 0 支撑",
+  "PASS backed by exit code 0": "PASS 有退出码 0 支撑",
+  "FAIL backed by non-zero exit": "FAIL 有非零退出码支撑",
+  "Final PASS backed by exit code 0": "最终 PASS 有退出码 0 支撑",
+  "Pre-verifier checkpoints": "Verifier 前 checkpoint",
+  "Manifest hashes verified": "Manifest hash 已验证",
+  "Same session binding": "同一会话绑定",
+  "Repository state comparison": "仓库状态比较",
+  "State transition detected": "已检测状态变化",
+};
+
+const privacyLabels = {
+  "Sanitized agent events": "脱敏 AgentEvent",
+  "Repository state": "仓库状态",
+  "Verification results": "验证结果",
+  "Prompt bodies": "Prompt 正文",
+  "Environment values": "环境变量值",
+  "Raw hook payloads": "原始 hook payload",
+  "Tool response bodies": "工具响应正文",
+  "Transcript paths": "Transcript 路径",
+  "Verifier output bodies": "Verifier 输出正文",
+};
+
+function stateCard(receipt, verifier, position) {
+  const isPass = receipt.outcome === "pass";
+  const kind = isPass ? "pass" : "fail";
+  const label = position === "start"
+    ? "初始已验证通过"
+    : isPass ? "最终已验证通过" : "首次已验证失败";
   return `
     <article class="state-card ${kind}">
       <div class="state-icon" aria-hidden="true">${isPass ? "✓" : "×"}</div>
       <div>
-        <p class="card-label">${isPass ? "最后已验证通过" : "首次已验证失败"}</p>
+        <p class="card-label">${label}</p>
         <code class="state-command">${escapeHtml(verifier)}</code>
         <div class="state-meta">
           <span title="${escapeHtml(receipt.checkpoint_id)}">checkpoint ${escapeHtml(shortId(receipt.checkpoint_id))}</span>
@@ -82,7 +130,7 @@ function fileRows(files) {
         <div class="file-entry">
           <div class="file-row">
             <span class="file-name">${escapeHtml(file.path)}</span>
-            <span class="change-type">${escapeHtml(file.change_type)}</span>
+            <span class="change-type">${escapeHtml(file.change_type === "modified" ? "已修改" : file.change_type === "added" ? "已新增" : "已删除")}</span>
             <button
               class="diff-toggle"
               type="button"
@@ -129,7 +177,7 @@ function overviewBlock(session) {
       </div>
       <div class="overview-metrics">
         <span><b>1</b><small>PASS 边界</small></span>
-        <span><b>1</b><small>FAIL 边界</small></span>
+        <span><b>1</b><small>${session.end_verification.outcome === "fail" ? "FAIL" : "PASS"} 末端验证</small></span>
         <span><b>${count}</b><small>个变化文件</small></span>
         <span><b>${session.summary.diagnostic_warning_count}</b><small>条诊断信号</small></span>
       </div>
@@ -148,7 +196,7 @@ function diagnosticBlock(items) {
           <div class="signal-top"><span class="signal-code">${escapeHtml(item.rule)}</span><span class="signal-state">${escapeHtml(item.status === "warning" ? "疑似冗余" : item.status === "normal" ? "正常" : "未评估")}</span></div>
           <h3>${escapeHtml(item.title)}</h3>
           <p>${escapeHtml(item.summary)}</p>
-          ${item.status === "warning" ? `<small>${escapeHtml(item.occurrences)} 次 · 值得检查 · 来源 ${escapeHtml(item.source)}</small>${item.event_sequences.length ? `<div class="affected-steps"><span>关联步骤</span>${item.event_sequences.map((sequence) => `<b>#${escapeHtml(sequence)}</b>`).join("")}</div>` : ""}` : ""}
+          ${item.status === "warning" ? `<small>${escapeHtml(item.occurrences)} 次 · 值得检查 · 来源 ${escapeHtml(item.source)}</small>${item.event_sequences.length ? `<div class="affected-steps"><span>黄色步骤</span>${item.event_sequences.map((sequence) => `<b>#${escapeHtml(sequence)}</b>`).join("")}</div>` : ""}${item.related_event_sequences?.length ? `<div class="affected-steps"><span>此前相同步骤</span>${item.related_event_sequences.map((sequence) => `<b>#${escapeHtml(sequence)}</b>`).join("")}</div>` : ""}` : ""}
         </article>`).join("")}</div>
       <p class="metadata-note">W01–W08 未评估不等于正常；D01/D02 仅是 demo_raw 上的 exact compatible signals，不冒充完整 W04/W06。</p>
     </section>`;
@@ -161,17 +209,17 @@ function timelineBlock(items) {
       <div class="timeline-list">${items.map((item) => `
         <div class="timeline-item timeline-${escapeHtml(item.status)}">
           <span class="timeline-marker">${item.status === "green" ? "✓" : item.status === "red" ? "×" : "•"}</span>
-          <div><strong>${escapeHtml(item.label)} <span class="timeline-status">${escapeHtml(item.status)}</span></strong><p>${item.sequence === null ? "" : `步骤 ${escapeHtml(item.sequence)} · `}${escapeHtml(item.detail)}</p>${item.diagnostic_refs.length ? `<div class="timeline-diagnostics">${item.diagnostic_refs.map((ref) => `<span>${escapeHtml(ref.rule)} ${escapeHtml(ref.title)} · ${escapeHtml(ref.source)}</span>`).join("")}</div>` : ""}</div>
+          <div><strong>${escapeHtml(stepLabels[item.label] || item.label)} <span class="timeline-status">${escapeHtml(statusLabels[item.status] || item.status)}</span></strong><p>${item.sequence === null ? "" : `步骤 ${escapeHtml(item.sequence)} · `}${escapeHtml(item.detail === "Observed between verification boundaries" ? "该操作发生在两次验证边界之间" : item.detail)}</p>${item.diagnostic_refs.length ? `<div class="timeline-diagnostics">${item.diagnostic_refs.map((ref) => `<span>${escapeHtml(ref.rule)} ${escapeHtml(ref.title)} · ${escapeHtml(ref.source)}</span>`).join("")}</div>` : ""}</div>
         </div>`).join("")}</div>
     </section>`;
 }
 
 function integrityBlock(integrity) {
-  return `<section class="dashboard-panel evidence-panel"><div class="panel-heading"><div><p class="section-label">证据完整性</p><h2>可信边界检查</h2></div><span class="healthy-badge">${integrity.status === "verified" ? "✓ 已验证" : "! 不支持"}</span></div><div class="check-list">${integrity.checks.map((item) => `<div class="check-row"><span class="check-icon ${item.status === "pass" ? "" : "check-fail"}">${item.status === "pass" ? "✓" : "×"}</span><span>${escapeHtml(item.label)}</span><small>${escapeHtml(item.detail || item.status)}</small></div>`).join("")}</div></section>`;
+  return `<section class="dashboard-panel evidence-panel"><div class="panel-heading"><div><p class="section-label">证据完整性</p><h2>可信边界检查</h2></div><span class="healthy-badge">${integrity.status === "verified" ? "✓ 已验证" : "! 不支持"}</span></div><div class="check-list">${integrity.checks.map((item) => `<div class="check-row"><span class="check-icon ${item.status === "pass" ? "" : "check-fail"}">${item.status === "pass" ? "✓" : "×"}</span><span>${escapeHtml(integrityLabels[item.label] || item.label)}</span><small>${escapeHtml(item.detail || item.status)}</small></div>`).join("")}</div></section>`;
 }
 
 function privacyBlock(privacy) {
-  return `<section class="dashboard-panel privacy-panel"><div class="panel-heading"><div><p class="section-label">隐私边界</p><h2>F1 journal 不保存的内容</h2></div><span class="healthy-badge">✓ 已执行</span></div><div class="privacy-columns"><div><small class="subheading">已捕获</small>${privacy.captured.map((item) => `<span class="privacy-item captured">✓ ${escapeHtml(item)}</span>`).join("")}</div><div><small class="subheading">F1 未持久化</small>${privacy.not_persisted.map((item) => `<span class="privacy-item">× ${escapeHtml(item)}</span>`).join("")}</div></div><p class="metadata-note">${escapeHtml(privacy.diagnostic_note)}</p></section>`;
+  return `<section class="dashboard-panel privacy-panel"><div class="panel-heading"><div><p class="section-label">隐私边界</p><h2>F1 journal 不保存的内容</h2></div><span class="healthy-badge">✓ 已执行</span></div><div class="privacy-columns"><div><small class="subheading">已捕获</small>${privacy.captured.map((item) => `<span class="privacy-item captured">✓ ${escapeHtml(privacyLabels[item] || item)}</span>`).join("")}</div><div><small class="subheading">F1 未持久化</small>${privacy.not_persisted.map((item) => `<span class="privacy-item">× ${escapeHtml(privacyLabels[item] || item)}</span>`).join("")}</div></div><p class="metadata-note">${escapeHtml(privacy.diagnostic_note)}</p></section>`;
 }
 
 function renderSession(session) {
@@ -184,7 +232,7 @@ function renderSession(session) {
     ${overviewBlock(session)}
     ${diagnosticBlock(session.diagnostics)}
     ${timelineBlock(session.timeline)}
-    ${stateCard("pass", session.last_pass, session.verifier)}
+    ${stateCard(session.start_verification, session.verifier, "start")}
     ${connector()}
     ${activityBlock(session.observed_activity)}
     ${connector()}
@@ -192,20 +240,20 @@ function renderSession(session) {
       <header class="change-heading">
         <div>
           <p class="section-label">已捕获仓库状态</p>
-          <h2>仓库状态变化</h2>
+          <h2>${count ? "仓库状态变化" : "仓库状态未变化"}</h2>
         </div>
         <span class="file-count">${count} 个变化文件</span>
       </header>
       ${fileRows(session.changed_files)}
     </article>
     ${connector()}
-    ${stateCard("fail", session.first_fail, session.verifier)}
+    ${stateCard(session.end_verification, session.verifier, "end")}
     <aside class="boundary-card">
       <div>
-        <p class="boundary-kicker">失败边界</p>
+        <p class="boundary-kicker">${session.summary.trajectory_kind === "failure_boundary" ? "失败边界" : "验证区间"}</p>
         <p class="boundary-copy">
-          最后一次已验证 PASS 与首次已验证 FAIL 之间，
-          <strong>${count} 个已捕获仓库文件发生变化</strong>。
+          两次真实 verifier observation 之间，
+          <strong>${count} 个已捕获仓库文件发生变化</strong>。${session.summary.trajectory_kind === "failure_boundary" ? "失败出现在这一已观测区间内。" : "末端 verifier 仍为 PASS。"}
         </p>
       </div>
       <div class="coming-next" aria-label="Workspace Fork 尚不可用"><span>Fork last passing state</span>后续提供</div>
@@ -228,7 +276,7 @@ function configureSessionSelector(sessions) {
   elements.sessionSelect.innerHTML = sessions
     .map(
       (session, index) =>
-        `<option value="${index}">${escapeHtml(session.presentation.title)}</option>`,
+        `<option value="${index}">${session.overall_status === "red" ? "🔴" : session.overall_status === "yellow" ? "🟡" : "🟢"} ${escapeHtml(session.presentation.title)}</option>`,
     )
     .join("");
   elements.sessionControl.classList.remove("is-hidden");

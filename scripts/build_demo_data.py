@@ -236,10 +236,11 @@ def _raw_diagnostic_view(
                 "event_sequences": [],
                 "occurrences": 0,
                 "raw_event_sequences": [],
+                "related_event_sequences": [],
                 "rule": rule,
                 "rule_family": hit.get("rule_family"),
                 "severity": "yellow",
-                "source": "demo_raw",
+                "source": "demo_raw_derived",
                 "status": "warning",
                 "summary": hit.get("summary", description),
                 "title": title,
@@ -250,6 +251,13 @@ def _raw_diagnostic_view(
             item["raw_event_sequences"].append(hit["event_sequence"])
         if f1_sequence is not None:
             item["event_sequences"].append(f1_sequence)
+        related_ids = hit.get("related_occurrence_ids")
+        if isinstance(related_ids, list):
+            item["related_event_sequences"].extend(
+                f1_sequences[value]
+                for value in related_ids
+                if isinstance(value, str) and value in f1_sequences
+            )
     if exact_count and unavailable_count:
         correlation_status = "partial"
     elif exact_count:
@@ -260,7 +268,7 @@ def _raw_diagnostic_view(
         "correlation_status": correlation_status,
         "diagnostic_hit_count": len(hits),
         "normalized_step_count": len(steps),
-        "source_class": "demo_raw",
+        "source_class": "demo_raw_derived",
         "source_hash": metadata.get("source_hash"),
     }
 
@@ -272,6 +280,7 @@ def _receipt_view(receipt: VerificationReceipt) -> dict[str, Any]:
         "checkpoint_id": receipt.pre_checkpoint_id,
         "exit_code": receipt.exit_code.value,
         "manifest_hash": receipt.tested_captured_workspace_manifest_hash,
+        "outcome": "pass" if receipt.passed.value is True else "fail",
         "receipt_id": receipt.id,
         "timestamp": receipt.finished_at.value.isoformat(),
     }
@@ -312,8 +321,8 @@ def _diagnostic_view(presentation: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _timeline_view(
-    passing: VerificationReceipt,
-    failing: VerificationReceipt,
+    starting: VerificationReceipt,
+    ending: VerificationReceipt,
     activity: list[dict[str, Any]],
     changed_files: list[dict[str, Any]],
     diagnostics: list[dict[str, Any]],
@@ -335,9 +344,9 @@ def _timeline_view(
         {
             "kind": "verified_pass",
             "label": "Verified PASS",
-            "detail": f"{verifier} · exit code {passing.exit_code.value}",
+            "detail": f"{verifier} · exit code {starting.exit_code.value}",
             "status": "green",
-            "sequence": _sequence(passing),
+            "sequence": _sequence(starting),
             "diagnostic_refs": [],
         }
     ]
@@ -357,7 +366,9 @@ def _timeline_view(
     entries.append(
         {
             "kind": "repository_transition",
-            "label": "Repository state changed",
+            "label": (
+                "Repository state changed" if changed_files else "Repository state unchanged"
+            ),
             "detail": paths,
             "status": "neutral",
             "sequence": None,
@@ -366,11 +377,11 @@ def _timeline_view(
     )
     entries.append(
         {
-            "kind": "verified_fail",
-            "label": "Verified FAIL",
-            "detail": f"{verifier} · exit code {failing.exit_code.value}",
-            "status": "red",
-            "sequence": _sequence(failing),
+            "kind": "verified_fail" if ending.passed.value is False else "verified_pass",
+            "label": "Verified FAIL" if ending.passed.value is False else "Verified PASS",
+            "detail": f"{verifier} · exit code {ending.exit_code.value}",
+            "status": "red" if ending.passed.value is False else "green",
+            "sequence": _sequence(ending),
             "diagnostic_refs": [],
         }
     )
@@ -389,28 +400,40 @@ def step_status(step: dict[str, Any]) -> str:
 
 
 def _integrity_view(
-    passing_receipt: VerificationReceipt,
-    failing_receipt: VerificationReceipt,
-    passing_checkpoint: WorkspaceCheckpoint,
-    failing_checkpoint: WorkspaceCheckpoint,
+    starting_receipt: VerificationReceipt,
+    ending_receipt: VerificationReceipt,
+    starting_checkpoint: WorkspaceCheckpoint,
+    ending_checkpoint: WorkspaceCheckpoint,
 ) -> dict[str, Any]:
-    same_session = passing_receipt.session_id == failing_receipt.session_id
+    same_session = starting_receipt.session_id == ending_receipt.session_id
     manifests_distinct = (
-        passing_checkpoint.captured_workspace_manifest_hash
-        != failing_checkpoint.captured_workspace_manifest_hash
+        starting_checkpoint.captured_workspace_manifest_hash
+        != ending_checkpoint.captured_workspace_manifest_hash
     )
-    all_pass = same_session and manifests_distinct
+    ending_failed = ending_receipt.passed.value is False
     return {
-        "status": "verified" if all_pass else "unsupported",
+        "status": "verified" if same_session else "unsupported",
         "checks": [
             {"label": "Session audit", "status": "pass", "detail": "audit_session passed"},
-            {"label": "Exact verifier observed", "status": "pass", "detail": "pytest -q"},
-            {"label": "PASS backed by exit code 0", "status": "pass", "detail": "observed"},
-            {"label": "FAIL backed by non-zero exit", "status": "pass", "detail": "observed"},
+            {"label": "Exact verifier observed", "status": "pass", "detail": "configured"},
+            {"label": "Initial PASS backed by exit code 0", "status": "pass", "detail": "observed"},
+            {
+                "label": (
+                    "FAIL backed by non-zero exit"
+                    if ending_failed
+                    else "Final PASS backed by exit code 0"
+                ),
+                "status": "pass",
+                "detail": "observed",
+            },
             {"label": "Pre-verifier checkpoints", "status": "pass", "detail": "both resolve"},
             {"label": "Manifest hashes verified", "status": "pass", "detail": "canonical"},
             {"label": "Same session binding", "status": "pass" if same_session else "fail", "detail": "receipt correlation"},
-            {"label": "State transition detected", "status": "pass" if manifests_distinct else "fail", "detail": "manifest hashes differ"},
+            {
+                "label": "Repository state comparison",
+                "status": "pass",
+                "detail": "manifest hashes differ" if manifests_distinct else "no captured change",
+            },
         ],
     }
 
@@ -436,17 +459,20 @@ def _privacy_view(*, demo_raw_active: bool) -> dict[str, Any]:
     }
 
 
-def _select_boundary(
+def _select_transition(
     receipts: list[VerificationReceipt],
-) -> tuple[VerificationReceipt, VerificationReceipt]:
+) -> tuple[VerificationReceipt, VerificationReceipt, str]:
     ordered = sorted(receipts, key=_sequence)
     for fail_index, failing in enumerate(ordered):
         if failing.passed.value is not False:
             continue
         preceding = [item for item in ordered[:fail_index] if item.passed.value is True]
         if preceding:
-            return preceding[-1], failing
-    raise UnsupportedDemoSession("no observed PASS-to-FAIL boundary")
+            return preceding[-1], failing, "failure_boundary"
+    passing = [item for item in ordered if item.passed.value is True]
+    if len(passing) >= 2:
+        return passing[0], passing[-1], "healthy_transition"
+    raise UnsupportedDemoSession("no supported PASS-to-FAIL or PASS-to-PASS transition")
 
 
 def build_session_view(
@@ -465,26 +491,26 @@ def build_session_view(
         item.id: item for item in _load_records(store, "checkpoints", WorkspaceCheckpoint)
     }
     events = _load_records(store, "events", AgentEvent)
-    passing_receipt, failing_receipt = _select_boundary(receipts)
+    starting_receipt, ending_receipt, trajectory_kind = _select_transition(receipts)
     try:
-        passing_checkpoint = checkpoints[passing_receipt.pre_checkpoint_id]
-        failing_checkpoint = checkpoints[failing_receipt.pre_checkpoint_id]
+        starting_checkpoint = checkpoints[starting_receipt.pre_checkpoint_id]
+        ending_checkpoint = checkpoints[ending_receipt.pre_checkpoint_id]
     except KeyError as error:
         raise UnsupportedDemoSession("receipt checkpoint is unavailable") from error
     presentation = presentation or {}
-    changed_files = _changed_files(store, passing_checkpoint, failing_checkpoint)
+    changed_files = _changed_files(store, starting_checkpoint, ending_checkpoint)
     activity = _observed_activity(
         store,
         events,
-        _sequence(passing_receipt),
-        _sequence(failing_receipt),
+        _sequence(starting_receipt),
+        _sequence(ending_receipt),
     )
     diagnostics = _diagnostic_view(presentation)
     raw_diagnostics, raw_trajectory = _raw_diagnostic_view(
         raw_session_dir, events, activity
     )
     diagnostics.extend(raw_diagnostics)
-    overall_status = "red" if failing_receipt.passed.value is False else (
+    overall_status = "red" if ending_receipt.passed.value is False else (
         "yellow" if any(item["status"] == "warning" for item in diagnostics) else "green"
     )
     title = presentation.get("title")
@@ -499,13 +525,16 @@ def build_session_view(
     ]
     result = {
         "changed_files": changed_files,
-        "first_fail": _receipt_view(failing_receipt),
-        "last_pass": _receipt_view(passing_receipt),
+        "end_verification": _receipt_view(ending_receipt),
+        "first_fail": _receipt_view(ending_receipt) if ending_receipt.passed.value is False else None,
+        "final_pass": _receipt_view(ending_receipt) if ending_receipt.passed.value is True else None,
+        "last_pass": _receipt_view(starting_receipt),
+        "start_verification": _receipt_view(starting_receipt),
         "overall_status": overall_status,
         "observed_activity": public_activity,
         "timeline": _timeline_view(
-            passing_receipt,
-            failing_receipt,
+            starting_receipt,
+            ending_receipt,
             activity,
             changed_files,
             diagnostics,
@@ -513,7 +542,7 @@ def build_session_view(
         ),
         "diagnostics": diagnostics,
         "evidence_integrity": _integrity_view(
-            passing_receipt, failing_receipt, passing_checkpoint, failing_checkpoint
+            starting_receipt, ending_receipt, starting_checkpoint, ending_checkpoint
         ),
         "privacy_boundary": _privacy_view(demo_raw_active=raw_trajectory is not None),
         "presentation": {
@@ -522,11 +551,21 @@ def build_session_view(
             "title": title,
         },
         "session_id": session_id,
+        "provenance": {
+            "audit_status": "pass",
+            "real_capture": True,
+            "raw_committed": False,
+            "source_classes": [
+                "acr_f1",
+                *(["demo_raw_derived"] if raw_diagnostics else []),
+            ],
+        },
         "summary": {
-            "boundary_status": "observed",
+            "boundary_status": "observed" if trajectory_kind == "failure_boundary" else "not_applicable",
             "changed_file_count": len(changed_files),
             "overall_status": overall_status,
-            "verified_fail_present": failing_receipt.passed.value is False,
+            "trajectory_kind": trajectory_kind,
+            "verified_fail_present": ending_receipt.passed.value is False,
             "diagnostic_warning_count": sum(item["status"] == "warning" for item in diagnostics),
         },
         "verifier": metadata["verifier"],
@@ -545,18 +584,47 @@ def _load_case_metadata(path: Path | None) -> dict[str, dict[str, Any]]:
     return value
 
 
+def _load_committed_artifacts(path: Path | None) -> list[dict[str, Any]]:
+    if path is None or not path.is_dir():
+        return []
+    sessions: list[dict[str, Any]] = []
+    for artifact_path in sorted(path.glob("*.json")):
+        artifact = json.loads(artifact_path.read_text())
+        if (
+            not isinstance(artifact, dict)
+            or artifact.get("schema") != "acr.committed-demo-case/0.1"
+            or not isinstance(artifact.get("session"), dict)
+        ):
+            raise TypeError(f"invalid committed demo artifact: {artifact_path}")
+        session = artifact["session"]
+        session["artifact"] = {
+            "case_id": artifact.get("case_id"),
+            "source_class": artifact.get("source_class"),
+            "source_hash": artifact.get("source_hash"),
+        }
+        sessions.append(session)
+    return sorted(
+        sessions,
+        key=lambda item: item.get("presentation", {}).get("order", 100),
+    )
+
+
 def build_demo_data(
     evidence_root: Path,
     *,
     cases_path: Path | None = None,
     raw_root: Path | None = None,
+    artifacts_root: Path | None = None,
 ) -> dict[str, Any]:
     sessions_root = evidence_root / "sessions"
     discovered = sorted(path.name for path in sessions_root.iterdir() if path.is_dir())
     case_metadata = _load_case_metadata(cases_path)
-    sessions: list[dict[str, Any]] = []
+    sessions = _load_committed_artifacts(artifacts_root)
+    artifact_session_ids = {item.get("session_id") for item in sessions}
     skipped: list[dict[str, str]] = []
     for session_id in discovered:
+        if session_id in artifact_session_ids:
+            continue
         try:
             sessions.append(
                 build_session_view(
@@ -575,6 +643,7 @@ def build_demo_data(
         "source": {
             "discovered_session_count": len(discovered),
             "kind": "agent_forensics_f1_evidence",
+            "committed_artifact_count": len(_load_committed_artifacts(artifacts_root)),
         },
     }
 
@@ -585,11 +654,15 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=Path("demo/data/sessions.json"))
     parser.add_argument("--cases", type=Path, default=Path("demo/cases.json"))
     parser.add_argument("--raw-root", type=Path)
+    parser.add_argument(
+        "--artifacts-root", type=Path, default=Path("demo/case-artifacts")
+    )
     args = parser.parse_args()
     payload = build_demo_data(
         args.evidence_root,
         cases_path=args.cases,
         raw_root=args.raw_root,
+        artifacts_root=args.artifacts_root,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")

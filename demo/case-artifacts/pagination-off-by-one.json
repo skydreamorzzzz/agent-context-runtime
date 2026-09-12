@@ -1,0 +1,326 @@
+{
+  "case_id": "pagination-off-by-one",
+  "exported_at": "2026-09-12T09:53:51.854994+00:00",
+  "provenance": {
+    "audit_status": "pass",
+    "correlation": "not_applicable",
+    "diagnostic_detectors": [],
+    "raw_committed": false,
+    "real_capture": true,
+    "repository_diff_source": "captured F1 blobs",
+    "source_session_id": "session-a9a4e3bf21684685bf53d1d87402755f",
+    "verifier_result_source": "F1 VerificationReceipt"
+  },
+  "schema": "acr.committed-demo-case/0.1",
+  "session": {
+    "changed_files": [
+      {
+        "after_executable": false,
+        "after_hash": "47570a078b9fdf29c101cefd142c9e9d52175fcb92d16e209fc908a9541db86e",
+        "before_executable": false,
+        "before_hash": "cec05f07e0e423a0baef14b644b9483a29588cf7369c29c73e5ee1af02723e07",
+        "change_type": "modified",
+        "diff": "--- a/pagination.py\n+++ b/pagination.py\n@@ -1,5 +1,5 @@\n def page_items(items, page, page_size):\n-    if page < 1:\n-        raise ValueError(\"page must be at least 1\")\n-    start = (page - 1) * page_size\n+    if page < 0:\n+        raise ValueError(\"page must be at least 0\")\n+    start = page * page_size\n     return items[start : start + page_size]\n",
+        "diff_status": "available",
+        "path": "pagination.py"
+      }
+    ],
+    "diagnostics": [
+      {
+        "description": "Historical context or token input growth.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W01",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Context Growth"
+      },
+      {
+        "description": "A single tool response contains a large payload.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W02",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Large Tool Output"
+      },
+      {
+        "description": "A long failure stack or error log was not truncated.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W03",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Failure Stack"
+      },
+      {
+        "description": "Large, highly similar context repeats.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W04",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Duplicate Context"
+      },
+      {
+        "description": "A single user input is unusually large.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W05",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Large User Input"
+      },
+      {
+        "description": "Similar tool commands repeat in a short window.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W06",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Repeated Command"
+      },
+      {
+        "description": "Tool calls form a dense repeated loop.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W07",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Tool Loop"
+      },
+      {
+        "description": "Assistant output shows highly similar retries.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W08",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Retry Storm"
+      }
+    ],
+    "end_verification": {
+      "checkpoint_id": "cp-0eb4a1a5b8c0488c841a2a69cb9274c5",
+      "exit_code": 1,
+      "manifest_hash": "7e97f470eae9ace3432f78e79bc3281dda8c662e95548a88bd75f1d5b408a621",
+      "outcome": "fail",
+      "receipt_id": "vr-b3443535c43bc8a5dc825b963ab3f3c8a4a278b9",
+      "timestamp": "2026-09-12T09:50:31.887296+00:00"
+    },
+    "evidence_integrity": {
+      "checks": [
+        {
+          "detail": "audit_session passed",
+          "label": "Session audit",
+          "status": "pass"
+        },
+        {
+          "detail": "configured",
+          "label": "Exact verifier observed",
+          "status": "pass"
+        },
+        {
+          "detail": "observed",
+          "label": "Initial PASS backed by exit code 0",
+          "status": "pass"
+        },
+        {
+          "detail": "observed",
+          "label": "FAIL backed by non-zero exit",
+          "status": "pass"
+        },
+        {
+          "detail": "both resolve",
+          "label": "Pre-verifier checkpoints",
+          "status": "pass"
+        },
+        {
+          "detail": "canonical",
+          "label": "Manifest hashes verified",
+          "status": "pass"
+        },
+        {
+          "detail": "receipt correlation",
+          "label": "Same session binding",
+          "status": "pass"
+        },
+        {
+          "detail": "manifest hashes differ",
+          "label": "Repository state comparison",
+          "status": "pass"
+        }
+      ],
+      "status": "verified"
+    },
+    "final_pass": null,
+    "first_fail": {
+      "checkpoint_id": "cp-0eb4a1a5b8c0488c841a2a69cb9274c5",
+      "exit_code": 1,
+      "manifest_hash": "7e97f470eae9ace3432f78e79bc3281dda8c662e95548a88bd75f1d5b408a621",
+      "outcome": "fail",
+      "receipt_id": "vr-b3443535c43bc8a5dc825b963ab3f3c8a4a278b9",
+      "timestamp": "2026-09-12T09:50:31.887296+00:00"
+    },
+    "last_pass": {
+      "checkpoint_id": "cp-44da0ca7c002466f8b81a7db2527d8d1",
+      "exit_code": 0,
+      "manifest_hash": "6637f43cf337696bea33fae7a94b2ac76954e1b143dafbac69564705977d95f2",
+      "outcome": "pass",
+      "receipt_id": "vr-39c43d06a305991d98efdc1ae21bbd57cfee6f41",
+      "timestamp": "2026-09-12T09:50:22.070635+00:00"
+    },
+    "observed_activity": [
+      {
+        "event_count": 2,
+        "kind": "Glob",
+        "label": "Glob operation",
+        "sequence": 6
+      },
+      {
+        "event_count": 2,
+        "kind": "Read",
+        "label": "Read operation",
+        "sequence": 8
+      },
+      {
+        "event_count": 2,
+        "kind": "Read",
+        "label": "Read operation",
+        "sequence": 10
+      },
+      {
+        "event_count": 2,
+        "kind": "Edit",
+        "label": "Edit operation",
+        "sequence": 12
+      }
+    ],
+    "overall_status": "red",
+    "presentation": {
+      "description": "\u771f\u5b9e Claude Code \u4f1a\u8bdd\u5c06\u5206\u9875\u8f93\u5165\u8fc1\u79fb\u4e3a\u96f6\u57fa\u7d22\u5f15\uff0c\u65e7\u7684\u4e00\u57fa\u6d4b\u8bd5\u968f\u540e\u51fa\u73b0\u7a33\u5b9a\u5931\u8d25\u3002",
+      "order": 10,
+      "source": "committed demo artifact",
+      "title": "Pagination Off-by-One"
+    },
+    "privacy_boundary": {
+      "captured": [
+        "Sanitized agent events",
+        "Repository state",
+        "Verification results"
+      ],
+      "demo_raw_active": false,
+      "diagnostic_note": "W01\u2013W08 \u6ce8\u89e3\u662f\u5c55\u793a\u5143\u6570\u636e\uff0c\u4e0d\u662f F1 evidence\u3002",
+      "not_persisted": [
+        "Prompt bodies",
+        "Environment values",
+        "Raw hook payloads",
+        "Tool response bodies",
+        "Transcript paths",
+        "Verifier output bodies"
+      ],
+      "status": "enforced"
+    },
+    "provenance": {
+      "audit_status": "pass",
+      "raw_committed": false,
+      "real_capture": true,
+      "source_classes": [
+        "acr_f1"
+      ]
+    },
+    "session_id": "session-a9a4e3bf21684685bf53d1d87402755f",
+    "start_verification": {
+      "checkpoint_id": "cp-44da0ca7c002466f8b81a7db2527d8d1",
+      "exit_code": 0,
+      "manifest_hash": "6637f43cf337696bea33fae7a94b2ac76954e1b143dafbac69564705977d95f2",
+      "outcome": "pass",
+      "receipt_id": "vr-39c43d06a305991d98efdc1ae21bbd57cfee6f41",
+      "timestamp": "2026-09-12T09:50:22.070635+00:00"
+    },
+    "summary": {
+      "boundary_status": "observed",
+      "changed_file_count": 1,
+      "diagnostic_warning_count": 0,
+      "overall_status": "red",
+      "trajectory_kind": "failure_boundary",
+      "verified_fail_present": true
+    },
+    "timeline": [
+      {
+        "detail": "pytest -q \u00b7 exit code 0",
+        "diagnostic_refs": [],
+        "kind": "verified_pass",
+        "label": "Verified PASS",
+        "sequence": 5,
+        "status": "green"
+      },
+      {
+        "detail": "Observed between verification boundaries",
+        "diagnostic_refs": [],
+        "kind": "observed_activity",
+        "label": "Glob operation",
+        "sequence": 6,
+        "status": "neutral"
+      },
+      {
+        "detail": "Observed between verification boundaries",
+        "diagnostic_refs": [],
+        "kind": "observed_activity",
+        "label": "Read operation",
+        "sequence": 8,
+        "status": "neutral"
+      },
+      {
+        "detail": "Observed between verification boundaries",
+        "diagnostic_refs": [],
+        "kind": "observed_activity",
+        "label": "Read operation",
+        "sequence": 10,
+        "status": "neutral"
+      },
+      {
+        "detail": "Observed between verification boundaries",
+        "diagnostic_refs": [],
+        "kind": "observed_activity",
+        "label": "Edit operation",
+        "sequence": 12,
+        "status": "neutral"
+      },
+      {
+        "detail": "pagination.py",
+        "diagnostic_refs": [],
+        "kind": "repository_transition",
+        "label": "Repository state changed",
+        "sequence": null,
+        "status": "neutral"
+      },
+      {
+        "detail": "pytest -q \u00b7 exit code 1",
+        "diagnostic_refs": [],
+        "kind": "verified_fail",
+        "label": "Verified FAIL",
+        "sequence": 17,
+        "status": "red"
+      }
+    ],
+    "verifier": "pytest -q"
+  },
+  "source_class": "acr_f1",
+  "source_hash": "ec3ba6bdcd39b339b70bacc882f20d571fade72db5d414c3c2a8f32a0ca6dd48"
+}

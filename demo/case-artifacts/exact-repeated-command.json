@@ -1,0 +1,324 @@
+{
+  "case_id": "exact-repeated-command",
+  "exported_at": "2026-09-12T09:54:26.662840+00:00",
+  "provenance": {
+    "audit_status": "pass",
+    "correlation": "exact",
+    "diagnostic_detectors": [
+      "exact_repeated_command_v1"
+    ],
+    "raw_committed": false,
+    "real_capture": true,
+    "repository_diff_source": "captured F1 blobs",
+    "source_session_id": "session-35cbf5c004eb499db9d7f6c3dc02267f",
+    "verifier_result_source": "F1 VerificationReceipt"
+  },
+  "schema": "acr.committed-demo-case/0.1",
+  "session": {
+    "changed_files": [],
+    "diagnostics": [
+      {
+        "description": "Historical context or token input growth.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W01",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Context Growth"
+      },
+      {
+        "description": "A single tool response contains a large payload.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W02",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Large Tool Output"
+      },
+      {
+        "description": "A long failure stack or error log was not truncated.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W03",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Failure Stack"
+      },
+      {
+        "description": "Large, highly similar context repeats.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W04",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Duplicate Context"
+      },
+      {
+        "description": "A single user input is unusually large.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W05",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Large User Input"
+      },
+      {
+        "description": "Similar tool commands repeat in a short window.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W06",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Repeated Command"
+      },
+      {
+        "description": "Tool calls form a dense repeated loop.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W07",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Tool Loop"
+      },
+      {
+        "description": "Assistant output shows highly similar retries.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W08",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Retry Storm"
+      },
+      {
+        "description": "W06-compatible exact repeated command; not a full W06 implementation.",
+        "event_sequences": [
+          7
+        ],
+        "occurrences": 1,
+        "raw_event_sequences": [
+          5
+        ],
+        "related_event_sequences": [
+          6
+        ],
+        "rule": "D02",
+        "rule_family": "W06-compatible",
+        "severity": "yellow",
+        "source": "demo_raw_derived",
+        "status": "warning",
+        "summary": "\u540c\u4e00\u53d7\u63a7\u4f1a\u8bdd\u4e2d\u51fa\u73b0\u5b8c\u5168\u76f8\u540c\u7684 Bash command",
+        "title": "Exact Repeated Command"
+      }
+    ],
+    "end_verification": {
+      "checkpoint_id": "cp-47555b327dcb497da53c01653221bb66",
+      "exit_code": 0,
+      "manifest_hash": "f0dff7392e782a1479868248dca8c95e87aaf2d9ad0a8ee48839f47599f87290",
+      "outcome": "pass",
+      "receipt_id": "vr-ee87fe62fcd4c6b95fa56a6b3e4989e7c3a6e4f7",
+      "timestamp": "2026-09-12T09:50:48.183714+00:00"
+    },
+    "evidence_integrity": {
+      "checks": [
+        {
+          "detail": "audit_session passed",
+          "label": "Session audit",
+          "status": "pass"
+        },
+        {
+          "detail": "configured",
+          "label": "Exact verifier observed",
+          "status": "pass"
+        },
+        {
+          "detail": "observed",
+          "label": "Initial PASS backed by exit code 0",
+          "status": "pass"
+        },
+        {
+          "detail": "observed",
+          "label": "Final PASS backed by exit code 0",
+          "status": "pass"
+        },
+        {
+          "detail": "both resolve",
+          "label": "Pre-verifier checkpoints",
+          "status": "pass"
+        },
+        {
+          "detail": "canonical",
+          "label": "Manifest hashes verified",
+          "status": "pass"
+        },
+        {
+          "detail": "receipt correlation",
+          "label": "Same session binding",
+          "status": "pass"
+        },
+        {
+          "detail": "no captured change",
+          "label": "Repository state comparison",
+          "status": "pass"
+        }
+      ],
+      "status": "verified"
+    },
+    "final_pass": {
+      "checkpoint_id": "cp-47555b327dcb497da53c01653221bb66",
+      "exit_code": 0,
+      "manifest_hash": "f0dff7392e782a1479868248dca8c95e87aaf2d9ad0a8ee48839f47599f87290",
+      "outcome": "pass",
+      "receipt_id": "vr-ee87fe62fcd4c6b95fa56a6b3e4989e7c3a6e4f7",
+      "timestamp": "2026-09-12T09:50:48.183714+00:00"
+    },
+    "first_fail": null,
+    "last_pass": {
+      "checkpoint_id": "cp-92ed20007237487182007882a3d6565f",
+      "exit_code": 0,
+      "manifest_hash": "f0dff7392e782a1479868248dca8c95e87aaf2d9ad0a8ee48839f47599f87290",
+      "outcome": "pass",
+      "receipt_id": "vr-2f49bb32486eee1ce06b028f385db33ee7566198",
+      "timestamp": "2026-09-12T09:50:43.471635+00:00"
+    },
+    "observed_activity": [
+      {
+        "event_count": 2,
+        "kind": "Bash",
+        "label": "Bash operation",
+        "sequence": 6
+      },
+      {
+        "event_count": 2,
+        "kind": "Bash",
+        "label": "Bash operation",
+        "sequence": 7
+      }
+    ],
+    "overall_status": "yellow",
+    "presentation": {
+      "description": "\u771f\u5b9e Claude Code \u4f1a\u8bdd\u91cd\u590d\u6267\u884c\u76f8\u540c Bash command\uff1bD02 \u5c06\u540e\u4e00\u6b21\u64cd\u4f5c\u6807\u8bb0\u4e3a\u7591\u4f3c\u5197\u4f59\uff0c\u672b\u7aef verifier \u4ecd\u7136\u901a\u8fc7\u3002",
+      "order": 20,
+      "source": "committed demo artifact",
+      "title": "\u91cd\u590d\u547d\u4ee4\u68c0\u67e5"
+    },
+    "privacy_boundary": {
+      "captured": [
+        "Sanitized agent events",
+        "Repository state",
+        "Verification results"
+      ],
+      "demo_raw_active": false,
+      "diagnostic_note": "\u9ec4\u8272\u8bca\u65ad\u7531\u672c\u5730 demo_raw \u6d3e\u751f\uff1b\u4ec5\u8131\u654f artifact \u5df2\u63d0\u4ea4\uff0craw \u6b63\u6587\u672a\u63d0\u4ea4\u3002",
+      "not_persisted": [
+        "Prompt bodies",
+        "Environment values",
+        "Raw hook payloads",
+        "Tool response bodies",
+        "Transcript paths",
+        "Verifier output bodies"
+      ],
+      "status": "enforced"
+    },
+    "provenance": {
+      "audit_status": "pass",
+      "raw_committed": false,
+      "real_capture": true,
+      "source_classes": [
+        "acr_f1",
+        "demo_raw_derived"
+      ]
+    },
+    "raw_trajectory": {
+      "correlation_status": "exact",
+      "diagnostic_hit_count": 1,
+      "normalized_step_count": 7,
+      "source_class": "demo_raw_derived",
+      "source_hash": "9fe837c7436019c4a55accd0edd64b5a10be0d5046d909ef6f2f13b0a7437992"
+    },
+    "session_id": "session-35cbf5c004eb499db9d7f6c3dc02267f",
+    "start_verification": {
+      "checkpoint_id": "cp-92ed20007237487182007882a3d6565f",
+      "exit_code": 0,
+      "manifest_hash": "f0dff7392e782a1479868248dca8c95e87aaf2d9ad0a8ee48839f47599f87290",
+      "outcome": "pass",
+      "receipt_id": "vr-2f49bb32486eee1ce06b028f385db33ee7566198",
+      "timestamp": "2026-09-12T09:50:43.471635+00:00"
+    },
+    "summary": {
+      "boundary_status": "not_applicable",
+      "changed_file_count": 0,
+      "diagnostic_warning_count": 1,
+      "overall_status": "yellow",
+      "trajectory_kind": "healthy_transition",
+      "verified_fail_present": false
+    },
+    "timeline": [
+      {
+        "detail": "pytest -q \u00b7 exit code 0",
+        "diagnostic_refs": [],
+        "kind": "verified_pass",
+        "label": "Verified PASS",
+        "sequence": 5,
+        "status": "green"
+      },
+      {
+        "detail": "Observed between verification boundaries",
+        "diagnostic_refs": [],
+        "kind": "observed_activity",
+        "label": "Bash operation",
+        "sequence": 6,
+        "status": "neutral"
+      },
+      {
+        "detail": "Observed between verification boundaries",
+        "diagnostic_refs": [
+          {
+            "rule": "D02",
+            "source": "demo_raw_derived",
+            "summary": "\u540c\u4e00\u53d7\u63a7\u4f1a\u8bdd\u4e2d\u51fa\u73b0\u5b8c\u5168\u76f8\u540c\u7684 Bash command",
+            "title": "Exact Repeated Command"
+          }
+        ],
+        "kind": "observed_activity",
+        "label": "Bash operation",
+        "sequence": 7,
+        "status": "yellow"
+      },
+      {
+        "detail": "No captured path change",
+        "diagnostic_refs": [],
+        "kind": "repository_transition",
+        "label": "Repository state unchanged",
+        "sequence": null,
+        "status": "neutral"
+      },
+      {
+        "detail": "pytest -q \u00b7 exit code 0",
+        "diagnostic_refs": [],
+        "kind": "verified_pass",
+        "label": "Verified PASS",
+        "sequence": 13,
+        "status": "green"
+      }
+    ],
+    "verifier": "pytest -q"
+  },
+  "source_class": "demo_raw_derived",
+  "source_hash": "9fe837c7436019c4a55accd0edd64b5a10be0d5046d909ef6f2f13b0a7437992"
+}

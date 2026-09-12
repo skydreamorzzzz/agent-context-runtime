@@ -2,6 +2,982 @@
   "schema": "acr.demo-view/0.2",
   "sessions": [
     {
+      "artifact": {
+        "case_id": "pagination-off-by-one",
+        "source_class": "acr_f1",
+        "source_hash": "ec3ba6bdcd39b339b70bacc882f20d571fade72db5d414c3c2a8f32a0ca6dd48"
+      },
+      "changed_files": [
+        {
+          "after_executable": false,
+          "after_hash": "47570a078b9fdf29c101cefd142c9e9d52175fcb92d16e209fc908a9541db86e",
+          "before_executable": false,
+          "before_hash": "cec05f07e0e423a0baef14b644b9483a29588cf7369c29c73e5ee1af02723e07",
+          "change_type": "modified",
+          "diff": "--- a/pagination.py\n+++ b/pagination.py\n@@ -1,5 +1,5 @@\n def page_items(items, page, page_size):\n-    if page < 1:\n-        raise ValueError(\"page must be at least 1\")\n-    start = (page - 1) * page_size\n+    if page < 0:\n+        raise ValueError(\"page must be at least 0\")\n+    start = page * page_size\n     return items[start : start + page_size]\n",
+          "diff_status": "available",
+          "path": "pagination.py"
+        }
+      ],
+      "diagnostics": [
+        {
+          "description": "Historical context or token input growth.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W01",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Context Growth"
+        },
+        {
+          "description": "A single tool response contains a large payload.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W02",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Large Tool Output"
+        },
+        {
+          "description": "A long failure stack or error log was not truncated.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W03",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Failure Stack"
+        },
+        {
+          "description": "Large, highly similar context repeats.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W04",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Duplicate Context"
+        },
+        {
+          "description": "A single user input is unusually large.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W05",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Large User Input"
+        },
+        {
+          "description": "Similar tool commands repeat in a short window.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W06",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Repeated Command"
+        },
+        {
+          "description": "Tool calls form a dense repeated loop.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W07",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Tool Loop"
+        },
+        {
+          "description": "Assistant output shows highly similar retries.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W08",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Retry Storm"
+        }
+      ],
+      "end_verification": {
+        "checkpoint_id": "cp-0eb4a1a5b8c0488c841a2a69cb9274c5",
+        "exit_code": 1,
+        "manifest_hash": "7e97f470eae9ace3432f78e79bc3281dda8c662e95548a88bd75f1d5b408a621",
+        "outcome": "fail",
+        "receipt_id": "vr-b3443535c43bc8a5dc825b963ab3f3c8a4a278b9",
+        "timestamp": "2026-09-12T09:50:31.887296+00:00"
+      },
+      "evidence_integrity": {
+        "checks": [
+          {
+            "detail": "audit_session passed",
+            "label": "Session audit",
+            "status": "pass"
+          },
+          {
+            "detail": "configured",
+            "label": "Exact verifier observed",
+            "status": "pass"
+          },
+          {
+            "detail": "observed",
+            "label": "Initial PASS backed by exit code 0",
+            "status": "pass"
+          },
+          {
+            "detail": "observed",
+            "label": "FAIL backed by non-zero exit",
+            "status": "pass"
+          },
+          {
+            "detail": "both resolve",
+            "label": "Pre-verifier checkpoints",
+            "status": "pass"
+          },
+          {
+            "detail": "canonical",
+            "label": "Manifest hashes verified",
+            "status": "pass"
+          },
+          {
+            "detail": "receipt correlation",
+            "label": "Same session binding",
+            "status": "pass"
+          },
+          {
+            "detail": "manifest hashes differ",
+            "label": "Repository state comparison",
+            "status": "pass"
+          }
+        ],
+        "status": "verified"
+      },
+      "final_pass": null,
+      "first_fail": {
+        "checkpoint_id": "cp-0eb4a1a5b8c0488c841a2a69cb9274c5",
+        "exit_code": 1,
+        "manifest_hash": "7e97f470eae9ace3432f78e79bc3281dda8c662e95548a88bd75f1d5b408a621",
+        "outcome": "fail",
+        "receipt_id": "vr-b3443535c43bc8a5dc825b963ab3f3c8a4a278b9",
+        "timestamp": "2026-09-12T09:50:31.887296+00:00"
+      },
+      "last_pass": {
+        "checkpoint_id": "cp-44da0ca7c002466f8b81a7db2527d8d1",
+        "exit_code": 0,
+        "manifest_hash": "6637f43cf337696bea33fae7a94b2ac76954e1b143dafbac69564705977d95f2",
+        "outcome": "pass",
+        "receipt_id": "vr-39c43d06a305991d98efdc1ae21bbd57cfee6f41",
+        "timestamp": "2026-09-12T09:50:22.070635+00:00"
+      },
+      "observed_activity": [
+        {
+          "event_count": 2,
+          "kind": "Glob",
+          "label": "Glob operation",
+          "sequence": 6
+        },
+        {
+          "event_count": 2,
+          "kind": "Read",
+          "label": "Read operation",
+          "sequence": 8
+        },
+        {
+          "event_count": 2,
+          "kind": "Read",
+          "label": "Read operation",
+          "sequence": 10
+        },
+        {
+          "event_count": 2,
+          "kind": "Edit",
+          "label": "Edit operation",
+          "sequence": 12
+        }
+      ],
+      "overall_status": "red",
+      "presentation": {
+        "description": "\u771f\u5b9e Claude Code \u4f1a\u8bdd\u5c06\u5206\u9875\u8f93\u5165\u8fc1\u79fb\u4e3a\u96f6\u57fa\u7d22\u5f15\uff0c\u65e7\u7684\u4e00\u57fa\u6d4b\u8bd5\u968f\u540e\u51fa\u73b0\u7a33\u5b9a\u5931\u8d25\u3002",
+        "order": 10,
+        "source": "committed demo artifact",
+        "title": "Pagination Off-by-One"
+      },
+      "privacy_boundary": {
+        "captured": [
+          "Sanitized agent events",
+          "Repository state",
+          "Verification results"
+        ],
+        "demo_raw_active": false,
+        "diagnostic_note": "W01\u2013W08 \u6ce8\u89e3\u662f\u5c55\u793a\u5143\u6570\u636e\uff0c\u4e0d\u662f F1 evidence\u3002",
+        "not_persisted": [
+          "Prompt bodies",
+          "Environment values",
+          "Raw hook payloads",
+          "Tool response bodies",
+          "Transcript paths",
+          "Verifier output bodies"
+        ],
+        "status": "enforced"
+      },
+      "provenance": {
+        "audit_status": "pass",
+        "raw_committed": false,
+        "real_capture": true,
+        "source_classes": [
+          "acr_f1"
+        ]
+      },
+      "session_id": "session-a9a4e3bf21684685bf53d1d87402755f",
+      "start_verification": {
+        "checkpoint_id": "cp-44da0ca7c002466f8b81a7db2527d8d1",
+        "exit_code": 0,
+        "manifest_hash": "6637f43cf337696bea33fae7a94b2ac76954e1b143dafbac69564705977d95f2",
+        "outcome": "pass",
+        "receipt_id": "vr-39c43d06a305991d98efdc1ae21bbd57cfee6f41",
+        "timestamp": "2026-09-12T09:50:22.070635+00:00"
+      },
+      "summary": {
+        "boundary_status": "observed",
+        "changed_file_count": 1,
+        "diagnostic_warning_count": 0,
+        "overall_status": "red",
+        "trajectory_kind": "failure_boundary",
+        "verified_fail_present": true
+      },
+      "timeline": [
+        {
+          "detail": "pytest -q \u00b7 exit code 0",
+          "diagnostic_refs": [],
+          "kind": "verified_pass",
+          "label": "Verified PASS",
+          "sequence": 5,
+          "status": "green"
+        },
+        {
+          "detail": "Observed between verification boundaries",
+          "diagnostic_refs": [],
+          "kind": "observed_activity",
+          "label": "Glob operation",
+          "sequence": 6,
+          "status": "neutral"
+        },
+        {
+          "detail": "Observed between verification boundaries",
+          "diagnostic_refs": [],
+          "kind": "observed_activity",
+          "label": "Read operation",
+          "sequence": 8,
+          "status": "neutral"
+        },
+        {
+          "detail": "Observed between verification boundaries",
+          "diagnostic_refs": [],
+          "kind": "observed_activity",
+          "label": "Read operation",
+          "sequence": 10,
+          "status": "neutral"
+        },
+        {
+          "detail": "Observed between verification boundaries",
+          "diagnostic_refs": [],
+          "kind": "observed_activity",
+          "label": "Edit operation",
+          "sequence": 12,
+          "status": "neutral"
+        },
+        {
+          "detail": "pagination.py",
+          "diagnostic_refs": [],
+          "kind": "repository_transition",
+          "label": "Repository state changed",
+          "sequence": null,
+          "status": "neutral"
+        },
+        {
+          "detail": "pytest -q \u00b7 exit code 1",
+          "diagnostic_refs": [],
+          "kind": "verified_fail",
+          "label": "Verified FAIL",
+          "sequence": 17,
+          "status": "red"
+        }
+      ],
+      "verifier": "pytest -q"
+    },
+    {
+      "artifact": {
+        "case_id": "exact-repeated-command",
+        "source_class": "demo_raw_derived",
+        "source_hash": "9fe837c7436019c4a55accd0edd64b5a10be0d5046d909ef6f2f13b0a7437992"
+      },
+      "changed_files": [],
+      "diagnostics": [
+        {
+          "description": "Historical context or token input growth.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W01",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Context Growth"
+        },
+        {
+          "description": "A single tool response contains a large payload.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W02",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Large Tool Output"
+        },
+        {
+          "description": "A long failure stack or error log was not truncated.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W03",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Failure Stack"
+        },
+        {
+          "description": "Large, highly similar context repeats.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W04",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Duplicate Context"
+        },
+        {
+          "description": "A single user input is unusually large.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W05",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Large User Input"
+        },
+        {
+          "description": "Similar tool commands repeat in a short window.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W06",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Repeated Command"
+        },
+        {
+          "description": "Tool calls form a dense repeated loop.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W07",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Tool Loop"
+        },
+        {
+          "description": "Assistant output shows highly similar retries.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W08",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Retry Storm"
+        },
+        {
+          "description": "W06-compatible exact repeated command; not a full W06 implementation.",
+          "event_sequences": [
+            7
+          ],
+          "occurrences": 1,
+          "raw_event_sequences": [
+            5
+          ],
+          "related_event_sequences": [
+            6
+          ],
+          "rule": "D02",
+          "rule_family": "W06-compatible",
+          "severity": "yellow",
+          "source": "demo_raw_derived",
+          "status": "warning",
+          "summary": "\u540c\u4e00\u53d7\u63a7\u4f1a\u8bdd\u4e2d\u51fa\u73b0\u5b8c\u5168\u76f8\u540c\u7684 Bash command",
+          "title": "Exact Repeated Command"
+        }
+      ],
+      "end_verification": {
+        "checkpoint_id": "cp-47555b327dcb497da53c01653221bb66",
+        "exit_code": 0,
+        "manifest_hash": "f0dff7392e782a1479868248dca8c95e87aaf2d9ad0a8ee48839f47599f87290",
+        "outcome": "pass",
+        "receipt_id": "vr-ee87fe62fcd4c6b95fa56a6b3e4989e7c3a6e4f7",
+        "timestamp": "2026-09-12T09:50:48.183714+00:00"
+      },
+      "evidence_integrity": {
+        "checks": [
+          {
+            "detail": "audit_session passed",
+            "label": "Session audit",
+            "status": "pass"
+          },
+          {
+            "detail": "configured",
+            "label": "Exact verifier observed",
+            "status": "pass"
+          },
+          {
+            "detail": "observed",
+            "label": "Initial PASS backed by exit code 0",
+            "status": "pass"
+          },
+          {
+            "detail": "observed",
+            "label": "Final PASS backed by exit code 0",
+            "status": "pass"
+          },
+          {
+            "detail": "both resolve",
+            "label": "Pre-verifier checkpoints",
+            "status": "pass"
+          },
+          {
+            "detail": "canonical",
+            "label": "Manifest hashes verified",
+            "status": "pass"
+          },
+          {
+            "detail": "receipt correlation",
+            "label": "Same session binding",
+            "status": "pass"
+          },
+          {
+            "detail": "no captured change",
+            "label": "Repository state comparison",
+            "status": "pass"
+          }
+        ],
+        "status": "verified"
+      },
+      "final_pass": {
+        "checkpoint_id": "cp-47555b327dcb497da53c01653221bb66",
+        "exit_code": 0,
+        "manifest_hash": "f0dff7392e782a1479868248dca8c95e87aaf2d9ad0a8ee48839f47599f87290",
+        "outcome": "pass",
+        "receipt_id": "vr-ee87fe62fcd4c6b95fa56a6b3e4989e7c3a6e4f7",
+        "timestamp": "2026-09-12T09:50:48.183714+00:00"
+      },
+      "first_fail": null,
+      "last_pass": {
+        "checkpoint_id": "cp-92ed20007237487182007882a3d6565f",
+        "exit_code": 0,
+        "manifest_hash": "f0dff7392e782a1479868248dca8c95e87aaf2d9ad0a8ee48839f47599f87290",
+        "outcome": "pass",
+        "receipt_id": "vr-2f49bb32486eee1ce06b028f385db33ee7566198",
+        "timestamp": "2026-09-12T09:50:43.471635+00:00"
+      },
+      "observed_activity": [
+        {
+          "event_count": 2,
+          "kind": "Bash",
+          "label": "Bash operation",
+          "sequence": 6
+        },
+        {
+          "event_count": 2,
+          "kind": "Bash",
+          "label": "Bash operation",
+          "sequence": 7
+        }
+      ],
+      "overall_status": "yellow",
+      "presentation": {
+        "description": "\u771f\u5b9e Claude Code \u4f1a\u8bdd\u91cd\u590d\u6267\u884c\u76f8\u540c Bash command\uff1bD02 \u5c06\u540e\u4e00\u6b21\u64cd\u4f5c\u6807\u8bb0\u4e3a\u7591\u4f3c\u5197\u4f59\uff0c\u672b\u7aef verifier \u4ecd\u7136\u901a\u8fc7\u3002",
+        "order": 20,
+        "source": "committed demo artifact",
+        "title": "\u91cd\u590d\u547d\u4ee4\u68c0\u67e5"
+      },
+      "privacy_boundary": {
+        "captured": [
+          "Sanitized agent events",
+          "Repository state",
+          "Verification results"
+        ],
+        "demo_raw_active": false,
+        "diagnostic_note": "\u9ec4\u8272\u8bca\u65ad\u7531\u672c\u5730 demo_raw \u6d3e\u751f\uff1b\u4ec5\u8131\u654f artifact \u5df2\u63d0\u4ea4\uff0craw \u6b63\u6587\u672a\u63d0\u4ea4\u3002",
+        "not_persisted": [
+          "Prompt bodies",
+          "Environment values",
+          "Raw hook payloads",
+          "Tool response bodies",
+          "Transcript paths",
+          "Verifier output bodies"
+        ],
+        "status": "enforced"
+      },
+      "provenance": {
+        "audit_status": "pass",
+        "raw_committed": false,
+        "real_capture": true,
+        "source_classes": [
+          "acr_f1",
+          "demo_raw_derived"
+        ]
+      },
+      "raw_trajectory": {
+        "correlation_status": "exact",
+        "diagnostic_hit_count": 1,
+        "normalized_step_count": 7,
+        "source_class": "demo_raw_derived",
+        "source_hash": "9fe837c7436019c4a55accd0edd64b5a10be0d5046d909ef6f2f13b0a7437992"
+      },
+      "session_id": "session-35cbf5c004eb499db9d7f6c3dc02267f",
+      "start_verification": {
+        "checkpoint_id": "cp-92ed20007237487182007882a3d6565f",
+        "exit_code": 0,
+        "manifest_hash": "f0dff7392e782a1479868248dca8c95e87aaf2d9ad0a8ee48839f47599f87290",
+        "outcome": "pass",
+        "receipt_id": "vr-2f49bb32486eee1ce06b028f385db33ee7566198",
+        "timestamp": "2026-09-12T09:50:43.471635+00:00"
+      },
+      "summary": {
+        "boundary_status": "not_applicable",
+        "changed_file_count": 0,
+        "diagnostic_warning_count": 1,
+        "overall_status": "yellow",
+        "trajectory_kind": "healthy_transition",
+        "verified_fail_present": false
+      },
+      "timeline": [
+        {
+          "detail": "pytest -q \u00b7 exit code 0",
+          "diagnostic_refs": [],
+          "kind": "verified_pass",
+          "label": "Verified PASS",
+          "sequence": 5,
+          "status": "green"
+        },
+        {
+          "detail": "Observed between verification boundaries",
+          "diagnostic_refs": [],
+          "kind": "observed_activity",
+          "label": "Bash operation",
+          "sequence": 6,
+          "status": "neutral"
+        },
+        {
+          "detail": "Observed between verification boundaries",
+          "diagnostic_refs": [
+            {
+              "rule": "D02",
+              "source": "demo_raw_derived",
+              "summary": "\u540c\u4e00\u53d7\u63a7\u4f1a\u8bdd\u4e2d\u51fa\u73b0\u5b8c\u5168\u76f8\u540c\u7684 Bash command",
+              "title": "Exact Repeated Command"
+            }
+          ],
+          "kind": "observed_activity",
+          "label": "Bash operation",
+          "sequence": 7,
+          "status": "yellow"
+        },
+        {
+          "detail": "No captured path change",
+          "diagnostic_refs": [],
+          "kind": "repository_transition",
+          "label": "Repository state unchanged",
+          "sequence": null,
+          "status": "neutral"
+        },
+        {
+          "detail": "pytest -q \u00b7 exit code 0",
+          "diagnostic_refs": [],
+          "kind": "verified_pass",
+          "label": "Verified PASS",
+          "sequence": 13,
+          "status": "green"
+        }
+      ],
+      "verifier": "pytest -q"
+    },
+    {
+      "artifact": {
+        "case_id": "healthy-input-normalization",
+        "source_class": "acr_f1",
+        "source_hash": "4acc1f42789c8145255e34b733ff26678b1bc0270e67d9677a7b9809dbac58f3"
+      },
+      "changed_files": [
+        {
+          "after_executable": false,
+          "after_hash": "fb8bf266d28c69835c170f170577ba5fb925b0a8fc5b373193ad2e258465032e",
+          "before_executable": false,
+          "before_hash": "05707791cc447cf2737c948e1be350fea658fdbb13fc8882f25e207783c7e914",
+          "change_type": "modified",
+          "diff": "--- a/normalization.py\n+++ b/normalization.py\n@@ -1,2 +1,6 @@\n def normalize_name(value):\n     return \" \".join(value.split())\n+\n+\n+def normalize_email(value):\n+    return value.strip().lower()\n",
+          "diff_status": "available",
+          "path": "normalization.py"
+        },
+        {
+          "after_executable": false,
+          "after_hash": "49f62326d24ff1515c69f8b169baee423d72df6a28889cea53962a702fc93b7a",
+          "before_executable": false,
+          "before_hash": "5a50b3f6a95e7c4808fccf84b7849f6b638fe69bbaeedd40745dc10951f1faee",
+          "change_type": "modified",
+          "diff": "--- a/test_normalization.py\n+++ b/test_normalization.py\n@@ -1,5 +1,21 @@\n-from normalization import normalize_name\n+from normalization import normalize_email, normalize_name\n \n \n def test_normalize_name():\n     assert normalize_name(\"  Ada   Lovelace \") == \"Ada Lovelace\"\n+\n+\n+def test_normalize_email_strips_whitespace():\n+    assert normalize_email(\"  ada@example.com  \") == \"ada@example.com\"\n+\n+\n+def test_normalize_email_lowercases():\n+    assert normalize_email(\"ADA@Example.COM\") == \"ada@example.com\"\n+\n+\n+def test_normalize_email_strips_and_lowercases():\n+    assert normalize_email(\"  Ada@Example.COM  \") == \"ada@example.com\"\n+\n+\n+def test_normalize_email_leaves_normalized_unchanged():\n+    assert normalize_email(\"ada@example.com\") == \"ada@example.com\"\n",
+          "diff_status": "available",
+          "path": "test_normalization.py"
+        }
+      ],
+      "diagnostics": [
+        {
+          "description": "Historical context or token input growth.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W01",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Context Growth"
+        },
+        {
+          "description": "A single tool response contains a large payload.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W02",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Large Tool Output"
+        },
+        {
+          "description": "A long failure stack or error log was not truncated.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W03",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Failure Stack"
+        },
+        {
+          "description": "Large, highly similar context repeats.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W04",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Duplicate Context"
+        },
+        {
+          "description": "A single user input is unusually large.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W05",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Large User Input"
+        },
+        {
+          "description": "Similar tool commands repeat in a short window.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W06",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Repeated Command"
+        },
+        {
+          "description": "Tool calls form a dense repeated loop.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W07",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Tool Loop"
+        },
+        {
+          "description": "Assistant output shows highly similar retries.",
+          "event_sequences": [],
+          "occurrences": 0,
+          "rule": "W08",
+          "severity": "neutral",
+          "source": "demo presentation metadata",
+          "status": "not_evaluated",
+          "summary": "Not evaluated from privacy-bounded F1 evidence.",
+          "title": "Retry Storm"
+        }
+      ],
+      "end_verification": {
+        "checkpoint_id": "cp-689643ed68644c37a487d62bf2bfa828",
+        "exit_code": 0,
+        "manifest_hash": "fd788723bde435a823962887d35dd5fb5af8ff3ba5389378d614a901b8feeac6",
+        "outcome": "pass",
+        "receipt_id": "vr-1e5ae731d01bba893aacfe594a2e7bbe0924ea9e",
+        "timestamp": "2026-09-12T09:51:09.083763+00:00"
+      },
+      "evidence_integrity": {
+        "checks": [
+          {
+            "detail": "audit_session passed",
+            "label": "Session audit",
+            "status": "pass"
+          },
+          {
+            "detail": "configured",
+            "label": "Exact verifier observed",
+            "status": "pass"
+          },
+          {
+            "detail": "observed",
+            "label": "Initial PASS backed by exit code 0",
+            "status": "pass"
+          },
+          {
+            "detail": "observed",
+            "label": "Final PASS backed by exit code 0",
+            "status": "pass"
+          },
+          {
+            "detail": "both resolve",
+            "label": "Pre-verifier checkpoints",
+            "status": "pass"
+          },
+          {
+            "detail": "canonical",
+            "label": "Manifest hashes verified",
+            "status": "pass"
+          },
+          {
+            "detail": "receipt correlation",
+            "label": "Same session binding",
+            "status": "pass"
+          },
+          {
+            "detail": "manifest hashes differ",
+            "label": "Repository state comparison",
+            "status": "pass"
+          }
+        ],
+        "status": "verified"
+      },
+      "final_pass": {
+        "checkpoint_id": "cp-689643ed68644c37a487d62bf2bfa828",
+        "exit_code": 0,
+        "manifest_hash": "fd788723bde435a823962887d35dd5fb5af8ff3ba5389378d614a901b8feeac6",
+        "outcome": "pass",
+        "receipt_id": "vr-1e5ae731d01bba893aacfe594a2e7bbe0924ea9e",
+        "timestamp": "2026-09-12T09:51:09.083763+00:00"
+      },
+      "first_fail": null,
+      "last_pass": {
+        "checkpoint_id": "cp-f3d8253aad2c4e04831fc64460826e0f",
+        "exit_code": 0,
+        "manifest_hash": "244492f1241117c4f160095e8965649c34426462ca5fbbd737e435beac7ae086",
+        "outcome": "pass",
+        "receipt_id": "vr-6ce71f3604ca1ab369afb0b3e25279aeba2375fd",
+        "timestamp": "2026-09-12T09:51:00.419496+00:00"
+      },
+      "observed_activity": [
+        {
+          "event_count": 2,
+          "kind": "Glob",
+          "label": "Glob operation",
+          "sequence": 6
+        },
+        {
+          "event_count": 2,
+          "kind": "Glob",
+          "label": "Glob operation",
+          "sequence": 7
+        },
+        {
+          "event_count": 2,
+          "kind": "Read",
+          "label": "Read operation",
+          "sequence": 10
+        },
+        {
+          "event_count": 2,
+          "kind": "Read",
+          "label": "Read operation",
+          "sequence": 11
+        },
+        {
+          "event_count": 2,
+          "kind": "Edit",
+          "label": "Edit operation",
+          "sequence": 14
+        },
+        {
+          "event_count": 2,
+          "kind": "Edit",
+          "label": "Edit operation",
+          "sequence": 16
+        }
+      ],
+      "overall_status": "green",
+      "presentation": {
+        "description": "\u771f\u5b9e Claude Code \u4f1a\u8bdd\u65b0\u589e\u90ae\u7bb1\u5f52\u4e00\u5316\u80fd\u529b\u4e0e\u6d4b\u8bd5\uff0c\u4ed3\u5e93\u53d1\u751f\u53d8\u5316\u4e14\u672b\u7aef verifier \u4fdd\u6301\u901a\u8fc7\u3002",
+        "order": 30,
+        "source": "committed demo artifact",
+        "title": "Healthy Input Normalization"
+      },
+      "privacy_boundary": {
+        "captured": [
+          "Sanitized agent events",
+          "Repository state",
+          "Verification results"
+        ],
+        "demo_raw_active": false,
+        "diagnostic_note": "W01\u2013W08 \u6ce8\u89e3\u662f\u5c55\u793a\u5143\u6570\u636e\uff0c\u4e0d\u662f F1 evidence\u3002",
+        "not_persisted": [
+          "Prompt bodies",
+          "Environment values",
+          "Raw hook payloads",
+          "Tool response bodies",
+          "Transcript paths",
+          "Verifier output bodies"
+        ],
+        "status": "enforced"
+      },
+      "provenance": {
+        "audit_status": "pass",
+        "raw_committed": false,
+        "real_capture": true,
+        "source_classes": [
+          "acr_f1"
+        ]
+      },
+      "session_id": "session-f9b24d3a75db4c3ea1929525d3e3f6c4",
+      "start_verification": {
+        "checkpoint_id": "cp-f3d8253aad2c4e04831fc64460826e0f",
+        "exit_code": 0,
+        "manifest_hash": "244492f1241117c4f160095e8965649c34426462ca5fbbd737e435beac7ae086",
+        "outcome": "pass",
+        "receipt_id": "vr-6ce71f3604ca1ab369afb0b3e25279aeba2375fd",
+        "timestamp": "2026-09-12T09:51:00.419496+00:00"
+      },
+      "summary": {
+        "boundary_status": "not_applicable",
+        "changed_file_count": 2,
+        "diagnostic_warning_count": 0,
+        "overall_status": "green",
+        "trajectory_kind": "healthy_transition",
+        "verified_fail_present": false
+      },
+      "timeline": [
+        {
+          "detail": "pytest -q \u00b7 exit code 0",
+          "diagnostic_refs": [],
+          "kind": "verified_pass",
+          "label": "Verified PASS",
+          "sequence": 5,
+          "status": "green"
+        },
+        {
+          "detail": "Observed between verification boundaries",
+          "diagnostic_refs": [],
+          "kind": "observed_activity",
+          "label": "Glob operation",
+          "sequence": 6,
+          "status": "neutral"
+        },
+        {
+          "detail": "Observed between verification boundaries",
+          "diagnostic_refs": [],
+          "kind": "observed_activity",
+          "label": "Glob operation",
+          "sequence": 7,
+          "status": "neutral"
+        },
+        {
+          "detail": "Observed between verification boundaries",
+          "diagnostic_refs": [],
+          "kind": "observed_activity",
+          "label": "Read operation",
+          "sequence": 10,
+          "status": "neutral"
+        },
+        {
+          "detail": "Observed between verification boundaries",
+          "diagnostic_refs": [],
+          "kind": "observed_activity",
+          "label": "Read operation",
+          "sequence": 11,
+          "status": "neutral"
+        },
+        {
+          "detail": "Observed between verification boundaries",
+          "diagnostic_refs": [],
+          "kind": "observed_activity",
+          "label": "Edit operation",
+          "sequence": 14,
+          "status": "neutral"
+        },
+        {
+          "detail": "Observed between verification boundaries",
+          "diagnostic_refs": [],
+          "kind": "observed_activity",
+          "label": "Edit operation",
+          "sequence": 16,
+          "status": "neutral"
+        },
+        {
+          "detail": "normalization.py, test_normalization.py",
+          "diagnostic_refs": [],
+          "kind": "repository_transition",
+          "label": "Repository state changed",
+          "sequence": null,
+          "status": "neutral"
+        },
+        {
+          "detail": "pytest -q \u00b7 exit code 0",
+          "diagnostic_refs": [],
+          "kind": "verified_pass",
+          "label": "Verified PASS",
+          "sequence": 21,
+          "status": "green"
+        }
+      ],
+      "verifier": "pytest -q"
+    },
+    {
       "changed_files": [
         {
           "after_executable": false,
@@ -104,6 +1080,14 @@
           "title": "Retry Storm"
         }
       ],
+      "end_verification": {
+        "checkpoint_id": "cp-6d004fd0bd924ce38c79d021270c13ef",
+        "exit_code": 1,
+        "manifest_hash": "730ef41fa69101a7220204b1296423c5c0ca007c1f181c5f44384b5b0187e10b",
+        "outcome": "fail",
+        "receipt_id": "vr-dcc5e9ff4f91b023021c0c04bc4c5ac572744a86",
+        "timestamp": "2026-09-11T06:38:11.739757+00:00"
+      },
       "evidence_integrity": {
         "checks": [
           {
@@ -112,13 +1096,13 @@
             "status": "pass"
           },
           {
-            "detail": "pytest -q",
+            "detail": "configured",
             "label": "Exact verifier observed",
             "status": "pass"
           },
           {
             "detail": "observed",
-            "label": "PASS backed by exit code 0",
+            "label": "Initial PASS backed by exit code 0",
             "status": "pass"
           },
           {
@@ -143,16 +1127,18 @@
           },
           {
             "detail": "manifest hashes differ",
-            "label": "State transition detected",
+            "label": "Repository state comparison",
             "status": "pass"
           }
         ],
         "status": "verified"
       },
+      "final_pass": null,
       "first_fail": {
         "checkpoint_id": "cp-6d004fd0bd924ce38c79d021270c13ef",
         "exit_code": 1,
         "manifest_hash": "730ef41fa69101a7220204b1296423c5c0ca007c1f181c5f44384b5b0187e10b",
+        "outcome": "fail",
         "receipt_id": "vr-dcc5e9ff4f91b023021c0c04bc4c5ac572744a86",
         "timestamp": "2026-09-11T06:38:11.739757+00:00"
       },
@@ -160,6 +1146,7 @@
         "checkpoint_id": "cp-e3f4058c3cd74cefb0bf34e0cc1837d9",
         "exit_code": 0,
         "manifest_hash": "43e9c05e20f6c97efcedd3354e3a494f3ccaf930c10133d16b0cfd6b0bc66d48",
+        "outcome": "pass",
         "receipt_id": "vr-b5e2cbdd0d811acf54dd24d1ebf33066e9b9f1f9",
         "timestamp": "2026-09-11T06:38:07.514492+00:00"
       },
@@ -173,9 +1160,9 @@
       ],
       "overall_status": "red",
       "presentation": {
-        "description": "One captured repository file changed between observed verifier outcomes.",
+        "description": "Baseline / Minimal Smoke\uff1a\u4e00\u4e2a\u5df2\u6355\u83b7\u6587\u4ef6\u5728 PASS \u4e0e FAIL \u4e4b\u95f4\u53d1\u751f\u53d8\u5316\u3002",
         "source": "demo/cases.json",
-        "title": "Calculator regression"
+        "title": "Calculator Regression \u00b7 Baseline"
       },
       "privacy_boundary": {
         "captured": [
@@ -195,12 +1182,29 @@
         ],
         "status": "enforced"
       },
+      "provenance": {
+        "audit_status": "pass",
+        "raw_committed": false,
+        "real_capture": true,
+        "source_classes": [
+          "acr_f1"
+        ]
+      },
       "session_id": "session-6886bc4f40144176bb747ba0556a02d0",
+      "start_verification": {
+        "checkpoint_id": "cp-e3f4058c3cd74cefb0bf34e0cc1837d9",
+        "exit_code": 0,
+        "manifest_hash": "43e9c05e20f6c97efcedd3354e3a494f3ccaf930c10133d16b0cfd6b0bc66d48",
+        "outcome": "pass",
+        "receipt_id": "vr-b5e2cbdd0d811acf54dd24d1ebf33066e9b9f1f9",
+        "timestamp": "2026-09-11T06:38:07.514492+00:00"
+      },
       "summary": {
         "boundary_status": "observed",
         "changed_file_count": 1,
         "diagnostic_warning_count": 0,
         "overall_status": "red",
+        "trajectory_kind": "failure_boundary",
         "verified_fail_present": true
       },
       "timeline": [
@@ -242,6 +1246,7 @@
   ],
   "skipped_sessions": [],
   "source": {
+    "committed_artifact_count": 3,
     "discovered_session_count": 1,
     "kind": "agent_forensics_f1_evidence"
   }

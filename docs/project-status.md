@@ -12,6 +12,7 @@
 - F0.5: PASS
 - F1 Product Core Foundation: PASS
 - Demo Visualization Slice: PASS
+- Committed Demo Cases: PASS
 - F2 Failure Boundary: DEFERRED / NOT STARTED
 - Workspace Fork: NOT STARTED
 - Incident Theater: NOT STARTED
@@ -112,6 +113,25 @@ concrete F1 timeline step; the session audit passed. An attempted repeated-Read
 smoke produced two Read occurrences but Claude returned a different deduplication
 result for the second call, so D01 correctly emitted no hit. Raw transcripts
 remain local and uncommitted. Full local regression: 174 tests PASS; Ruff PASS.
+
+Three display-safe artifacts have now been exported from separate real Claude
+Code 2.1.144 captures and committed under `demo/case-artifacts/`. Pagination
+Off-by-One records a real initial PASS, a tracked `pagination.py` transition,
+and exit-1 FAIL. Exact Repeated Command records two real `git status --short`
+occurrences, one D02 raw-derived yellow step with exact `tool_use_id`
+correlation, and a final PASS. Healthy Input Normalization records tracked
+changes to `normalization.py` and `test_normalization.py` with a final PASS.
+The default static build loads these three cases before the retained Calculator
+Regression baseline, so the selector exposes RED, YELLOW, GREEN, and baseline
+examples without access to local raw data.
+
+Each artifact records source classification, source/session identity hashes,
+export-time audit status, verifier and repository-diff provenance, and whether
+raw data was committed. Artifact export rejects raw body/input/output fields
+and local Claude/transcript paths. Full local regression: 177 tests PASS; Ruff
+PASS. No repository GitHub workflow is present, so this is not CI evidence.
+
+> **Committed Demo Cases: PASS**
 
 Formal Failure Window productization, Workspace Fork, restore, and
 production-grade Incident Theater remain DEFERRED / NOT STARTED. Product

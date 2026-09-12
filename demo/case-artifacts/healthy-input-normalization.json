@@ -1,0 +1,364 @@
+{
+  "case_id": "healthy-input-normalization",
+  "exported_at": "2026-09-12T09:53:51.871883+00:00",
+  "provenance": {
+    "audit_status": "pass",
+    "correlation": "not_applicable",
+    "diagnostic_detectors": [],
+    "raw_committed": false,
+    "real_capture": true,
+    "repository_diff_source": "captured F1 blobs",
+    "source_session_id": "session-f9b24d3a75db4c3ea1929525d3e3f6c4",
+    "verifier_result_source": "F1 VerificationReceipt"
+  },
+  "schema": "acr.committed-demo-case/0.1",
+  "session": {
+    "changed_files": [
+      {
+        "after_executable": false,
+        "after_hash": "fb8bf266d28c69835c170f170577ba5fb925b0a8fc5b373193ad2e258465032e",
+        "before_executable": false,
+        "before_hash": "05707791cc447cf2737c948e1be350fea658fdbb13fc8882f25e207783c7e914",
+        "change_type": "modified",
+        "diff": "--- a/normalization.py\n+++ b/normalization.py\n@@ -1,2 +1,6 @@\n def normalize_name(value):\n     return \" \".join(value.split())\n+\n+\n+def normalize_email(value):\n+    return value.strip().lower()\n",
+        "diff_status": "available",
+        "path": "normalization.py"
+      },
+      {
+        "after_executable": false,
+        "after_hash": "49f62326d24ff1515c69f8b169baee423d72df6a28889cea53962a702fc93b7a",
+        "before_executable": false,
+        "before_hash": "5a50b3f6a95e7c4808fccf84b7849f6b638fe69bbaeedd40745dc10951f1faee",
+        "change_type": "modified",
+        "diff": "--- a/test_normalization.py\n+++ b/test_normalization.py\n@@ -1,5 +1,21 @@\n-from normalization import normalize_name\n+from normalization import normalize_email, normalize_name\n \n \n def test_normalize_name():\n     assert normalize_name(\"  Ada   Lovelace \") == \"Ada Lovelace\"\n+\n+\n+def test_normalize_email_strips_whitespace():\n+    assert normalize_email(\"  ada@example.com  \") == \"ada@example.com\"\n+\n+\n+def test_normalize_email_lowercases():\n+    assert normalize_email(\"ADA@Example.COM\") == \"ada@example.com\"\n+\n+\n+def test_normalize_email_strips_and_lowercases():\n+    assert normalize_email(\"  Ada@Example.COM  \") == \"ada@example.com\"\n+\n+\n+def test_normalize_email_leaves_normalized_unchanged():\n+    assert normalize_email(\"ada@example.com\") == \"ada@example.com\"\n",
+        "diff_status": "available",
+        "path": "test_normalization.py"
+      }
+    ],
+    "diagnostics": [
+      {
+        "description": "Historical context or token input growth.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W01",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Context Growth"
+      },
+      {
+        "description": "A single tool response contains a large payload.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W02",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Large Tool Output"
+      },
+      {
+        "description": "A long failure stack or error log was not truncated.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W03",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Failure Stack"
+      },
+      {
+        "description": "Large, highly similar context repeats.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W04",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Duplicate Context"
+      },
+      {
+        "description": "A single user input is unusually large.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W05",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Large User Input"
+      },
+      {
+        "description": "Similar tool commands repeat in a short window.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W06",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Repeated Command"
+      },
+      {
+        "description": "Tool calls form a dense repeated loop.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W07",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Tool Loop"
+      },
+      {
+        "description": "Assistant output shows highly similar retries.",
+        "event_sequences": [],
+        "occurrences": 0,
+        "rule": "W08",
+        "severity": "neutral",
+        "source": "demo presentation metadata",
+        "status": "not_evaluated",
+        "summary": "Not evaluated from privacy-bounded F1 evidence.",
+        "title": "Retry Storm"
+      }
+    ],
+    "end_verification": {
+      "checkpoint_id": "cp-689643ed68644c37a487d62bf2bfa828",
+      "exit_code": 0,
+      "manifest_hash": "fd788723bde435a823962887d35dd5fb5af8ff3ba5389378d614a901b8feeac6",
+      "outcome": "pass",
+      "receipt_id": "vr-1e5ae731d01bba893aacfe594a2e7bbe0924ea9e",
+      "timestamp": "2026-09-12T09:51:09.083763+00:00"
+    },
+    "evidence_integrity": {
+      "checks": [
+        {
+          "detail": "audit_session passed",
+          "label": "Session audit",
+          "status": "pass"
+        },
+        {
+          "detail": "configured",
+          "label": "Exact verifier observed",
+          "status": "pass"
+        },
+        {
+          "detail": "observed",
+          "label": "Initial PASS backed by exit code 0",
+          "status": "pass"
+        },
+        {
+          "detail": "observed",
+          "label": "Final PASS backed by exit code 0",
+          "status": "pass"
+        },
+        {
+          "detail": "both resolve",
+          "label": "Pre-verifier checkpoints",
+          "status": "pass"
+        },
+        {
+          "detail": "canonical",
+          "label": "Manifest hashes verified",
+          "status": "pass"
+        },
+        {
+          "detail": "receipt correlation",
+          "label": "Same session binding",
+          "status": "pass"
+        },
+        {
+          "detail": "manifest hashes differ",
+          "label": "Repository state comparison",
+          "status": "pass"
+        }
+      ],
+      "status": "verified"
+    },
+    "final_pass": {
+      "checkpoint_id": "cp-689643ed68644c37a487d62bf2bfa828",
+      "exit_code": 0,
+      "manifest_hash": "fd788723bde435a823962887d35dd5fb5af8ff3ba5389378d614a901b8feeac6",
+      "outcome": "pass",
+      "receipt_id": "vr-1e5ae731d01bba893aacfe594a2e7bbe0924ea9e",
+      "timestamp": "2026-09-12T09:51:09.083763+00:00"
+    },
+    "first_fail": null,
+    "last_pass": {
+      "checkpoint_id": "cp-f3d8253aad2c4e04831fc64460826e0f",
+      "exit_code": 0,
+      "manifest_hash": "244492f1241117c4f160095e8965649c34426462ca5fbbd737e435beac7ae086",
+      "outcome": "pass",
+      "receipt_id": "vr-6ce71f3604ca1ab369afb0b3e25279aeba2375fd",
+      "timestamp": "2026-09-12T09:51:00.419496+00:00"
+    },
+    "observed_activity": [
+      {
+        "event_count": 2,
+        "kind": "Glob",
+        "label": "Glob operation",
+        "sequence": 6
+      },
+      {
+        "event_count": 2,
+        "kind": "Glob",
+        "label": "Glob operation",
+        "sequence": 7
+      },
+      {
+        "event_count": 2,
+        "kind": "Read",
+        "label": "Read operation",
+        "sequence": 10
+      },
+      {
+        "event_count": 2,
+        "kind": "Read",
+        "label": "Read operation",
+        "sequence": 11
+      },
+      {
+        "event_count": 2,
+        "kind": "Edit",
+        "label": "Edit operation",
+        "sequence": 14
+      },
+      {
+        "event_count": 2,
+        "kind": "Edit",
+        "label": "Edit operation",
+        "sequence": 16
+      }
+    ],
+    "overall_status": "green",
+    "presentation": {
+      "description": "\u771f\u5b9e Claude Code \u4f1a\u8bdd\u65b0\u589e\u90ae\u7bb1\u5f52\u4e00\u5316\u80fd\u529b\u4e0e\u6d4b\u8bd5\uff0c\u4ed3\u5e93\u53d1\u751f\u53d8\u5316\u4e14\u672b\u7aef verifier \u4fdd\u6301\u901a\u8fc7\u3002",
+      "order": 30,
+      "source": "committed demo artifact",
+      "title": "Healthy Input Normalization"
+    },
+    "privacy_boundary": {
+      "captured": [
+        "Sanitized agent events",
+        "Repository state",
+        "Verification results"
+      ],
+      "demo_raw_active": false,
+      "diagnostic_note": "W01\u2013W08 \u6ce8\u89e3\u662f\u5c55\u793a\u5143\u6570\u636e\uff0c\u4e0d\u662f F1 evidence\u3002",
+      "not_persisted": [
+        "Prompt bodies",
+        "Environment values",
+        "Raw hook payloads",
+        "Tool response bodies",
+        "Transcript paths",
+        "Verifier output bodies"
+      ],
+      "status": "enforced"
+    },
+    "provenance": {
+      "audit_status": "pass",
+      "raw_committed": false,
+      "real_capture": true,
+      "source_classes": [
+        "acr_f1"
+      ]
+    },
+    "session_id": "session-f9b24d3a75db4c3ea1929525d3e3f6c4",
+    "start_verification": {
+      "checkpoint_id": "cp-f3d8253aad2c4e04831fc64460826e0f",
+      "exit_code": 0,
+      "manifest_hash": "244492f1241117c4f160095e8965649c34426462ca5fbbd737e435beac7ae086",
+      "outcome": "pass",
+      "receipt_id": "vr-6ce71f3604ca1ab369afb0b3e25279aeba2375fd",
+      "timestamp": "2026-09-12T09:51:00.419496+00:00"
+    },
+    "summary": {
+      "boundary_status": "not_applicable",
+      "changed_file_count": 2,
+      "diagnostic_warning_count": 0,
+      "overall_status": "green",
+      "trajectory_kind": "healthy_transition",
+      "verified_fail_present": false
+    },
+    "timeline": [
+      {
+        "detail": "pytest -q \u00b7 exit code 0",
+        "diagnostic_refs": [],
+        "kind": "verified_pass",
+        "label": "Verified PASS",
+        "sequence": 5,
+        "status": "green"
+      },
+      {
+        "detail": "Observed between verification boundaries",
+        "diagnostic_refs": [],
+        "kind": "observed_activity",
+        "label": "Glob operation",
+        "sequence": 6,
+        "status": "neutral"
+      },
+      {
+        "detail": "Observed between verification boundaries",
+        "diagnostic_refs": [],
+        "kind": "observed_activity",
+        "label": "Glob operation",
+        "sequence": 7,
+        "status": "neutral"
+      },
+      {
+        "detail": "Observed between verification boundaries",
+        "diagnostic_refs": [],
+        "kind": "observed_activity",
+        "label": "Read operation",
+        "sequence": 10,
+        "status": "neutral"
+      },
+      {
+        "detail": "Observed between verification boundaries",
+        "diagnostic_refs": [],
+        "kind": "observed_activity",
+        "label": "Read operation",
+        "sequence": 11,
+        "status": "neutral"
+      },
+      {
+        "detail": "Observed between verification boundaries",
+        "diagnostic_refs": [],
+        "kind": "observed_activity",
+        "label": "Edit operation",
+        "sequence": 14,
+        "status": "neutral"
+      },
+      {
+        "detail": "Observed between verification boundaries",
+        "diagnostic_refs": [],
+        "kind": "observed_activity",
+        "label": "Edit operation",
+        "sequence": 16,
+        "status": "neutral"
+      },
+      {
+        "detail": "normalization.py, test_normalization.py",
+        "diagnostic_refs": [],
+        "kind": "repository_transition",
+        "label": "Repository state changed",
+        "sequence": null,
+        "status": "neutral"
+      },
+      {
+        "detail": "pytest -q \u00b7 exit code 0",
+        "diagnostic_refs": [],
+        "kind": "verified_pass",
+        "label": "Verified PASS",
+        "sequence": 21,
+        "status": "green"
+      }
+    ],
+    "verifier": "pytest -q"
+  },
+  "source_class": "acr_f1",
+  "source_hash": "4acc1f42789c8145255e34b733ff26678b1bc0270e67d9677a7b9809dbac58f3"
+}
